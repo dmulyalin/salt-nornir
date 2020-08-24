@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Nornir
-======
+Nornir Proxy module
+===================
 
 Nornir proxy-minion pillar example::
 
@@ -129,7 +129,7 @@ Sample jumphost definition in host's data::
 """
 from __future__ import absolute_import
 
-# Import python stdlib 
+# Import python stdlib
 import logging
 from fnmatch import fnmatchcase
 
@@ -137,8 +137,8 @@ from fnmatch import fnmatchcase
 try:
     from nornir import InitNornir
     from nornir.core.deserializer.inventory import Inventory
-    from nornir.plugins.tasks.networking import napalm_get
     from nornir.core.filter import F
+    from nornir.plugins.tasks.networking import tcp_ping
 
     HAS_NORNIR = True
 except ImportError:
@@ -166,7 +166,7 @@ nornir_data = {"initialized": False}
 
 def __virtual__():
     """
-    Proxy module available only if nornir is installed.
+    Proxy module available only if Nornir is installed.
     """
     if not HAS_NORNIR:
         return (
@@ -185,6 +185,7 @@ def init(opts):
     """
     Initiate nornir by calling InitNornir() 
     """
+    opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
     nornir_data["nr"] = InitNornir(
         core={"num_workers": opts["proxy"].get("num_workers", 100)},
         logging={"enabled": False},
@@ -202,23 +203,20 @@ def init(opts):
 
 def alive(opts):
     """
-    Return the nornir status
+    Return Nornir status
     """
     return nornir_data["initialized"]
 
 
 def ping():
     """
-    Connection open successfully?
+    Check that hosts are reachable on port given in inventory
     """
-    from nornir.plugins.tasks.networking import tcp_ping
-
-    output = nornir_data["nr"].run(    
-        task=tcp_ping,
-        name="TCP Ping ports",
-        ports=[22, 23]
-    )
-    return {host: res.result for host, res in output.items()} 
+    output = nornir_data["nr"].run(task=_tcp_ping)
+    return {
+        h: i.result for h, res in output.items() 
+        for i in res if not i.name.startswith("_")
+    }
 
 
 def initialized():
@@ -242,8 +240,6 @@ def grains():
     """
     Get grains from Hosts
     """
-    # network_devices = nornir_data["nr"].filter(platfor="ios" |)
-    # grains_data = network_devices.run(task=napalm_get, getters=["facts"])
     return {}
 
 
@@ -254,12 +250,18 @@ def grains_refresh():
     return grains()
 
 
-
 # -----------------------------------------------------------------------------
 # proxy module private functions
 # -----------------------------------------------------------------------------
 
 
+def _tcp_ping(task):
+    """Helper function to run TCP ping to hosts
+    """
+    port = task.host.port or 22
+    task.run(task=tcp_ping, name="TCP ping", ports=[port])
+
+    
 def _filter_FO(ret, filter_data):
     """Function to filter hosts using Filter Object
     """

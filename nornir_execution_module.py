@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Nornir Testing module
-=====================
+Nornir Execution module
+=======================
 
 Commands timeout
 ----------------
@@ -10,18 +10,21 @@ It is recommended to increase
 or use `--timeout=60` option to wait for minion return as on 
 each call Nornir connects to devices and all together it might take more 
 than 5 seconds for task to complete.
+
+To implement:
+brief/table putput for nr.inventory
+salt-run nr.find to find various staff across devices - MACs, IPs, interfaces etc.
+salt-run nr.host to find hosts details
+salt -I "hosts:HOSTNAME" nr.bla - to target hosts off the pillars
 """
 from __future__ import absolute_import
 
-# Import python libs 
+# Import python libs
 import logging
 import sys, traceback
 
 # import salt libs
 from salt.exceptions import CommandExecutionError
-
-# import stndrt libs
-import logging
 
 # import nornir libs
 try:
@@ -140,6 +143,7 @@ def _to_text(nr_results):
                 ret[-1] += "\n{}#{}\n{}".format(
                     hostname, command, str(output["result"])
                 )
+    log.debug(ret)
     return ret
 
 
@@ -419,7 +423,14 @@ def ttp(*args, **kwargs):
     )
     if not template_text:
         return "Failed to get TTP '{}' template".format(template)
-    parser.add_template(template_text)
+    try:
+        parser.add_template(template_text)
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        return "Failed to load TTP template: {}\n{}".format(
+            template,
+            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
+        )        
     # get commands output from devices if any
     if commands:
         default_input = cli(*commands, **kwargs)
@@ -457,7 +468,7 @@ def ttp(*args, **kwargs):
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         return "Failed to parse output with TTP template \n\nTemplate:\n{}...\n\nError:\n{}".format(
-            template_text[:300] if len(template_text) > 301 else template_text,
+            template,
             "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
         )
     return ret
