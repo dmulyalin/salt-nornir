@@ -13,9 +13,11 @@ Repository to store Nornir based SALTSTACK modules:
 
 Place files in appropriate directories:
 
-`salt://_proxy/nornir_proxy_module.py`
-`salt://_modules/nornir_execution_module.py`
-`salt://_state/nornir_state_module.py`
+```
+salt://_proxy/nornir_proxy_module.py
+salt://_modules/nornir_execution_module.py
+salt://_state/nornir_state_module.py
+```
 
 Sample Pillar with Nornir inventory:
 
@@ -63,4 +65,14 @@ groups:
         optional_args: {dest_file_system: "system:"}
           
 defaults: {}
+```
+
+Start salt-proxy process, accept key on master and run commands to explore doc strings for further usage:
+
+```
+salt nornir-minion-id saltutil.sync_all
+salt nornir-minion-id sys.doc nr.cli
+salt nornir-minion-id sys.doc nr.cfg
+salt nornir-minion-id sys.doc nr.ttp
+salt nornir-minion-id sys.doc nr.inventory
 ```
