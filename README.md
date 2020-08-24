@@ -16,7 +16,7 @@ Place files in appropriate directories:
 ```
 salt://_proxy/nornir_proxy_module.py
 salt://_modules/nornir_execution_module.py
-salt://_state/nornir_state_module.py
+salt://_states/nornir_state_module.py
 ```
 
 Sample Pillar with Nornir inventory:
