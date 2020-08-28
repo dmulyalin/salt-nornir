@@ -11,11 +11,85 @@ or use `--timeout=60` option to wait for minion return as on
 each call Nornir connects to devices and all together it might take more 
 than 5 seconds for task to complete.
 
-To implement:
-brief/table putput for nr.inventory
-salt-run nr.find to find various staff across devices - MACs, IPs, interfaces etc.
-salt-run nr.host to find hosts details
-salt -I "hosts:HOSTNAME" nr.bla - to target hosts off the pillars
+Filtering Hosts
+---------------
+
+Filtering order::
+
+    FO -> FB -> FG -> FP -> FL
+    
+If multiple filters provided, returned hosts must comply all checks - AND logic.
+
+FO - Filter Object
+++++++++++++++++++
+
+Filter using `Nornir Filter Object <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html#Filter-Object>`_
+
+platform ios and hostname 192.168.217.7::
+
+    salt nornir-proxy-1  nr.inventory FO='{"platform": "ios", "hostname": "192.168.217.7"}'
+    
+location B1 or location B2:
+
+    salt nornir-proxy-1  nr.inventory FO='[{"location": "B1"}, {"location": "B2"}]'
+    
+location B1 and platform ios or any host at location B2:
+
+   salt nornir-proxy-1  nr.inventory FO='[{"location": "B1", "platform": "ios"}, {"location": "B2"}]' 
+   
+FB - Filter gloB
+++++++++++++++++
+   
+Filter hosts by name using Glob Patterns - `fnmatchcase <https://docs.python.org/3.4/library/fnmatch.html#fnmatch.fnmatchcase>`_ method::
+
+    salt nornir-proxy-1  nr.inventory FB="IOL*"
+
+FG - Filter Group
++++++++++++++++++
+   
+Filter hosts by group returning all hosts that belongs to given group::
+
+    salt nornir-proxy-1  nr.inventory FG="lab"
+    
+FP - Filter Prefix
+++++++++++++++++++
+
+Filter hosts by checking if hosts hostname is part of at least one of given IP Prefixes::
+
+    salt nornir-proxy-1  nr.inventory FP="192.168.217.0/29, 192.168.2.0/24"
+    salt nornir-proxy-1  nr.inventory FP='["192.168.217.0/29", "192.168.2.0/24"]'
+    
+If hostname is an IP, will use it as is, if it is FQDN, will attempt to resolve it to 
+obtain IP address. If DNS resolution fails, host fails the check.
+
+FL - Filter List
+++++++++++++++++
+
+Match only hosts with names in provided list::
+
+    salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
+    salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
+	
+jumphosts or bastions
+---------------------
+
+`nr.cli` function and `nr.cfg` with `plugin="netmiko"` can interract with devices
+behind jumposts. 
+
+Sample jumphost definition in host's inventory data::
+
+    hosts:
+      LAB-R1:
+        hostname: 192.168.1.10
+        platform: ios
+        password: user
+        username: user
+        data: 
+          jumphost:
+            hostname: 172.16.0.10
+            port: 22
+            password: admin
+            username: admin
 """
 from __future__ import absolute_import
 

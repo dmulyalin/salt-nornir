@@ -31,17 +31,18 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def cfg(*commands, **kwargs):
+def cfg(*args, **kwargs):
     """
     Enforce configuration state on device using Nornir
     execution module ``nr.cfg`` function.
     
     """
-    log.debug("commands: {}, kwargs: {}".format(commands, kwargs))
+    state_name = kwargs.pop("name") 
+    result = __salt__["nr.cfg"](**kwargs)
     ret = {
-        "name": name,
-        "changes": {},
-        "result": False,
+        "name": state_name,
+        "changes": result,
+        "result": True,
         "comment": "",
     }
     return ret
@@ -53,10 +54,12 @@ def task():
     execution module ``nr.task`` function.
     
     """
+    state_name = kwargs.pop("name") 
+    result = __salt__["nr.task"](**kwargs)
     ret = {
-        "name": name,
-        "changes": {},
-        "result": False,
+        "name": state_name,
+        "changes": result,
+        "result": True,
         "comment": "",
     }
     return ret

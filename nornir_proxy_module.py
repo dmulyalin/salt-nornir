@@ -3,6 +3,32 @@
 Nornir Proxy module
 ===================
 
+This proxy module uses `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
+to interact with devices initiating short living connections to devices on each
+function call and tearing them down after completion. 
+
+The main benefit of this approach is scale factor, while single proxy-minion
+normally handles one device, Nornir proxy module can work with hundreds of devices 
+simultaneously, as a result, resource requirements would decrease significantly as
+single minion process can replace hundreds of minions.
+
+This module recommended way of operating is with 
+`multiprocessing <https://docs.saltstack.com/en/latest/ref/configuration/minion.html#multiprocessing>`_ 
+set to ``True``, so that each task will be executed in dedicated process, processes
+destroyed after task run completion. That would imply these consequences:
+
+- multiple tasks can run in parallel handled by different process, each initiating dedicated connections to devices
+- multi threading is an alternative way of working but prone to memory leaks, multiprocessing mode allows to eliminate such a problem
+
+Nornir inventory/pillar
+-----------------------
+
+Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_ 
+to store information it uses to interact with devices. Inventory can contain
+information about hosts, groups and defaults. Conveniently, Nornir inventory source data
+is nothing more than a nested, Python dictionary, as a result it is easy to 
+define it in proxy-minion pillar.
+
 Nornir proxy-minion pillar example::
 
     proxy:
@@ -27,93 +53,6 @@ Nornir proxy-minion pillar example::
         platform: ios
         location: B3
         groups: [lab]
-        
-    groups: 
-      lab:
-        username: nornir
-        password: nornir
-        connection_options: 
-          napalm:
-            optional_args: {dest_file_system: "system:"}
-              
-    defaults: {}
-    
-proxy_always_alive amd multiprocessing
---------------------------------------
-
-`proxy_always_alive` is ignored, `multiprocessing=True` is a
-recommended way to run this proxy. 
-
-Nornir object and connections to devices initiated on each function
-call, connections closed after completion.
-
-Filtering Hosts
----------------
-
-Filtering order::
-
-    FO -> FB -> FG -> FP -> FL
-    
-If multiple filters provided, returned hosts must comply all checks - AND logic.
-
-FO - Filter Object
-++++++++++++++++++
-
-Filter using `Nornir Filter Object <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html#Filter-Object>`_
-
-platform ios and hostname 192.168.217.7::
-
-    salt nornir-proxy-1  nr.inventory FO='{"platform": "ios", "hostname": "192.168.217.7"}'
-    
-location B1 or location B2:
-
-    salt nornir-proxy-1  nr.inventory FO='[{"location": "B1"}, {"location": "B2"}]'
-    
-location B1 and platform ios or any host at location B2:
-
-   salt nornir-proxy-1  nr.inventory FO='[{"location": "B1", "platform": "ios"}, {"location": "B2"}]' 
-   
-FB - Filter gloB
-++++++++++++++++
-   
-Filter hosts by name using Glob Patterns - `fnmatchcase <https://docs.python.org/3.4/library/fnmatch.html#fnmatch.fnmatchcase>`_ method::
-
-    salt nornir-proxy-1  nr.inventory FB="IOL*"
-
-FG - Filter Group
-+++++++++++++++++
-   
-Filter hosts by group returning all hosts that belongs to given group::
-
-    salt nornir-proxy-1  nr.inventory FG="lab"
-    
-FP - Filter Prefix
-++++++++++++++++++
-
-Filter hosts by checking if hosts hostname is part of given IP Prefix::
-
-    salt nornir-proxy-1  nr.inventory FP="192.168.217.0/29, 192.168.2.0/24"
-    salt nornir-proxy-1  nr.inventory FP='["192.168.217.0/29", "192.168.2.0/24"]'
-    
-If hostname is IP will use it as is, if it is FQDN will attempt to resolve it to obtain IP address.
-
-FL - Filter List
-++++++++++++++++
-
-Match only hosts with names in provided list::
-
-    salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
-    salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
-    
-jumphosts or bastions
----------------------
-
-`nr.cli` function and `nr.cfg` with `plugin="netmiko"` can interract with devices
-behind jumposts. 
-
-Sample jumphost definition in host's data::
-
-    hosts:
       LAB-R1:
         hostname: 192.168.1.10
         platform: ios
@@ -125,7 +64,37 @@ Sample jumphost definition in host's data::
             port: 22
             password: admin
             username: admin
+			
+    groups: 
+      lab:
+        username: nornir
+        password: nornir
+        connection_options: 
+          napalm:
+            optional_args: {dest_file_system: "system:"}
+              
+    defaults: {}
+    
+Proxy configuration parameters
+------------------------------
 
+Notes on proxy configuration parameters
+
+- ``proxy_always_alive`` is ignored
+- ``multiprocessing=True`` is a recommended way to run this proxy so that
+  Nornir object and connections to devices initiated on each function
+  call and closed after completion
+- ``num_workers`` maximum number of workers threads to use within Nornir
+- ``process_count_max`` - maximum number of processes to use, that would limit
+  the number of simultaneous tasks and as a result maximum number of connections
+  initiated to devices
+  
+test.ping function
+------------------
+
+On ``test.ping`` Nornir proxy establishes TCP connections to devices on 
+configured ports to check if they are reachable and responding, effectively
+doing TCP ping.
 """
 from __future__ import absolute_import
 
@@ -171,7 +140,7 @@ def __virtual__():
     if not HAS_NORNIR:
         return (
             False,
-            "The nornir proxy module requires nornir library to be installed.",
+            "Nornir proxy module requires https://pypi.org/project/nornir/ library",
         )
     return __virtualname__
 
@@ -291,10 +260,42 @@ def _filter_FG(ret, group):
     ) 
 
 
-def _filter_FP(ret, prefix):
-    """Function to filter hosts based on IP Prefix
+def _filter_FP(ret, pfx):
+    """Function to filter hosts based on IP Prefixes
     """
-    return ret
+    import ipaddress
+    import socket
+    
+    socket.setdefaulttimeout(1)
+    
+    def _filter_net(host):
+        # convert host ip to ip address object
+        try:
+            ip_addr = ipaddress.ip_address(host.hostname)
+        except:
+            # try to resolve hostname using DNS
+            try:
+                ip_str = socket.gethostbyname(host.hostname)
+                ip_addr = ipaddress.ip_address(ip_str)
+            except Exception as e:
+                log.error("FP failed to convert host IP '{}', error '{}'".format(host.name, e))
+                return False
+        # run filtering
+        for net in networks:
+            if ip_addr in net:
+                return True
+        return False 
+    
+    # make a list of network objects
+    prefixes = [i.strip() for i in pfx.split(",")] if isinstance(pfx, str) else pfx  
+    networks = []
+    for prefix in prefixes:
+        try:
+            networks.append(ipaddress.ip_network(prefix))
+        except Exception as e:
+            log.error("FP failed to convert prefix '{}', error '{}'".format(prefix, e))
+    # filter hosts
+    return ret.filter(filter_func=_filter_net)
 
 
 def _filter_FL(ret, names_list):
@@ -342,7 +343,7 @@ def _refresh(**kwargs):
 
 def inventory_data(**kwargs):
     """
-    Return nornir inventory as a dictionary
+    Return Nornir inventory as a dictionary
     """
     # re-init Nornir
     _refresh()
@@ -356,7 +357,7 @@ def run(task, *args, **kwargs):
     Function to run Nornir tasks
     
     :param task: callable task function
-    :param kwargs: arguments to pass on to run method
+    :param kwargs: arguments to pass to `Nornir run <https://nornir.readthedocs.io/en/latest/ref/api/nornir.html#nornir.core.Nornir.run>`_ method
     """
     # re-init Nornir
     _refresh()
