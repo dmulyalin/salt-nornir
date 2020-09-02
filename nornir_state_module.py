@@ -48,7 +48,7 @@ def cfg(*args, **kwargs):
     return ret
 
     
-def task():
+def task(*args, **kwargs):
     """
     Enforce configuration state on device using Nornir
     execution module ``nr.task`` function.

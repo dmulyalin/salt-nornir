@@ -4,27 +4,27 @@ Nornir Proxy module
 ===================
 
 This proxy module uses `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
-to interact with devices initiating short living connections to devices on each
-function call and tearing them down after completion. 
+library to interact with devices at scale over SSH, Telnet or NETCONF.
 
-The main benefit of this approach is scale factor, while single proxy-minion
-normally handles one device, Nornir proxy module can work with hundreds of devices 
-simultaneously, as a result, resource requirements would decrease significantly as
-single minion process can replace hundreds of minions.
+Key differentiator of this module is in the fact that single proxy-minion
+normally dedicated to one device only, but Nornir proxy module can work with hundreds of 
+devices simultaneously, significantly lowering overall resource requirements and 
+simplifying operations as single proxy-minion process can handle multiple devices.
 
 This module recommended way of operating is with 
 `multiprocessing <https://docs.saltstack.com/en/latest/ref/configuration/minion.html#multiprocessing>`_ 
-set to ``True``, so that each task will be executed in dedicated process, processes
-destroyed after task run completion. That would imply these consequences:
+set to ``True``, so that each task will be executed in dedicated process. That would 
+imply these consequences:
 
-- multiple tasks can run in parallel handled by different process, each initiating dedicated connections to devices
-- multi threading is an alternative way of working but prone to memory leaks, multiprocessing mode allows to eliminate such a problem
+- multiple tasks can run in parallel handled by different process
+- each process will have to initiate dedicated connections to device increasing overall execution time
+- multiprocessing mode allows to eliminate majority of problems with memory leaks, resulting in more efficient use of resources
 
 Nornir inventory/pillar
 -----------------------
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_ 
-to store information it uses to interact with devices. Inventory can contain
+to store information about devices to interact with. Inventory can contain
 information about hosts, groups and defaults. Conveniently, Nornir inventory source data
 is nothing more than a nested, Python dictionary, as a result it is easy to 
 define it in proxy-minion pillar.
@@ -85,8 +85,8 @@ Notes on proxy configuration parameters
   Nornir object and connections to devices initiated on each function
   call and closed after completion
 - ``num_workers`` maximum number of workers threads to use within Nornir
-- ``process_count_max`` - maximum number of processes to use, that would limit
-  the number of simultaneous tasks and as a result maximum number of connections
+- ``process_count_max`` maximum number of processes to use, that would limit
+  a number of simultaneous tasks and maximum number of connections
   initiated to devices
   
 test.ping function

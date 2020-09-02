@@ -3,13 +3,21 @@
 Nornir Execution module
 =======================
 
+This execution module complements `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
+based proxy-minion to interact with devices at scale over SSH, Telnet or NETCONF.
+
+Key differentiator of this module is in the fact that single proxy-minion
+normally dedicated to one device only, but Nornir proxy module can work with hundreds of 
+devices simultaneously, significantly lowering overall resource requirements and 
+simplifying operations as single proxy-minion process can handle multiple devices.
+
 Commands timeout
 ----------------
 It is recommended to increase 
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
-or use `--timeout=60` option to wait for minion return as on 
-each call Nornir connects to devices and all together it might take more 
-than 5 seconds for task to complete.
+or use `--timeout=60` option to wait for minion return, as on each call Nornir 
+has to initiate connections to devices and all together it might take more than 
+5 seconds for task to complete.
 
 Filtering Hosts
 ---------------
@@ -73,10 +81,10 @@ Match only hosts with names in provided list::
 jumphosts or bastions
 ---------------------
 
-`nr.cli` function and `nr.cfg` with `plugin="netmiko"` can interract with devices
-behind jumposts. 
+`nr.cli` function and `nr.cfg` with `plugin="netmiko"` can interact with devices
+behind jumposts. NAPALM or NETCONF task plugins does not support that.
 
-Sample jumphost definition in host's inventory data::
+Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
     hosts:
       LAB-R1:
