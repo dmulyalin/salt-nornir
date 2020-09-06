@@ -1,32 +1,54 @@
-# -*- coding: utf-8 -*-
 """
 Nornir Execution module
 =======================
 
-This execution module complements `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
-based proxy-minion to interact with devices at scale over SSH, Telnet or NETCONF.
+.. versionadded:: v3000
 
-Key differentiator of this module is in the fact that single proxy-minion
-normally dedicated to one device only, but Nornir proxy module can work with hundreds of 
-devices simultaneously, significantly lowering overall resource requirements and 
-simplifying operations as single proxy-minion process can handle multiple devices.
+:codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
+:maturity:   new
+:depends:    Nornir
+:platform:   unix
+
+Dependencies
+------------
+
+- :mod:`Nornir proxy minion <salt.proxy.nornir>`
+
+Introduction
+------------
+
+This execution module complements `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
+based :mod:`proxy minion <salt.proxy.nornir>` to interact with devices over SSH, Telnet or NETCONF.
+
+Nornir proxy can work with devices using function defined in this execution module.
+
+Things to keep in mind:
+
+- on each function call, Nornir instance re-initiated with latest pillar data
+- ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-module
+- with multiprocessing on, dedicated process starts for each task
+- each process initiates new connections to devices, increasing task execution time
 
 Commands timeout
 ----------------
-It is recommended to increase 
+It is recommended to increase
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
-or use `--timeout=60` option to wait for minion return, as on each call Nornir 
-has to initiate connections to devices and all together it might take more than 
+or use ``--timeout=60`` option to wait for minion return, as on each call Nornir
+has to initiate connections to devices and all together it might take more than
 5 seconds for task to complete.
 
 Filtering Hosts
 ---------------
 
+Nornir interacts with many devices and has it's own inventory, as a result
+additional filtering capabilities introduced to narrow down tasks execution
+to certain hosts/devices.
+
 Filtering order::
 
     FO -> FB -> FG -> FP -> FL
-    
-If multiple filters provided, returned hosts must comply all checks - AND logic.
+
+If multiple filters provided, returned hosts must comply all checks - `AND` logic.
 
 FO - Filter Object
 ++++++++++++++++++
@@ -36,29 +58,29 @@ Filter using `Nornir Filter Object <https://nornir.readthedocs.io/en/latest/tuto
 platform ios and hostname 192.168.217.7::
 
     salt nornir-proxy-1  nr.inventory FO='{"platform": "ios", "hostname": "192.168.217.7"}'
-    
+
 location B1 or location B2:
 
     salt nornir-proxy-1  nr.inventory FO='[{"location": "B1"}, {"location": "B2"}]'
-    
+
 location B1 and platform ios or any host at location B2:
 
-   salt nornir-proxy-1  nr.inventory FO='[{"location": "B1", "platform": "ios"}, {"location": "B2"}]' 
-   
+    salt nornir-proxy-1  nr.inventory FO='[{"location": "B1", "platform": "ios"}, {"location": "B2"}]'
+
 FB - Filter gloB
 ++++++++++++++++
-   
+
 Filter hosts by name using Glob Patterns - `fnmatchcase <https://docs.python.org/3.4/library/fnmatch.html#fnmatch.fnmatchcase>`_ method::
 
     salt nornir-proxy-1  nr.inventory FB="IOL*"
 
 FG - Filter Group
 +++++++++++++++++
-   
+
 Filter hosts by group returning all hosts that belongs to given group::
 
     salt nornir-proxy-1  nr.inventory FG="lab"
-    
+
 FP - Filter Prefix
 ++++++++++++++++++
 
@@ -66,9 +88,10 @@ Filter hosts by checking if hosts hostname is part of at least one of given IP P
 
     salt nornir-proxy-1  nr.inventory FP="192.168.217.0/29, 192.168.2.0/24"
     salt nornir-proxy-1  nr.inventory FP='["192.168.217.0/29", "192.168.2.0/24"]'
-    
-If hostname is an IP, will use it as is, if it is FQDN, will attempt to resolve it to 
-obtain IP address. If DNS resolution fails, host fails the check.
+
+If host's inventory hostname is IP, will use it as is, if it is FQDN, will
+attempt to resolve it to obtain IP address, if DNS resolution fails, host
+fails the check.
 
 FL - Filter List
 ++++++++++++++++
@@ -77,12 +100,12 @@ Match only hosts with names in provided list::
 
     salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
     salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
-	
+
 jumphosts or bastions
 ---------------------
 
-`nr.cli` function and `nr.cfg` with `plugin="netmiko"` can interact with devices
-behind jumposts. NAPALM or NETCONF task plugins does not support that.
+``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"`` can interact with devices
+behind jumposts, NAPALM or NETCONF task plugins does not support that.
 
 Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
@@ -92,18 +115,17 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
         platform: ios
         password: user
         username: user
-        data: 
+        data:
           jumphost:
             hostname: 172.16.0.10
             port: 22
             password: admin
             username: admin
 """
-from __future__ import absolute_import
 
 # Import python libs
 import logging
-import sys, traceback
+import sys
 
 # import salt libs
 from salt.exceptions import CommandExecutionError
@@ -136,9 +158,10 @@ def __virtual__():
 
 
 def _form_results(nr_results, add_details=False):
-    """Helper function to transform Nornir results in dictionary
-    
-    :parap add_details: boolean to indicate if results should contain config info
+    """
+    Helper function to transform Nornir results in dictionary
+
+    :parap add_details: boolean to indicate if results should contain more info
     """
     ret = {}
     for hostname, results in nr_results.items():
@@ -169,7 +192,7 @@ def _form_results(nr_results, add_details=False):
 
 def _connect_to_device_behind_jumphost(task, connection_plugin):
     """
-    Establich connection to devices behind jumphost/bastion
+    Establish connection to devices behind jumphost/bastion
     """
     try:
         import paramiko
@@ -180,7 +203,9 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
         # initiate connection to jumphost
         if not jumphosts_connections.get(jumphost["hostname"]):
             jumphost_ssh_client = paramiko.client.SSHClient()
-            jumphost_ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            jumphost_ssh_client.set_missing_host_key_policy(
+                paramiko.AutoAddPolicy()
+            )
             jumphost_ssh_client.connect(**jumphost)
             jumphosts_connections[jumphost["hostname"]] = {
                 "jumphost_ssh_client": jumphost_ssh_client,
@@ -207,26 +232,6 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
         task.host["exception"] = "Jumphost {}, error - {}".format(
             task.host["jumphost"]["hostname"], e
         )
-
-
-def _to_text(nr_results):
-    """
-    Helper function to combine results output for TTP processing
-    into chunks of text from Nornir run results, reconstructing 
-    device prompt for TTP `gethostname` getter.
-    """
-    ret = []
-    for hostname, commands in nr_results.items():
-        ret.append("")
-        for command, output in commands.items():
-            if isinstance(output, str):
-                ret[-1] += "\n{}#{}\n{}".format(hostname, command, output)
-            elif isinstance(output, dict) and "result" in output:
-                ret[-1] += "\n{}#{}\n{}".format(
-                    hostname, command, str(output["result"])
-                )
-    log.debug(ret)
-    return ret
 
 
 # -----------------------------------------------------------------------------
@@ -267,7 +272,9 @@ def _netmiko_send_config(task, config, **kwargs):
         _connect_to_device_behind_jumphost(task, connection_plugin="netmiko")
     # push config to devices
     task.run(
-        task=netmiko_send_config, config_commands=rendered_config.splitlines(), **kwargs
+        task=netmiko_send_config,
+        config_commands=rendered_config.splitlines(),
+        **kwargs
     )
     task.host.close_connections()
 
@@ -291,7 +298,7 @@ def _render_config_template(task, config, kwargs):
     """
     Helper function to render config template with adding task.host
     to context.
-    
+
     This function also cleans template engine related arguments
     from kwargs.
     """
@@ -315,11 +322,11 @@ def _render_config_template(task, config, kwargs):
 def inventory(**kwargs):
     """
     Return inventory dictionary for Nornir hosts
-    
+
     :param Fx: filters to filter hosts
-    
+
     Sample Usage::
-    
+
         salt nornir-proxy-1 nr.inventory
         salt nornir-proxy-1 nr.inventory FB="R[12]"
     """
@@ -330,13 +337,13 @@ def cli(*commands, **kwargs):
     """
     Method to retrieve commands output from devices using *netmiko_send_command*
     task plugin.
-    
+
     :param commands: list of commands
     :param Fx: filters to filter hosts
     :param netmiko_kwargs: kwargs to pass on to netmiko send_command methos
-    
+
     Sample Usage::
-    
+
          salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]"
          salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
     """
@@ -351,21 +358,23 @@ def cli(*commands, **kwargs):
 
 def task(plugin, *args, **kwargs):
     """
-    Function to invoke any of supported nornir task plugins. This function
+    Function to invoke any of supported Nornir task plugins. This function
     will perform dynamic import of requested plugin function and execute
     nr.run using supplied args and kwargs
-    
+
     :param plugin: *plugin_name.task_name* to import from *nornir.plugins.tasks*
     :param Fx: filters to filter hosts
-    
+
     Sample usage::
-    
+
         salt nornir-proxy-1 nr.task "networking.napalm_cli" commands='["show ip arp"]' FB="IOL1"
         salt nornir-proxy-1 nr.task "networking.netmiko_send_config" config_commands='["ip scp server enable"]'
     """
     # import task function, below two lines are the same as
     # from nornir.plugins.tasks.plugin_name import task_name as task_function
-    module = __import__("nornir.plugins.tasks.{}".format(plugin), fromlist=[""])
+    module = __import__(
+        "nornir.plugins.tasks.{}".format(plugin), fromlist=[""]
+    )
     task_function = getattr(module, plugin.split(".")[-1])
     # run task
     output = __proxy__["nornir.run"](task=task_function, *args, **kwargs)
@@ -374,31 +383,30 @@ def task(plugin, *args, **kwargs):
 
 def cfg(*commands, **kwargs):
     """
-    Function to push configuration to devices using *napalm_configure* or 
+    Function to push configuration to devices using *napalm_configure* or
     *netmiko_send_config* task plugin.
-    
+
     :param commands: list of commands to send to device
     :param filename: path to file with configuration
     :param template_engine: template engine to render configuration, default is jinja
     :param saltenv: name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param plugin: name of configuration task plugin to use - napalm (default) or netmiko
+    :param plugin: name of configuration task plugin to use - NAPALM (default) or Netmiko
     :param dry_run: boolean, default False, controls whether to apply changes to device or simulate them
     :param Fx: filters to filter hosts
-    
-    .. warning:: dry_run not supported by netmiko plugin
+
+    .. warning:: dry_run not supported by Netmiko plugin
 
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host
     inventory data.
 
     Sample usage::
-    
+
         salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
         salt nornir-proxy-1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
-        salt nornir-proxy-1 nr.cfg commands="logging host 1.1.1.1 \n ntp server 1.1.1.2" FB="R[12]" 
-        salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko" 
+        salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
         salt nornir-proxy-1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
     """
     # get arguments
@@ -424,133 +432,40 @@ def cfg(*commands, **kwargs):
 
 def cfg_gen(filename, *args, **kwargs):
     """
-    Function to render configuration from template file. No config pushed to devices.
-    
-    This function can be useful to stage/test templates or when configuration need to be 
-    generated without pushing it to devices.
-    
+    Function to render configuration from template file. No configuration pushed
+    to devices.
+
+    This function can be useful to stage/test templates or to generate configuration
+    without pushing it to devices.
+
     :param filename: path to template
     :param template_engine: template engine to render configuration, default is jinja
     :param saltenv: name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    
+
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
-    template engine loaded with additional context variable `host`, to access Nornir host
+    template engine loaded with additional context variable `host`, to access Nornir host's
     inventory data.
-    
-    Returns rendered configuration
+
+    Returns rendered configuration.
 
     Sample usage::
-    
+
         salt nornir-proxy-1 nr.cfg_gen filename=salt://templates/template.j2 FB="R[12]"
-        
+
     Sample template.j2 content::
-    
+
         proxy data: {{ pillar.proxy }}
         jumphost_data: {{ host["jumphost"] }} # "jumphost" defined in host's data
         hostname: {{ host.name }}
         platform: {{ host.platform }}
     """
-    # get config file content
+    # get configuration file content
     config = __salt__["cp.get_file_str"](
         filename, saltenv=kwargs.get("saltenv", "base")
     )
     kwargs["filename"] = filename
-    # renred template
+    # render template
     output = __proxy__["nornir.run"](task=_cfg_gen, config=config, **kwargs)
     return _form_results(output)
-
-
-def ttp(*args, **kwargs):
-    """
-    TTP function to retrieve data from devices and parse it with 
-    TTP templates. Commands output retrieved from devices using nr.cli
-    function.
-    
-    :param template: path to TTP template
-    :param commands: list of show commands to get from devices
-    :param kwargs: any additional arguments supported by `nr.cli` function
-    :param saltenv: name of SALT environment
-    :param vars: dictionary of template variables to pass on to TTP parser
-    :param ttp_res_kwargs: kwargs to pass to TTP result method
-    
-    Sample Usage::
-    
-        salt nornir-proxy-1 nr.ttp salt://path/to/ttp_template.txt
-        salt nornir-proxy-1 nr.ttp salt://path/to/ttp_template.txt commands='["show run", "show version"]'
-        salt nornir-proxy-1 nr.ttp salt://path/to/ttp_template.txt netmiko_kwargs='{"strip_prompt": False}'
-        salt nornir-proxy-1 nr.ttp "show run" "show version" template=salt://path/to/ttp_template.txt FB="R[123]"
-        salt nornir-proxy-1 nr.ttp commands='["show run", "show version"]' template=salt://path/to/ttp_template.txt FB="R[123]" 
-        salt nornir-proxy-1 nr.ttp salt://path/to/ttp_template.txt ttp_res_kwargs='{"structure": "dictionary"}'
-    """
-    # get arguments
-    if "template" in kwargs:
-        commands = args
-        template = kwargs.pop("template")
-    else:
-        template = args[0]
-        commands = kwargs.pop("commands", [])
-    vars_to_share = kwargs.pop("vars", {})
-    ttp_res_kwargs = kwargs.pop("ttp_res_kwargs", {})
-    # create TTP parser
-    try:
-        from ttp import ttp as ttp_lib
-    except ImportError:
-        return "Failed to import TTP library, make sure it is installed."
-    parser = ttp_lib(vars=vars_to_share)
-    # get ttp template
-    template_text = __salt__["cp.get_file_str"](
-        template, saltenv=kwargs.pop("saltenv", "base")
-    )
-    if not template_text:
-        return "Failed to get TTP '{}' template".format(template)
-    try:
-        parser.add_template(template_text)
-    except:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        return "Failed to load TTP template: {}\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
-        )        
-    # get commands output from devices if any
-    if commands:
-        default_input = cli(*commands, **kwargs)
-        [parser.add_input(i) for i in _to_text(default_input)]
-    # run inputs if any
-    input_load = parser.get_input_load()
-    for template_name, template_inputs in input_load.items():
-        for inpt_name, input_params in template_inputs.items():
-            if not "arg" in input_params and not "kwarg" in input_params:
-                continue
-            function = input_params.get("fun", "nr.cli").lower()
-            arguments = input_params.get("arg", [])
-            function_kwargs = input_params.get("kwarg", {})
-            # get output from minions
-            if function == "nr.cli":
-                output = cli(*arguments, **function_kwargs)
-            elif function == "nr.task":
-                output = task(*arguments, **function_kwargs)
-            else:
-                log.error(
-                    "Input '{}' unsupported function '{}', use 'nr.cli' or 'nr.task'".format(
-                        inpt_name, function
-                    )
-                )
-            [
-                parser.add_input(
-                    data=i, template_name=template_name, input_name=inpt_name
-                )
-                for i in _to_text(output)
-            ]
-    # parse data
-    try:
-        parser.parse(one=True)
-        ret = parser.result(**ttp_res_kwargs)
-    except:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        return "Failed to parse output with TTP template \n\nTemplate:\n{}...\n\nError:\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
-        )
-    return ret
