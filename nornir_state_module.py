@@ -35,9 +35,9 @@ def cfg(*args, **kwargs):
     """
     Enforce configuration state on device using Nornir
     execution module ``nr.cfg`` function.
-    
+
     """
-    state_name = kwargs.pop("name") 
+    state_name = kwargs.pop("name")
     result = __salt__["nr.cfg"](**kwargs)
     ret = {
         "name": state_name,
@@ -47,14 +47,14 @@ def cfg(*args, **kwargs):
     }
     return ret
 
-    
+
 def task(*args, **kwargs):
     """
     Enforce configuration state on device using Nornir
     execution module ``nr.task`` function.
-    
+
     """
-    state_name = kwargs.pop("name") 
+    state_name = kwargs.pop("name")
     result = __salt__["nr.task"](**kwargs)
     ret = {
         "name": state_name,
