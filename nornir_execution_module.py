@@ -31,11 +31,47 @@ Things to keep in mind:
 
 Commands timeout
 ----------------
+
 It is recommended to increase
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
 or use ``--timeout=60`` option to wait for minion return, as on each call Nornir
 has to initiate connections to devices and all together it might take more than
 5 seconds for task to complete.
+
+AAA considerations
+------------------
+
+Quiet often, AAA servers (Radius, Tacacs) might get overloaded with authentication
+and authorization requests coming from devices due to Nornir tries to establish
+connections with them, that effectively results in jobs failures. This problem
+equally true for jobs executed from CLI as well as for scheduled jobs. There are
+several things can be done to mitigate such a problem:
+
+- ``splay`` parameter can be supplied to ``nr.cli`` and ``nr.cfg`` commands to
+ distributed threads start time in attempt to decrease load on AAA servers, default
+ threads splay value is 500ms, meaning threads will randomly start in between 0
+ and 500ms interval
+- ``num_workers`` proxy settings parameter can be changed from default 100 to
+ lower values, that way overall execution time would increase, at the same time
+ decreasing the amount of simultaneous requests to AAA servers
+- Various Netmiko module connection timeouts can be tuned, for instance
+ ``conn_timeout`` or ``auth_timeout`` parameters
+- For scheduled tasks, consider using scheduler ``splay`` parameter to randomize
+ tasks start time
+- Using devices local authentication and authorization as apposed to AAA servers
+ is against best practices, but might be the option one can attempt
+
+Devices connections limits
+--------------------------
+
+As Nornir proxy has to initiate new connection to devices for each task, running
+too many tasks might hit certain devices' limits, such as:
+
+- maximum allowed number of simultaneous VTY connections
+- maximum allowed number of simultaneous connections per user
+
+As a result, it make sense to increase above numbers and/or engineer tasks execution
+to work within these limits.
 
 Filtering Hosts
 ---------------
@@ -101,7 +137,7 @@ Match only hosts with names in provided list::
     salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
     salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
 
-jumphosts or bastions
+Jumphosts or Bastions
 ---------------------
 
 ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"`` can interact with devices
