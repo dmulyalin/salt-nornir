@@ -41,6 +41,7 @@ Above architecture helps avoid these problems:
 
 - Double targeting required to narrow down tasks execution to a subset of hosts
 - In addition to knowing how pillar works, one will have to know how [Nornir inventory](https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html) structured to use it effectively, as Nornir inventory integrated in proxy-minion pillar
+- Tasks executed sequentially one after another, if a lot of tasks scheduled simultaneously, they will consume resource waiting to execute
 
 
 # How to use
