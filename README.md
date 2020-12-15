@@ -31,7 +31,7 @@ To illustrate, say we want to manage same 1000 devices, but with Nornir proxy. F
 
 To facilitate long running connections, proxy-minion architecture adapted to use queues for inter-process jobs communication.
 
-<img src="nornir_proxy_inter_process_communication.png">
+<img src="nornir_proxy_inter_process_communication_v0.png">
 
 Above architecture helps avoid these problems:
 - If no long running connections exists to devices, each new task creates dedicated connections to devices, increasing overall execution time
