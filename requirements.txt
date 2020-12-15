@@ -1,1 +1,2 @@
-nornir==2.5.0
+nornir>=3.0.0
+nornir-salt>=0.1.1
