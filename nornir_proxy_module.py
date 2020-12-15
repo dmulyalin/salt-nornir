@@ -2,7 +2,7 @@
 Nornir Proxy module
 ===================
 
-.. versionadded:: v3000
+.. versionadded:: v3001
 
 :codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 :maturity:   new
@@ -12,12 +12,17 @@ Nornir Proxy module
 Dependencies
 ------------
 
-Nornir `2.5.0 <https://github.com/nornir-automation/nornir/releases/tag/v2.5.0>`_
+Nornir 3.x uses modular approach for plugins. As a result  required 
+plugins need to be installed separately from Nornir Core library. Main 
+plugin to install is:
 
-This proxy module uses `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
-library to interact with devices over SSH, Telnet or NETCONF. Nornir module need
-to be installed on proxy-minion machine - ``pip install nornir==2.5.0``, Nornir
-3.0.0 not supported yet.
+- `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ ``pip install nornir-salt``
+
+``nornir-salt`` will install these additional dependencies automatically:
+
+- `Nornir <https://github.com/nornir-automation/nornir>`_ ``pip install nornir``
+- `nornir_netmiko <https://github.com/ktbyers/nornir_netmiko/>`_ ``pip install nornir_netmiko``
+- `nornir_napalm <https://github.com/nornir-automation/nornir_napalm/>`_ ``pip install nornir_napalm``
 
 Introduction
 ------------
@@ -50,22 +55,22 @@ Proxy parameters:
 - ``proxytype`` nornir
 - ``proxy_always_alive`` is ignored
 - ``multiprocessing`` set to ``True`` is a recommended way to run this proxy
-- ``num_workers`` maximum number of workers threads to use within Nornir
 - ``process_count_max`` maximum number of processes to use to limit
   a number of simultaneous tasks and maximum number of active connections
   to devices
-- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory
-  for tasks executed by this proxy-minion. Nornir has access to multiple devices,
-  by default, if no filter provided, task will run for all devices. ``nornir_filter_required``
-  allows to change behavior to opposite, if no filter provided, no devices matched,
-  task will not run. It is a safety measure against running task accidentally for
-  many devices. ``FB="*"`` filter can be used to run task on all devices.
+- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory 
+  for tasks executed by this proxy-minion. Nornir has access to
+  multiple devices, by default, if no filter provided, task will run for all
+  devices, ``nornir_filter_required`` allows to change behaviour to opposite,
+  if no filter provided, task will not run at all. It is a safety measure against
+  running task for all devices accidentally, instead, filter ``FB="*"`` can be 
+  used to run task for all devices.
+- ``runner`` - Nornir runner parameters to use for this proxy module
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
-information about ``hosts``, ``groups`` and ``defaults``. Conveniently, Nornir
-inventory is nothing more than a nested, Python dictionary, as a result it is
-easy to define it in proxy-minion pillar.
+information about ``hosts``, ``groups`` and ``defaults``. Nornir inventory is
+a nested, Python dictionary and it is easy to define it in proxy-minion pillar.
 
 Nornir proxy-minion pillar example:
 
@@ -73,11 +78,14 @@ Nornir proxy-minion pillar example:
 
     proxy:
       proxytype: nornir
-      num_workers: 100
       process_count_max: 3
       multiprocessing: True
       nornir_filter_required: True
-
+      runner:
+         plugin: threaded
+         options:
+             num_workers: 100
+             
     hosts:
       IOL1:
         hostname: 192.168.217.10
@@ -116,27 +124,40 @@ Nornir proxy-minion pillar example:
 
     defaults: {}
 
-test.ping function
-------------------
+Nornir runners
+--------------
 
-On :py:func:`test.ping <salt.modules.test.ping>` call Nornir proxy establishes
-TCP connections to devices on configured ports to check if they are reachable
-and responding, effectively doing TCP ping.
+Runners in nornir defines how to run tasks for hosts. If no ``runner``
+parameters provided in proxy-minion pillar, ``RetryRunner`` will be used.
+``RetryRunner`` runner included in 
+`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library.
 """
 
 # Import python std lib
 import logging
-from fnmatch import fnmatchcase
+import threading
+import multiprocessing
+import queue
+
+log = logging.getLogger(__name__)
+
+# import SALT libs
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
     from nornir import InitNornir
-    from nornir.core.deserializer.inventory import Inventory
-    from nornir.core.filter import F
-    from nornir.plugins.tasks.networking import tcp_ping
+    from nornir.core.task import Result, Task
+    from nornir_salt.plugins.functions import FFun
+    from nornir_salt.plugins.functions import ResultSerializer
+    from nornir_salt import tcp_ping
+    from nornir_netmiko import netmiko_send_command
+    from nornir_netmiko import netmiko_send_config
+    from nornir_napalm.plugins.tasks import napalm_configure
 
     HAS_NORNIR = True
 except ImportError:
+    log.debug("Nornir-proxy - failed importing Nornir modules")
     HAS_NORNIR = False
 # -----------------------------------------------------------------------------
 # proxy properties
@@ -149,7 +170,6 @@ __proxyenabled__ = ["nornir"]
 # -----------------------------------------------------------------------------
 
 __virtualname__ = "nornir"
-log = logging.getLogger(__name__)
 nornir_data = {"initialized": False}
 
 # -----------------------------------------------------------------------------
@@ -178,43 +198,47 @@ def init(opts):
     """
     Initiate nornir by calling InitNornir()
     """
+    default_runner = {
+        "plugin": "RetryRunner",
+        "options": {
+            "num_workers": 100,
+            "num_connectors": 10,
+            "connect_retry": 3,
+            "connect_backoff": 1000,
+            "connect_splay": 100,
+            "task_retry": 3,
+            "task_backoff": 1000,
+            "task_splay": 100,
+        },
+    }
     opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
     nornir_data["nr"] = InitNornir(
-        core={"num_workers": opts["proxy"].get("num_workers", 100)},
         logging={"enabled": False},
+        runner=opts["proxy"].get("runner", default_runner),
         inventory={
+            "plugin": "DictInventory",
             "options": {
                 "hosts": opts["pillar"]["hosts"],
                 "groups": opts["pillar"].get("groups", {}),
                 "defaults": opts["pillar"].get("defaults", {}),
-            }
+            },
         },
     )
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
     )
     nornir_data["initialized"] = True
+    nornir_data["jobs_queue"] = multiprocessing.Queue()
+    nornir_data["res_queue"] = multiprocessing.Queue()
+    nornir_data["worker_thread"] = threading.Thread(target=_worker).start()
     return True
-
-
-def alive(opts):
-    """
-    Return Nornir status
-    """
-    return nornir_data["initialized"]
 
 
 def ping():
     """
-    Check that hosts are reachable on ports given in inventory
+    Return Nornir proxy status
     """
-    output = nornir_data["nr"].run(task=_tcp_ping)
-    return {
-        h: i.result
-        for h, res in output.items()
-        for i in res
-        if not i.name.startswith("_")
-    }
+    return nornir_data["initialized"]
 
 
 def initialized():
@@ -229,7 +253,8 @@ def shutdown():
     Closes connections to devices and deletes Nornir object.
     """
     nornir_data["nr"].close_connections(on_good=True, on_failed=True)
-    del nornir_data["nr"]
+    nornir_data["jobs_queue"].put(None)
+    del nornir_data["nr"], nornir_data["worker_thread"]
     nornir_data["initialized"] = False
     return True
 
@@ -249,138 +274,120 @@ def grains_refresh():
 
 
 # -----------------------------------------------------------------------------
+# Nornir task functions
+# -----------------------------------------------------------------------------
+
+
+def _netmiko_send_commands(task, commands, **kwargs):
+    for command in commands:
+        task.run(
+            task=netmiko_send_command,
+            command_string=command,
+            name=command,
+            **kwargs.get("netmiko_kwargs", {})
+        )
+    return Result(host=task.host)
+
+
+def _napalm_configure(task, config, **kwargs):
+    # render configuration
+    rendered_config = _render_config_template(task, config, kwargs)
+    # push config to devices
+    task.run(task=napalm_configure, configuration=rendered_config.result, **kwargs)
+    return Result(host=task.host)
+
+
+def _netmiko_send_config(task, config, **kwargs):
+    # render configuration
+    rendered_config = _render_config_template(task, config, kwargs)
+    # push config to devices
+    task.run(
+        task=netmiko_send_config,
+        config_commands=rendered_config.result.splitlines(),
+        **kwargs
+    )
+    return Result(host=task.host)
+
+
+def _cfg_gen(task, config, **kwargs):
+    """
+    Task function for cfg_gen method to render template with pillar
+    and Nornir host Inventory data
+    """
+    task.run(
+        task=_render_config_template,
+        name="Rendered {} config".format(kwargs.get("filename", task.host.hostname)),
+        config=config,
+        kwargs=kwargs,
+    )
+    return Result(host=task.host)
+
+
+def _render_config_template(task, config, kwargs):
+    """
+    Helper function to render config template with adding task.host
+    to context.
+
+    This function also cleans template engine related arguments
+    from kwargs.
+    """
+    context = kwargs.pop("context", {})
+    context.update({"host": task.host})
+    rendered_config = __salt__["file.apply_template_on_contents"](
+        contents=config,
+        template=kwargs.pop("template_engine", "jinja"),
+        context=context,
+        defaults=kwargs.pop("defaults", {}),
+        saltenv=kwargs.pop("saltenv", "base"),
+    )
+    return Result(host=task.host, result=rendered_config)
+
+
+# -----------------------------------------------------------------------------
 # proxy module private functions
 # -----------------------------------------------------------------------------
 
 
-def _tcp_ping(task):
-    """
-    Helper function to run TCP ping to hosts
-    """
-    port = task.host.port or 22
-    task.run(task=tcp_ping, name="TCP ping", ports=[port])
+def _import_task(plugin):
+    # import task function, below two lines are the same as
+    # from nornir.plugins.tasks import task_name as task_function
+    try:
+        module = __import__(plugin, fromlist=[""])
+        task_function = getattr(module, plugin.split(".")[-1])
+        return task_function
+    except ImportError:
+        return None
 
 
-def _filter_FO(ret, filter_data):
+def _worker():
     """
-    Function to filter hosts using Filter Object
+    Target function for worker thread to run jobs from
+    jobs_queue submitted by execution module processes
     """
-    if isinstance(filter_data, dict):
-        ret = ret.filter(F(**filter_data))
-    elif isinstance(filter_data, list):
-        ret = ret.filter(F(**filter_data[0]))
-        for item in filter_data[1:]:
-            filtered_hosts = nornir_data["nr"].filter(F(**item))
-            ret.inventory.hosts.update(filtered_hosts.inventory.hosts)
-    return ret
-
-
-def _filter_FB(ret, pattern):
-    """
-    Function to filter hosts by name using glob patterns
-    """
-    return ret.filter(filter_func=lambda h: fnmatchcase(h.name, pattern))
-
-
-def _filter_FG(ret, group):
-    """
-    Function to filter hosts using Groups
-    """
-    return ret.filter(filter_func=lambda h: h.has_parent_group(group))
-
-
-def _filter_FP(ret, pfx):
-    """
-    Function to filter hosts based on IP Prefixes
-    """
-    import ipaddress
-    import socket
-
-    socket.setdefaulttimeout(1)
-
-    def _filter_net(host):
-        # convert host ip to ip address object
+    while True:
         try:
-            ip_addr = ipaddress.ip_address(host.hostname)
-        except ValueError:
-            # try to resolve hostname using DNS
-            try:
-                ip_str = socket.gethostbyname(host.hostname)
-                ip_addr = ipaddress.ip_address(ip_str)
-            except Exception as e:
-                log.error(
-                    "FP failed to convert host IP '{}', error '{}'".format(
-                        host.name, e
-                    )
-                )
-                return False
-        # run filtering
-        for net in networks:
-            if ip_addr in net:
-                return True
-        return False
-
-    # make a list of network objects
-    prefixes = (
-        [i.strip() for i in pfx.split(",")] if isinstance(pfx, str) else pfx
-    )
-    networks = []
-    for prefix in prefixes:
+            job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
+            if job is None:
+                break
+        except queue.Empty:
+            continue
         try:
-            networks.append(ipaddress.ip_network(prefix))
+            task_name = job["task_name"]
+            task_fun = globals().get(task_name, _import_task(task_name))
+            # run task function if its found
+            if task_fun:
+                ret = run(task_fun, *job["args"], **job["kwargs"])
+                output = ResultSerializer(ret, job.get("add_details", False))
+            else:
+                ret = None
+                output = "Error - failed to import task function '{}'".format(task_name)
+            # submit results in results queue
+            nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
+            del ret, output, job  
         except Exception as e:
-            log.error(
-                "FP failed to convert prefix '{}', error '{}'".format(
-                    prefix, e
-                )
-            )
-    # filter hosts
-    return ret.filter(filter_func=_filter_net)
-
-
-def _filter_FL(ret, names_list):
-    """
-    Function to filter hosts names based on list of names
-    """
-    names_list = (
-        [i.strip() for i in names_list.split(",")]
-        if isinstance(names_list, str)
-        else names_list
-    )
-    return ret.filter(filter_func=lambda h: h.name in names_list)
-
-
-def _filters_dispatcher(kwargs):
-    """
-    Inventory filters dispatcher function
-    """
-    ret = nornir_data["nr"]
-    nornir_data["has_filter"] = False
-    if kwargs.get("FO"):
-        ret = _filter_FO(ret, kwargs.pop("FO"))
-        nornir_data["has_filter"] = True
-    if kwargs.get("FB"):
-        ret = _filter_FB(ret, kwargs.pop("FB"))
-        nornir_data["has_filter"] = True
-    if kwargs.get("FG"):
-        ret = _filter_FG(ret, kwargs.pop("FG"))
-        nornir_data["has_filter"] = True
-    if kwargs.get("FP"):
-        ret = _filter_FP(ret, kwargs.pop("FP"))
-        nornir_data["has_filter"] = True
-    if kwargs.get("FL"):
-        ret = _filter_FL(ret, kwargs.pop("FL"))
-        nornir_data["has_filter"] = True
-    return ret
-
-
-def _refresh(**kwargs):
-    """
-    Method to reinitiate nornir with latest pillar data
-    """
-    opts = {"pillar": __salt__["pillar.items"](), "proxy": __opts__["proxy"]}
-    init(opts)
-    log.debug("Reinitiated Nornir with latest pillar data")
+            output = "Nornir-proxy job failed: {}, error: '{}'".format(job, e)
+            nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
+            continue
 
 
 # -----------------------------------------------------------------------------
@@ -394,11 +401,9 @@ def inventory_data(**kwargs):
 
     :param Fx: filters to filter hosts
     """
-    # re-init Nornir
-    _refresh()
     # filter hosts to return inventory for
-    hosts = _filters_dispatcher(kwargs=kwargs)
-    return Inventory.serialize(hosts.inventory).dict()
+    hosts = FFun(nornir_data["nr"], kwargs=kwargs)
+    return hosts.dict()
 
 
 def run(task, *args, **kwargs):
@@ -407,27 +412,39 @@ def run(task, *args, **kwargs):
 
     :param task: callable task function
     :param Fx: filters to filter hosts
-    :param kwargs: arguments to pass to `Nornir run <https://nornir.readthedocs.io/en/latest/ref/api/nornir.html#nornir.core.Nornir.run>`_ method
+    :param kwargs: arguments to pass to ``nornir_object.run`` method
     """
-    # re-init Nornir
-    _refresh()
     # set dry_run argument
     nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
-    # Filter hosts to run tasks for. Do not unpack kwargs, e.g. **kwargs, as need
-    # to pop filter keys from it. This is required to unpack kwargs to run method
-    # without causing task function to choke on unsupported argument
-    hosts = _filters_dispatcher(kwargs=kwargs)
+    # reset failed hosts if any
+    nornir_data["nr"].data.reset_failed_hosts()
+    # Filter hosts to run tasks for
+    hosts = FFun(nornir_data["nr"], kwargs=kwargs)
     # check if nornir_filter_required is True but no filter
     if (
-        nornir_data["nornir_filter_required"] == True and
-        nornir_data.get("has_filter") == False
+        nornir_data["nornir_filter_required"] == True
+        and hosts.state.has_filter == False
     ):
-        log.warning("nornir_filter_required is True but no filter provided")
-        return {}
+        raise CommandExecutionError(
+            "Proxy 'nornir_filter_required' is True but no filter provided"
+        )
     # run tasks
-    ret = hosts.run(
+    return hosts.run(
         task,
         *[i for i in args if not i.startswith("_")],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
-    return ret
+
+
+def get_jobs_queue():
+    """
+    Function to return jobs queue to submit jobs into
+    """
+    return nornir_data["jobs_queue"]
+
+
+def get_results_queue():
+    """
+    Function to return results queue to get results from
+    """
+    return nornir_data["res_queue"]
