@@ -46,12 +46,12 @@ Above architecture helps avoid these problems:
 
 # How to use
 
-Place files in appropriate directories:
+# Installation
+
+From [PyPi distribution](https://pypi.org/project/salt-nornir/0.1.0/)
 
 ```
-salt://_proxy/nornir_proxy_module.py
-salt://_modules/nornir_execution_module.py
-salt://_states/nornir_state_module.py
+pip install salt_nornir
 ```
 
 Sample Pillar with Nornir inventory:
@@ -59,9 +59,6 @@ Sample Pillar with Nornir inventory:
 ```
 proxy:
   proxytype: nornir
-  num_workers: 100         
-  process_count_max: 3     
-  multiprocessing: True        
   
 hosts:
   LAB-R1:
@@ -95,9 +92,6 @@ groups:
   lab:
     username: nornir
     password: nornir
-    connection_options: 
-      napalm:
-        optional_args: {dest_file_system: "system:"}
           
 defaults: {}
 ```
@@ -105,8 +99,5 @@ defaults: {}
 Start salt-proxy process, accept key on master and run commands to explore doc strings for further usage:
 
 ```
-salt nornir-minion-id saltutil.sync_all
-salt nornir-minion-id sys.doc nr.cli
-salt nornir-minion-id sys.doc nr.cfg
-salt nornir-minion-id sys.doc nr.inventory
+salt nornir-minion-id sys.doc nr
 ```
