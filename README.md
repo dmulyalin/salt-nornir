@@ -19,7 +19,7 @@ Not a secret that normally for each network device we want to manage with SALT, 
 
 ## Design
 
-<img src="Nornir proxy-minion architecture.png">
+<img src="images/Nornir proxy-minion architecture.png">
 
 [Nornir ](https://nornir.readthedocs.io/en/latest/index.html) is an open-source automation software that uses same libraries under the hood as some other Network proxy-minion - NAPALM, Netmiko, Paramiko, NCClient etc. The key differentiator of Nornir is that it uses Python to express task execution work flows and runs them in parallel using threading. 
 
@@ -31,7 +31,7 @@ To illustrate, say we want to manage same 1000 devices, but with Nornir proxy. F
 
 To facilitate long running connections, proxy-minion architecture adapted to use queues for inter-process jobs communication.
 
-<img src="nornir_proxy_inter_process_communication_v0.png">
+<img src="images/nornir_proxy_inter_process_communication_v0.png">
 
 Above architecture helps avoid these problems:
 - If no long running connections exists to devices, each new task creates dedicated connections to devices, increasing overall execution time

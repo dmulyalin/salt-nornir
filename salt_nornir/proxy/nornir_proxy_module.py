@@ -66,6 +66,8 @@ Proxy parameters:
   running task for all devices accidentally, instead, filter ``FB="*"`` can be 
   used to run task for all devices.
 - ``runner`` - Nornir runner parameters to use for this proxy module
+- ``child_process_timeout`` - int, how much seconds wait before kill child process,
+  default 660 seconds
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
@@ -138,8 +140,15 @@ import logging
 import threading
 import multiprocessing
 import queue
+import os
+import psutil
+import time
+import sys
+import traceback
+import signal
 
 log = logging.getLogger(__name__)
+minion_process = psutil.Process(os.getpid())
 
 # import SALT libs
 from salt.exceptions import CommandExecutionError
@@ -170,7 +179,38 @@ __proxyenabled__ = ["nornir"]
 # -----------------------------------------------------------------------------
 
 __virtualname__ = "nornir"
-nornir_data = {"initialized": False}
+stats_dict = {
+    "proxy_minion_id": None,
+    "main_process_is_running": 0,
+    "main_process_start_time": time.time(),
+    "main_process_start_date": time.ctime(),
+    "main_process_uptime_seconds": 0,
+    "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1000000,
+    "main_process_pid": os.getpid(),
+    "main_process_proxy_id": None,
+    "jobs_started": 0,
+    "jobs_completed": 0,
+    "jobs_failed": 0,
+    "jobs_job_queue_size": 0,
+    "jobs_res_queue_size": 0,
+    "hosts_count": 0,
+    # "hosts_connections": 0,
+    "hosts_tasks_failed": 0,
+    "timestamp": time.ctime(),
+    "child_processes_killed": 0,
+    "child_processes_count": 0,
+    # "child_processes_ram_usage": 0
+}
+nornir_data = {
+    "nr": None,
+    "initialized": False,
+    "stats": stats_dict.copy(),
+    "nornir_filter_required": False,
+    "jobs_queue": None,
+    "res_queue": None,
+    "worker_thread": None,
+    "watchdog_thread": None,
+}
 
 # -----------------------------------------------------------------------------
 # propery functions
@@ -198,23 +238,28 @@ def init(opts):
     """
     Initiate nornir by calling InitNornir()
     """
-    default_runner = {
-        "plugin": "RetryRunner",
-        "options": {
-            "num_workers": 100,
-            "num_connectors": 10,
-            "connect_retry": 3,
-            "connect_backoff": 1000,
-            "connect_splay": 100,
-            "task_retry": 3,
-            "task_backoff": 1000,
-            "task_splay": 100,
-        },
-    }
     opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
+    opts["process_count_max"] = opts["proxy"].get("process_count_max", -1)
+    runner_config = (
+        {
+            "plugin": "RetryRunner",
+            "options": {
+                "num_workers": 100,
+                "num_connectors": 10,
+                "connect_retry": 3,
+                "connect_backoff": 1000,
+                "connect_splay": 100,
+                "task_retry": 3,
+                "task_backoff": 1000,
+                "task_splay": 100,
+            },
+        }
+        if not opts["proxy"].get("runner")
+        else opts["proxy"]["runner"]
+    )
     nornir_data["nr"] = InitNornir(
         logging={"enabled": False},
-        runner=opts["proxy"].get("runner", default_runner),
+        runner=runner_config,
         inventory={
             "plugin": "DictInventory",
             "options": {
@@ -227,10 +272,19 @@ def init(opts):
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
     )
+    nornir_data["child_process_timeout"] = opts["proxy"].get(
+        "child_process_timeout", 660
+    )
     nornir_data["initialized"] = True
+    # add some stats
+    nornir_data["stats"]["proxy_minion_id"] = opts["id"]
+    nornir_data["stats"]["main_process_is_running"] = 1
+    nornir_data["stats"]["hosts_count"] = len(nornir_data["nr"].inventory.hosts.keys())
+    # Initiate multiprocessing related queus, locks and threads
     nornir_data["jobs_queue"] = multiprocessing.Queue()
     nornir_data["res_queue"] = multiprocessing.Queue()
     nornir_data["worker_thread"] = threading.Thread(target=_worker).start()
+    nornir_data["watchdog_thread"] = threading.Thread(target=_watchdog).start()
     return True
 
 
@@ -253,9 +307,9 @@ def shutdown():
     Closes connections to devices and deletes Nornir object.
     """
     nornir_data["nr"].close_connections(on_good=True, on_failed=True)
-    nornir_data["jobs_queue"].put(None)
-    del nornir_data["nr"], nornir_data["worker_thread"]
-    nornir_data["initialized"] = False
+    nornir_data["initialized"] = False  # trigger worker and watchdogs threads to stop
+    nornir_data["stats"] = stats_dict.copy()
+    del nornir_data["nr"], nornir_data["worker_thread"], nornir_data["watchdog_thread"]
     return True
 
 
@@ -351,12 +405,60 @@ def _render_config_template(task, config, kwargs):
 def _import_task(plugin):
     # import task function, below two lines are the same as
     # from nornir.plugins.tasks import task_name as task_function
-    try:
-        module = __import__(plugin, fromlist=[""])
-        task_function = getattr(module, plugin.split(".")[-1])
-        return task_function
-    except ImportError:
-        return None
+    module = __import__(plugin, fromlist=[""])
+    task_function = getattr(module, plugin.split(".")[-1])
+    return task_function
+
+
+
+def _watchdog():
+    """
+    Thread worker to maintain nornir proxy process and it's children
+    liveability.
+    """
+    child_processes = {}
+    while nornir_data["initialized"]:
+        mem_usage = minion_process.memory_info().rss / 1000000
+        log.error(
+            "Nornir-proxy MAIN PID {} watchdog, memory usage {}MByte".format(
+                os.getpid(), mem_usage
+            )
+        )
+        # Handle child processes lifespan
+        try:
+            for p in multiprocessing.active_children():
+                cpid = p.pid
+                if not p.is_alive():
+                    _ = child_processes.pop(cpid, None)
+                elif cpid not in child_processes:
+                    child_processes[cpid] = {
+                        "first_seen": time.time(),
+                        "process": p,
+                        "age": 0,
+                    }
+                elif (
+                    child_processes[cpid]["age"] > nornir_data["child_process_timeout"]
+                ):
+                    os.kill(cpid, signal.SIGKILL)
+                    nornir_data["stats"]["child_processes_killed"] += 1
+                    log.error(
+                        "Nornir-proxy MAIN PID {} watchdog, terminating child PID {}: {}".format(
+                            os.getpid(), cpid, child_processes[cpid]
+                        )
+                    )
+                    _ = child_processes.pop(cpid, None)
+                else:
+                    child_processes[cpid]["age"] = (
+                        time.time() - child_processes[cpid]["first_seen"]
+                    )
+        except:
+            tb = traceback.format_exc()
+            log.error(
+                "Nornir-proxy MAIN PID {} watchdog, child processes error: {}".format(
+                    os.getpid(), tb
+                )
+            )
+        time.sleep(30)
 
 
 def _worker():
@@ -364,30 +466,35 @@ def _worker():
     Target function for worker thread to run jobs from
     jobs_queue submitted by execution module processes
     """
-    while True:
+    while nornir_data["initialized"]:
+        job, ret, output = None, None, None
         try:
+            # get job from queue
             job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
             if job is None:
                 break
+            # run job
+            nornir_data["stats"]["jobs_started"] += 1
+            task_name = job["task_name"]
+            task_fun = globals()[task_name] if task_name in globals() else _import_task(task_name)
+            ret = run(task_fun, *job["args"], **job["kwargs"])
+            output = ResultSerializer(ret, job.get("add_details", False))
+            nornir_data["stats"]["hosts_tasks_failed"] += len(
+                nornir_data["nr"].data.failed_hosts
+            )
+            nornir_data["stats"]["jobs_completed"] += 1
         except queue.Empty:
             continue
-        try:
-            task_name = job["task_name"]
-            task_fun = globals().get(task_name, _import_task(task_name))
-            # run task function if its found
-            if task_fun:
-                ret = run(task_fun, *job["args"], **job["kwargs"])
-                output = ResultSerializer(ret, job.get("add_details", False))
-            else:
-                ret = None
-                output = "Error - failed to import task function '{}'".format(task_name)
-            # submit results in results queue
-            nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
-            del ret, output, job  
-        except Exception as e:
-            output = "Nornir-proxy job failed: {}, error: '{}'".format(job, e)
-            nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
-            continue
+        except:
+            tb = traceback.format_exc()
+            output = "Nornir-proxy MAIN PID {} job failed: {}, child PID {}, error:\n'{}'".format(
+                os.getpid(), job, job["pid"], tb
+            )
+            log.error(output)
+            nornir_data["stats"]["jobs_failed"] += 1
+        # submit job results in results queue
+        nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
+        del job, ret, output
 
 
 # -----------------------------------------------------------------------------
@@ -448,3 +555,28 @@ def get_results_queue():
     Function to return results queue to get results from
     """
     return nornir_data["res_queue"]
+
+
+def stats():
+    """
+    Function to gather and return stats about Nornir proxy process
+    """
+    # get approximate queue sizes
+    try:
+        jobs_job_queue_size = nornir_data["jobs_queue"].qsize()
+        jobs_res_queue_size = nornir_data["res_queue"].qsize()
+    except:
+        jobs_job_queue_size = -1
+        jobs_res_queue_size = -1
+    # update stats
+    nornir_data["stats"].update(
+        {
+            "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1000000,
+            "main_process_uptime_seconds": time.time() - nornir_data["stats"]["main_process_start_time"],
+            "timestamp": time.ctime(),
+            "jobs_job_queue_size": jobs_job_queue_size,
+            "jobs_res_queue_size": jobs_res_queue_size,
+            "child_processes_count": len(multiprocessing.active_children()),
+        }
+    )
+    return nornir_data["stats"]

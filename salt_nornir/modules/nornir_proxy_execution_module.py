@@ -14,8 +14,8 @@ Dependencies
 
 - :mod:`Nornir proxy minion <salt.proxy.nornir>`
 
-Nornir 3.x uses modular approach for plugins. As a result  required 
-plugins need to be installed separately from Nornir Core library. Main 
+Nornir 3.x uses modular approach for plugins. As a result  required
+plugins need to be installed separately from Nornir Core library. Main
 plugin to install is:
 
 - `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ ``pip install nornir-salt``
@@ -54,12 +54,12 @@ AAA considerations
 
 Quiet often, AAA servers (Radius, Tacacs) might get overloaded with authentication
 and authorization requests coming from devices due to Nornir establishing
-connections with them, that effectively results in jobs failures. This problem 
-equally true for jobs executed from CLI as well as for scheduled jobs. 
+connections with them, that effectively results in jobs failures. This problem
+equally true for jobs executed from CLI as well as for scheduled jobs.
 
 To overcome above problems Nornir proxy-module uses ``RetryRunner`` by default.
-``RetryRunner`` runner included in 
-`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library and was 
+``RetryRunner`` runner included in
+`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library and was
 developed to address aforemention issues.
 
 Devices connections limits
@@ -89,10 +89,10 @@ Sample command to demonstrate targeting capabilites::
 Jumphosts or Bastions
 ---------------------
 
-``RetryRunner`` included in 
+``RetryRunner`` included in
 `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library has
-support for ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"`` 
-to interact with devices behind jumposts, other tasks and runners plugins 
+support for ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"``
+to interact with devices behind jumposts, other tasks and runners plugins
 does not support that.
 
 Sample jumphost definition in host's inventory data in proxy-minion pillar::
@@ -115,11 +115,13 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
 import logging
 import os
 import time
-
-log = logging.getLogger(__name__)
+import queue
+import traceback
 
 # import salt libs
 from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
 
 # import nornir libs
 try:
@@ -152,8 +154,10 @@ def _get_results(task_name, args, kwargs, add_details):
     Function to subm,it work request in parent nornir-proxy
     process and retrieve results from results queue.
     """
-    # submit work request to main nornir-proxy process
-    jobs_queue = __proxy__["nornir.get_jobs_queue"]()    
+    jobs_queue = __proxy__["nornir.get_jobs_queue"]()
+    results_queue = __proxy__["nornir.get_results_queue"]()
+    start_time = time.time()
+    # submit work request to main proxy-minion process
     jobs_queue.put(
         {
             "task_name": task_name,
@@ -163,16 +167,23 @@ def _get_results(task_name, args, kwargs, add_details):
             "add_details": add_details
         }
     )
-    results_queue = __proxy__["nornir.get_results_queue"]()
-    while True:
-        res = results_queue.get()
-        if res["pid"] == os.getpid():
-            return res["output"]
-        else:
-            results_queue.put(res)
+    # wait 10 minites for job results return to avoid deadlocks
+    while (time.time() - start_time) < 600:
         time.sleep(0.1)
-            
-            
+        try:
+            res = results_queue.get(block=True, timeout=0.1)
+            if res["pid"] == os.getpid():
+                return res["output"]
+            else:
+                results_queue.put(res)
+        except queue.Empty:
+            continue
+        except:
+            tb = traceback.format_exc()
+            log.error("Nornir-proxy child PID {}, failed get job '{}' results, error: '{}'".format(os.getpid(), task_name, tb))
+    log.error("Nornir-proxy child PID {}, job '{}' got no results after 10min waiting.".format(os.getpid(), task_name))
+
+
 # -----------------------------------------------------------------------------
 # callable module function
 # -----------------------------------------------------------------------------
@@ -207,13 +218,15 @@ def cli(*commands, **kwargs):
          salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
          salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
     """
+    # log.error("Proxy minion nr.cli got kwargs: {}".format(kwargs))
+    __pub_jid = kwargs.get("__pub_jid")
     commands = kwargs.pop("commands", commands)
     kwargs["commands"] = [commands] if isinstance(commands, str) else commands
     kwargs["connection_name"] = "netmiko"
     return _get_results(
-        task_name="_netmiko_send_commands", 
-        args=[], 
-        kwargs=kwargs, 
+        task_name="_netmiko_send_commands",
+        args=[],
+        kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
     )
 
@@ -234,9 +247,9 @@ def task(plugin, *args, **kwargs):
         salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
     """
     return _get_results(
-        task_name=plugin, 
-        args=args, 
-        kwargs=kwargs, 
+        task_name=plugin,
+        args=args,
+        kwargs=kwargs,
         add_details=kwargs.pop("add_details", True)
     )
 
@@ -292,9 +305,9 @@ def cfg(*commands, **kwargs):
         kwargs["connection_name"] = "netmiko"
     # work and return results
     return _get_results(
-        task_name=task_name, 
-        args=[], 
-        kwargs=kwargs, 
+        task_name=task_name,
+        args=[],
+        kwargs=kwargs,
         add_details=kwargs.pop("add_details", True)
     )
 
@@ -343,9 +356,9 @@ def cfg_gen(filename, *args, **kwargs):
     kwargs["filename"] = filename
     # work and return results
     return _get_results(
-        task_name="_cfg_gen", 
-        args=[], 
-        kwargs=kwargs, 
+        task_name="_cfg_gen",
+        args=[],
+        kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
     )
 
@@ -373,8 +386,15 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     kwargs["host"] = host
     # work and return results
     return _get_results(
-        task_name="tcp_ping", 
-        args=[], 
-        kwargs=kwargs, 
+        task_name="tcp_ping",
+        args=[],
+        kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
     )
+
+
+def stats(*args, **kwargs):
+    """
+    Function to return useful stats for main nornir proxy process
+    """
+    return __proxy__["nornir.stats"]()
