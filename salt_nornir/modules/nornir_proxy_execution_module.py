@@ -127,8 +127,6 @@ log = logging.getLogger(__name__)
 try:
     from nornir import InitNornir
     from nornir_salt import tcp_ping
-    from nornir_netmiko import netmiko_send_config
-    from nornir_napalm.plugins.tasks import napalm_configure
 
     HAS_NORNIR = True
 except ImportError:
@@ -203,34 +201,6 @@ def inventory(**kwargs):
     return __proxy__["nornir.inventory_data"](**kwargs)
 
 
-def cli(*commands, **kwargs):
-    """
-    Method to retrieve commands output from devices using ``netmiko_send_command``
-    task plugin.
-
-    :param commands: list of commands
-    :param Fx: filters to filter hosts
-    :param netmiko_kwargs: kwargs to pass on to netmiko send_command methods
-    :param add_details: boolean, to include details in result or not
-
-    Sample Usage::
-
-         salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
-         salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
-    """
-    # log.error("Proxy minion nr.cli got kwargs: {}".format(kwargs))
-    __pub_jid = kwargs.get("__pub_jid")
-    commands = kwargs.pop("commands", commands)
-    kwargs["commands"] = [commands] if isinstance(commands, str) else commands
-    kwargs["connection_name"] = "netmiko"
-    return _get_results(
-        task_name="_netmiko_send_commands",
-        args=[],
-        kwargs=kwargs,
-        add_details=kwargs.pop("add_details", False)
-    )
-
-
 def task(plugin, *args, **kwargs):
     """
     Function to invoke any of supported Nornir task plugins. This function
@@ -254,10 +224,45 @@ def task(plugin, *args, **kwargs):
     )
 
 
+def cli(*commands, **kwargs):
+    """
+    Method to retrieve commands output from devices using ``send_command``
+    task plugin from either Netmiko or Scrapli library.
+
+    :param commands: list of commands
+    :param Fx: filters to filter hosts
+    :param netmiko_kwargs: kwargs to pass on to netmiko send_command methods
+    :param add_details: boolean, to include details in result or not
+    :param plugin: name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
+
+    Sample Usage::
+
+         salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
+         salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
+    """
+    # log.error("Proxy minion nr.cli got kwargs: {}".format(kwargs))
+    __pub_jid = kwargs.get("__pub_jid")
+    commands = kwargs.pop("commands", commands)
+    kwargs["commands"] = [commands] if isinstance(commands, str) else commands
+    plugin = kwargs.get("plugin", "netmiko").lower()
+    if plugin.lower() == "netmiko":
+        task_name="_netmiko_send_commands"
+        kwargs["connection_name"] = "netmiko"
+    elif plugin.lower() == "scrapli":
+        task_name="_scrapli_send_commands"
+        kwargs["connection_name"] = "scrapli"
+    return _get_results(
+        task_name=task_name,
+        args=[],
+        kwargs=kwargs,
+        add_details=kwargs.pop("add_details", False)
+    )
+
+
 def cfg(*commands, **kwargs):
     """
     Function to push configuration to devices using ``napalm_configure`` or
-    ``netmiko_send_config`` task plugin.
+    ``netmiko_send_config`` or Scrapli ``send_config`` task plugin.
 
     :param commands: list of commands to send to device
     :param filename: path to file with configuration
@@ -265,7 +270,7 @@ def cfg(*commands, **kwargs):
     :param saltenv: name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param plugin: name of configuration task plugin to use - NAPALM (default) or Netmiko
+    :param plugin: name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` or ``scrapli``
     :param dry_run: boolean, default False, controls whether to apply changes to device or simulate them
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
@@ -303,6 +308,9 @@ def cfg(*commands, **kwargs):
     elif plugin.lower() == "netmiko":
         task_name = "_netmiko_send_config"
         kwargs["connection_name"] = "netmiko"
+    elif plugin.lower() == "scrapli":
+        task_name = "_scrapli_send_config"
+        kwargs["connection_name"] = "scrapli"
     # work and return results
     return _get_results(
         task_name=task_name,

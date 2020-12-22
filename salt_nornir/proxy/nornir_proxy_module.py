@@ -12,8 +12,8 @@ Nornir Proxy module
 Dependencies
 ------------
 
-Nornir 3.x uses modular approach for plugins. As a result  required 
-plugins need to be installed separately from Nornir Core library. Main 
+Nornir 3.x uses modular approach for plugins. As a result  required
+plugins need to be installed separately from Nornir Core library. Main
 plugin to install is:
 
 - `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ ``pip install nornir-salt``
@@ -58,12 +58,12 @@ Proxy parameters:
 - ``process_count_max`` maximum number of processes to use to limit
   a number of simultaneous tasks and maximum number of active connections
   to devices
-- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory 
+- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory
   for tasks executed by this proxy-minion. Nornir has access to
   multiple devices, by default, if no filter provided, task will run for all
   devices, ``nornir_filter_required`` allows to change behaviour to opposite,
   if no filter provided, task will not run at all. It is a safety measure against
-  running task for all devices accidentally, instead, filter ``FB="*"`` can be 
+  running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
 - ``runner`` - Nornir runner parameters to use for this proxy module
 - ``child_process_timeout`` - int, how much seconds wait before kill child process,
@@ -87,7 +87,7 @@ Nornir proxy-minion pillar example:
          plugin: threaded
          options:
              num_workers: 100
-             
+
     hosts:
       IOL1:
         hostname: 192.168.217.10
@@ -131,7 +131,7 @@ Nornir runners
 
 Runners in nornir defines how to run tasks for hosts. If no ``runner``
 parameters provided in proxy-minion pillar, ``RetryRunner`` will be used.
-``RetryRunner`` runner included in 
+``RetryRunner`` runner included in
 `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library.
 """
 
@@ -143,7 +143,6 @@ import queue
 import os
 import psutil
 import time
-import sys
 import traceback
 import signal
 
@@ -159,10 +158,6 @@ try:
     from nornir.core.task import Result, Task
     from nornir_salt.plugins.functions import FFun
     from nornir_salt.plugins.functions import ResultSerializer
-    from nornir_salt import tcp_ping
-    from nornir_netmiko import netmiko_send_command
-    from nornir_netmiko import netmiko_send_config
-    from nornir_napalm.plugins.tasks import napalm_configure
 
     HAS_NORNIR = True
 except ImportError:
@@ -333,10 +328,23 @@ def grains_refresh():
 
 
 def _netmiko_send_commands(task, commands, **kwargs):
+    task_fun = _get_or_import_task_fun("nornir_netmiko.tasks.netmiko_send_command")
     for command in commands:
         task.run(
-            task=netmiko_send_command,
+            task=task_fun,
             command_string=command,
+            name=command,
+            **kwargs.get("netmiko_kwargs", {})
+        )
+    return Result(host=task.host)
+
+
+def _scrapli_send_commands(task, commands, **kwargs):
+    task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_command")
+    for command in commands:
+        task.run(
+            task=task_fun,
+            command=command,
             name=command,
             **kwargs.get("netmiko_kwargs", {})
         )
@@ -347,7 +355,8 @@ def _napalm_configure(task, config, **kwargs):
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
     # push config to devices
-    task.run(task=napalm_configure, configuration=rendered_config.result, **kwargs)
+    task_fun = _get_or_import_task_fun("nornir_napalm.plugins.tasks.napalm_configure")
+    task.run(task=task_fun, configuration=rendered_config.result, **kwargs)
     return Result(host=task.host)
 
 
@@ -355,9 +364,23 @@ def _netmiko_send_config(task, config, **kwargs):
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
     # push config to devices
+    task_fun = _get_or_import_task_fun("nornir_netmiko.tasks.netmiko_send_config")
     task.run(
-        task=netmiko_send_config,
+        task=task_fun,
         config_commands=rendered_config.result.splitlines(),
+        **kwargs
+    )
+    return Result(host=task.host)
+
+
+def _scrapli_send_config(task, config, **kwargs):
+    # render configuration
+    rendered_config = _render_config_template(task, config, kwargs)
+    # push config to devices
+    task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_config")
+    task.run(
+        task=task_fun,
+        config=rendered_config.result,
         **kwargs
     )
     return Result(host=task.host)
@@ -402,13 +425,22 @@ def _render_config_template(task, config, kwargs):
 # -----------------------------------------------------------------------------
 
 
-def _import_task(plugin):
-    # import task function, below two lines are the same as
-    # from nornir.plugins.tasks import task_name as task_function
-    module = __import__(plugin, fromlist=[""])
-    task_function = getattr(module, plugin.split(".")[-1])
+def _get_or_import_task_fun(plugin):
+    """
+    Tries to get task function from globals() dictionary,
+    if its not there tries to import task and inject it
+    in globals() dictionary for future reference.
+    """
+    task_name = plugin.split(".")[-1]
+    if task_name in globals():
+        task_function = globals()[task_name]
+    else:
+        # import task function, below two lines are the same as
+        # from nornir.plugins.tasks import task_name as task_function
+        module = __import__(plugin, fromlist=[""])
+        task_function = getattr(module, task_name)
+        globals()[task_name] = task_function
     return task_function
-
 
 
 def _watchdog():
@@ -475,8 +507,7 @@ def _worker():
                 break
             # run job
             nornir_data["stats"]["jobs_started"] += 1
-            task_name = job["task_name"]
-            task_fun = globals()[task_name] if task_name in globals() else _import_task(task_name)
+            task_fun = _get_or_import_task_fun(job["task_name"])
             ret = run(task_fun, *job["args"], **job["kwargs"])
             output = ResultSerializer(ret, job.get("add_details", False))
             nornir_data["stats"]["hosts_tasks_failed"] += len(
