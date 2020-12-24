@@ -126,7 +126,6 @@ log = logging.getLogger(__name__)
 # import nornir libs
 try:
     from nornir import InitNornir
-    from nornir_salt import tcp_ping
 
     HAS_NORNIR = True
 except ImportError:
@@ -147,7 +146,7 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def _get_results(task_name, args, kwargs, add_details):
+def _get_results(task_fun, args, kwargs, add_details):
     """
     Function to subm,it work request in parent nornir-proxy
     process and retrieve results from results queue.
@@ -155,13 +154,15 @@ def _get_results(task_name, args, kwargs, add_details):
     jobs_queue = __proxy__["nornir.get_jobs_queue"]()
     results_queue = __proxy__["nornir.get_results_queue"]()
     start_time = time.time()
+    cpid = os.getpid()
     # submit work request to main proxy-minion process
     jobs_queue.put(
         {
-            "task_name": task_name,
+            "task_fun": task_fun,
             "args": args,
             "kwargs": kwargs,
-            "pid": os.getpid(),
+            "pid": cpid,
+            "name": "{} CPID {}".format(task_fun, cpid),
             "add_details": add_details
         }
     )
@@ -170,16 +171,15 @@ def _get_results(task_name, args, kwargs, add_details):
         time.sleep(0.1)
         try:
             res = results_queue.get(block=True, timeout=0.1)
-            if res["pid"] == os.getpid():
+            if res["pid"] == cpid:
                 return res["output"]
-            else:
-                results_queue.put(res)
+            results_queue.put(res)
         except queue.Empty:
             continue
         except:
             tb = traceback.format_exc()
-            log.error("Nornir-proxy child PID {}, failed get job '{}' results, error: '{}'".format(os.getpid(), task_name, tb))
-    log.error("Nornir-proxy child PID {}, job '{}' got no results after 10min waiting.".format(os.getpid(), task_name))
+            log.error("Nornir-proxy child PID {}, failed get job '{}' results, error: '{}'".format(cpid, task_fun, tb))
+    log.error("Nornir-proxy child PID {}, job '{}' got no results after 10min waiting.".format(cpid, task_fun))
 
 
 # -----------------------------------------------------------------------------
@@ -207,7 +207,7 @@ def task(plugin, *args, **kwargs):
     performs dynamic import of requested plugin function and executes
     ``nr.run`` using supplied args and kwargs
 
-    :param plugin: ``path.to.plugin.task_name`` to run ``from path.to.plugin import task_name``
+    :param plugin: ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
 
@@ -217,7 +217,7 @@ def task(plugin, *args, **kwargs):
         salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
     """
     return _get_results(
-        task_name=plugin,
+        task_fun=plugin,
         args=args,
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", True)
@@ -246,13 +246,13 @@ def cli(*commands, **kwargs):
     kwargs["commands"] = [commands] if isinstance(commands, str) else commands
     plugin = kwargs.get("plugin", "netmiko").lower()
     if plugin.lower() == "netmiko":
-        task_name="_netmiko_send_commands"
+        task_fun="_netmiko_send_commands"
         kwargs["connection_name"] = "netmiko"
     elif plugin.lower() == "scrapli":
-        task_name="_scrapli_send_commands"
+        task_fun="_scrapli_send_commands"
         kwargs["connection_name"] = "scrapli"
     return _get_results(
-        task_name=task_name,
+        task_fun=task_fun,
         args=[],
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
@@ -303,17 +303,17 @@ def cfg(*commands, **kwargs):
     kwargs["config"] = config
     # decide on task name to run
     if plugin.lower() == "napalm":
-        task_name = "_napalm_configure"
+        task_fun = "_napalm_configure"
         kwargs["connection_name"] = "napalm"
     elif plugin.lower() == "netmiko":
-        task_name = "_netmiko_send_config"
+        task_fun = "_netmiko_send_config"
         kwargs["connection_name"] = "netmiko"
     elif plugin.lower() == "scrapli":
-        task_name = "_scrapli_send_config"
+        task_fun = "_scrapli_send_config"
         kwargs["connection_name"] = "scrapli"
     # work and return results
     return _get_results(
-        task_name=task_name,
+        task_fun=task_fun,
         args=[],
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", True)
@@ -364,7 +364,7 @@ def cfg_gen(filename, *args, **kwargs):
     kwargs["filename"] = filename
     # work and return results
     return _get_results(
-        task_name="_cfg_gen",
+        task_fun="_cfg_gen",
         args=[],
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
@@ -394,7 +394,7 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     kwargs["host"] = host
     # work and return results
     return _get_results(
-        task_name="tcp_ping",
+        task_fun="nornir_salt.plugins.tasks.tcp_ping",
         args=[],
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)

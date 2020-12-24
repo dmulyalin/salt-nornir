@@ -141,10 +141,10 @@ import threading
 import multiprocessing
 import queue
 import os
-import psutil
 import time
 import traceback
 import signal
+import psutil
 
 log = logging.getLogger(__name__)
 minion_process = psutil.Process(os.getpid())
@@ -182,7 +182,6 @@ stats_dict = {
     "main_process_uptime_seconds": 0,
     "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1000000,
     "main_process_pid": os.getpid(),
-    "main_process_proxy_id": None,
     "jobs_started": 0,
     "jobs_completed": 0,
     "jobs_failed": 0,
@@ -305,6 +304,13 @@ def shutdown():
     nornir_data["initialized"] = False  # trigger worker and watchdogs threads to stop
     nornir_data["stats"] = stats_dict.copy()
     del nornir_data["nr"], nornir_data["worker_thread"], nornir_data["watchdog_thread"]
+    for p in multiprocessing.active_children():
+        os.kill(p.pid, signal.SIGKILL)
+        log.warning(
+            "Nornir-proxy MAIN PID {} received shutdown request, terminated child PID {}".format(
+                os.getpid(), p.pid
+            )
+        )
     return True
 
 
@@ -431,15 +437,15 @@ def _get_or_import_task_fun(plugin):
     if its not there tries to import task and inject it
     in globals() dictionary for future reference.
     """
-    task_name = plugin.split(".")[-1]
-    if task_name in globals():
-        task_function = globals()[task_name]
+    task_fun = plugin.split(".")[-1]
+    if task_fun in globals():
+        task_function = globals()[task_fun]
     else:
         # import task function, below two lines are the same as
-        # from nornir.plugins.tasks import task_name as task_function
+        # from nornir.plugins.tasks import task_fun as task_function
         module = __import__(plugin, fromlist=[""])
-        task_function = getattr(module, task_name)
-        globals()[task_name] = task_function
+        task_function = getattr(module, task_fun)
+        globals()[task_fun] = task_function
     return task_function
 
 
@@ -498,6 +504,7 @@ def _worker():
     Target function for worker thread to run jobs from
     jobs_queue submitted by execution module processes
     """
+    ppid = os.getpid()
     while nornir_data["initialized"]:
         job, ret, output = None, None, None
         try:
@@ -507,8 +514,9 @@ def _worker():
                 break
             # run job
             nornir_data["stats"]["jobs_started"] += 1
-            task_fun = _get_or_import_task_fun(job["task_name"])
-            ret = run(task_fun, *job["args"], **job["kwargs"])
+            task_fun = _get_or_import_task_fun(job["task_fun"])
+            log.info("Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"]))
+            ret = run(task_fun, *job["args"], **job["kwargs"], name=job["name"])
             output = ResultSerializer(ret, job.get("add_details", False))
             nornir_data["stats"]["hosts_tasks_failed"] += len(
                 nornir_data["nr"].data.failed_hosts
@@ -519,7 +527,7 @@ def _worker():
         except:
             tb = traceback.format_exc()
             output = "Nornir-proxy MAIN PID {} job failed: {}, child PID {}, error:\n'{}'".format(
-                os.getpid(), job, job["pid"], tb
+                ppid, job, job["pid"], tb
             )
             log.error(output)
             nornir_data["stats"]["jobs_failed"] += 1
@@ -564,7 +572,7 @@ def run(task, *args, **kwargs):
         and hosts.state.has_filter == False
     ):
         raise CommandExecutionError(
-            "Proxy 'nornir_filter_required' is True but no filter provided"
+            "Nornir-proxy 'nornir_filter_required' setting is True but no filter provided"
         )
     # run tasks
     return hosts.run(
