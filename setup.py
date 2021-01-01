@@ -7,7 +7,7 @@ __author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
 
 setup(
     name="salt_nornir",
-    version="0.2.1",
+    version="0.2.2",
     author="Denis Mulyalin",
     author_email="d.mulyalin@gmail.com",
     description="SALTSTACK Nornir Modules",
