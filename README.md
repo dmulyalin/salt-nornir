@@ -1,13 +1,10 @@
 # SALTSTACK Nornir
 
-Work in progress.
-
 Repository to store Nornir based SALTSTACK modules:
 
-- salt-nornir proxy minion module <- done
-- salt-nornir execution module <- done
-- salt-nornir state module <- not completed
-- salt-nornir runner module <- not started
+- salt-nornir proxy minion module 
+- salt-nornir execution module
+- salt-nornir state module
 
 Nornir modules [pull request](https://github.com/saltstack/salt/pull/58393)
 
@@ -15,21 +12,21 @@ Nornir modules [pull request](https://github.com/saltstack/salt/pull/58393)
 
 Primary reason for developing Nornir proxy is scaling issues. 
 
-Not a secret that normally for each network device we want to manage with SALT, there is a dedicated proxy-minion process must be forked and configured. Each such a process consumes from 40 to 70 MByte or RAM. Meaning, to managed 1000 network devices, 40-70 Gbyte of RAM required. That is a big amount of resources to spent. Problem aggravated by the fact that SSH based proxy-minions have to run with multiprocessing mode off, resulting in use of threading to run tasks. However, threading prone to memory leaks [issue](https://github.com/saltstack/salt/issues/38990), workaround - periodic processes restart, that in return raises operational costs of overall system.
+Not a secret that normally for each network device we want to manage with SALT, there is a dedicated proxy-minion process must be configured and started. Each such a process consumes from  about 90 MByte or RAM. Meaning, to managed 1000 network devices, ~90 Gbyte of RAM required. That is a significant amount of resources to spent. Problem aggravated by the fact that SSH based proxy-minions use threading to execute tasks and prone to memory leaks [issue](https://github.com/saltstack/salt/issues/38990), workaround - periodic processes restart, that in return raises operational costs of the system.
 
 ## Design
 
 <img src="images/Nornir proxy-minion architecture.png">
 
-[Nornir ](https://nornir.readthedocs.io/en/latest/index.html) is an open-source automation software that uses same libraries under the hood as some other Network proxy-minion - NAPALM, Netmiko, Paramiko, NCClient etc. The key differentiator of Nornir is that it uses Python to express task execution work flows and runs them in parallel using threading. 
+[Nornir ](https://nornir.readthedocs.io/en/latest/index.html) is an open-source automation software that uses plugins to work with popular libraries such as - NAPALM, Netmiko, Paramiko, NCClient etc. Key difference is that Nornir uses Python to express task execution work flows and runs them in parallel using threading.
 
-Wrapping Norninr in a salt-proxy allowing us to use SALT systems such as schedulers, reactors, returners, mines, pillars, API etc. together with Nornir's capability to effectively run jobs for multiple devices. As a result, single proxy process can deliver configuration or retrieve state from multiple devices simultaneously. Moreover, due to Nornir stateless nature, proxy can and should operate with multiprocessing set to True.
+Wrapping Nornir in salt-proxy allowing us to use SALTSTACK's systems - schedulers, reactors, returners, mines, pillars, API etc. together with Nornir's capability to effectively run jobs for multiple devices. As a result, single proxy process can deliver configuration or retrieve state from multiple devices. Moreover, Nornir proxy has support for long running connections to devices and shares access to connections with child processes, as a result recommended way to run this proxy is with multiprocessing set to True.
 
-To illustrate, say we want to manage same 1000 devices, but with Nornir proxy. For that we start 10 Nornir processes proxying for 100 devices each, say each process consumes 200 MByte of RAM, resulting in 2 GByte of RAM to run 10 process. Every time we want to run task, new process started, consuming another 200 MByte or RAM. Assume extreme case, we have 4 tasks executing for 1000 devices with process dedicated to each task, that would consume 10 GByte of RAM, once tasks completed and processes destroyed, RAM consumption will fall back to 2 GByte. That is, in author's opinion, quite an improvement compared to above example where we used 40-70 GByte or RAM to manage same number of devices.
+To illustrate, say we want to manage same 1000 devices, but with Nornir proxy. For that we start 10 Nornir processes proxying for 100 devices each, say each process consumes 300 MByte of RAM, resulting in 3 GByte of RAM to run 10 process. Every time we want to run task, new process started, consuming another 300 MByte or RAM. Assume extreme case, we have 4 tasks executing for 1000 devices with process dedicated to each task, that would consume 15 GByte of RAM, once tasks completed and processes destroyed, RAM consumption will fall back to 3 GByte. That is x6 times improvement compared to above example where we need 90 GByte or RAM to manage same number of devices.
 
 ## Inter process communication
 
-To facilitate long running connections, proxy-minion architecture adapted to use queues for inter-process jobs communication.
+To facilitate long running connections, proxy-minion designed to use queues for inter-process jobs communication.
 
 <img src="images/nornir_proxy_inter_process_communication_v0.png">
 

@@ -126,7 +126,8 @@ log = logging.getLogger(__name__)
 # import nornir libs
 try:
     from nornir import InitNornir
-
+    from nornir_salt import tcp_ping
+    from nornir_salt.plugins.functions import FindString
     HAS_NORNIR = True
 except ImportError:
     log.error("Nornir Execution Module - failed importing libraries")
@@ -210,6 +211,8 @@ def task(plugin, *args, **kwargs):
     :param plugin: ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
+    :param args: arguments to pass on to task plugin
+    :param kwargs: keyword arguments to pass on to task plugin
 
     Sample usage::
 
@@ -234,13 +237,16 @@ def cli(*commands, **kwargs):
     :param netmiko_kwargs: kwargs to pass on to netmiko send_command methods
     :param add_details: boolean, to include details in result or not
     :param plugin: name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
+    :param match: regular expression pattern to search for in results,
+        similar to Cisco ``inlclude`` or Juniper ``match`` pipe commands
+    :param before: used with match, number of lines before match to include in results, default is 0
 
     Sample Usage::
 
          salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
          salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
+         salt nornir-proxy-1 nr.cli "show run" FL="SW1,RTR1,RTR2" match="CPE[123]+" before=1
     """
-    # log.error("Proxy minion nr.cli got kwargs: {}".format(kwargs))
     __pub_jid = kwargs.get("__pub_jid")
     commands = kwargs.pop("commands", commands)
     kwargs["commands"] = [commands] if isinstance(commands, str) else commands
@@ -251,12 +257,17 @@ def cli(*commands, **kwargs):
     elif plugin.lower() == "scrapli":
         task_fun="_scrapli_send_commands"
         kwargs["connection_name"] = "scrapli"
-    return _get_results(
+    result = _get_results(
         task_fun=task_fun,
         args=[],
         kwargs=kwargs,
         add_details=kwargs.pop("add_details", False)
     )
+    if "match" in kwargs:
+        return FindString(result, pattern=kwargs["match"], before=kwargs.get("before", 0))
+    else:
+        return result
+
 
 
 def cfg(*commands, **kwargs):
@@ -299,7 +310,7 @@ def cfg(*commands, **kwargs):
             filename, saltenv=kwargs.get("saltenv", "base")
         )
     if not config:
-        raise CommandExecutionError("Configuration not found")
+        raise CommandExecutionError("Configuration not found. filename: {}; commands: {}".format(filename, commands))
     kwargs["config"] = config
     # decide on task name to run
     if plugin.lower() == "napalm":
@@ -406,3 +417,26 @@ def stats(*args, **kwargs):
     Function to return useful stats for main nornir proxy process
     """
     return __proxy__["nornir.stats"]()
+
+
+def snap(*args, **kwargs):
+    """
+    Function to save task execution result in a file, effectively
+    taking snapshot for future reference.
+    """
+    pass
+
+
+def diff(*args, **kwargs):
+    """
+    Function show difference between two snapshots
+    """
+    pass
+
+
+def discover(*args, **kwargs):
+    """
+    Function to discover hosts dynamically and add them to Inventory
+    for managing
+    """
+    pass

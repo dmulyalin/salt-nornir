@@ -352,7 +352,7 @@ def _scrapli_send_commands(task, commands, **kwargs):
             task=task_fun,
             command=command,
             name=command,
-            **kwargs.get("netmiko_kwargs", {})
+            **kwargs.get("scrapli_kwargs", {})
         )
     return Result(host=task.host)
 
