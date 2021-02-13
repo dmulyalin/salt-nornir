@@ -4,3 +4,4 @@ nornir_netmiko>=0.1.1
 nornir_napalm>=0.1.1
 nornir_salt>=0.3.0
 napalm>=3.0.0
+psutil>=2.2.1
