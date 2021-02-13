@@ -14,7 +14,7 @@ def module_dirs():
     return [os.path.join(PKG_DIR, "modules")]
 
 
-def state_dirs():
+def states_dirs():
     """
     Return a list of paths from where salt should load state modules
     """

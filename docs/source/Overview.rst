@@ -1,7 +1,10 @@
 Overview
 ########
 
-**Why use Nornir with SALT?**
+Overview of Nornir proxy Minion.
+
+Why use Nornir with SALT?
+=========================
 
 **First of all**, Salt Nornir modules help to address scaling issues of interacting with
 devices at high numbers - hundreds to tens of thousands - without over consuming 
@@ -46,3 +49,29 @@ Nornir Proxy minion as well
 all of them available for use with Nornir Proxy Minion, allowing to save significant amount of time 
 on addressing various use cases that otherwise would turn in tangible coding exercise. New SALT modules 
 and capabilities should interoperate with Nornir proxy minion seamlessly.
+
+How it works?
+=============
+
+Wrapping Nornir in salt-proxy allowing effectively run jobs for multiple devices. As a result, single
+proxy process can deliver configuration or retrieve state from multiple devices. Moreover, Nornir proxy 
+has support for long running connections to devices and shares access to connections with child 
+processes, as a result recommended way to run this proxy is with ``multiprocessing`` set to ``True``.
+
+.. image:: ./_images/Nornir-proxy-minion_architecture.png
+
+To facilitate long running connections, proxy-minion designed to use queues for inter-process jobs communication.
+
+This architecture helps avoid these problems:
+
+* If no long running connections exists to devices, each new task creates dedicated connections to devices, increasing overall execution time
+* Increase in the number of connections increases load on AAA system (Tacacs, Radius) as more tasks result in more authentication requests from devices
+
+.. image:: ./_images/nornir_proxy_inter_process_communication_v0.png
+
+Above architecture prone to these **drawbacks**:
+
+* Double targeting required to narrow down tasks execution to a subset of hosts
+* In addition to knowing how pillar works, one will have to know how [Nornir inventory](https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html) structured to use it effectively, as Nornir inventory integrated in proxy-minion pillar
+* Tasks executed sequentially one after another, if a lot of tasks scheduled simultaneously, they will consume resource waiting to execute
+

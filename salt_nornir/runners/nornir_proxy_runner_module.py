@@ -2,11 +2,9 @@
 Nornir Runner Module
 ====================
 
-.. versionadded:: v3001
+Nornir Runner module reference. 
 
-:maturity:   new
-:depends:    Nornir
-:platform:   unix
+.. note:: Keep in mind that runner module functions executed on same machine where salt-master process runs.
 
 Dependencies
 ------------
@@ -16,7 +14,15 @@ Dependencies
 Introduction
 ------------
 
-Nornir-runner module runs on SALT Master to interact with devices behind Nornir proxies.
+Nornir-runner module runs on SALT Master to interact with devices behind Nornir proxies allowing ti interact with
+several Nornir Proxy minion processes.
+
+Nornir Runner module functions
+------------------------------
+
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.inventory
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.cli
+
 """
 # Import python libs
 import logging

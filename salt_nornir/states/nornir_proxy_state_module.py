@@ -3,16 +3,7 @@
 Nornir State Module
 ===================
 
-.. versionadded:: v3001
-
-:maturity:   new
-:depends:    Nornir
-:platform:   unix
-
-Dependencies
-------------
-
-This module does not have any external dependencies
+Nornir State module reference.
 
 Introduction
 ------------
@@ -60,6 +51,12 @@ File ``salt://templates/nr_state_test_ntp.j2`` content located on Master::
 Apply state running command on master::
 
     salt nr_minion_id state.apply nr_state_test
+
+Nornir state module functions
+-----------------------------
+
+.. autofunction:: salt_nornir.states.nornir_proxy_state_module.cfg
+.. autofunction:: salt_nornir.states.nornir_proxy_state_module.task
 
 """
 # Import python libs

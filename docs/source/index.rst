@@ -12,4 +12,5 @@ Welcome to salt-nornir's documentation!
    Nornir Execution Module
    Nornir Runner Module
    Nornir State Module
-   Use cases and examples
+   FAQ
+   Examples

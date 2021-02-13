@@ -2,93 +2,79 @@
 Nornir Execution Module
 =======================
 
-.. versionadded:: v3001
+Nornir Execution module reference. 
 
-:maturity:   new
-:depends:    Nornir
-:platform:   unix
-
-Dependencies
-------------
-
-Nornir 3.x uses modular approach for plugins. As a result  required
-plugins need to be installed separately from Nornir Core library. Main
-plugin to install is:
-
-- `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ ``pip install nornir-salt``
-
-``nornir-salt`` will install these additional dependencies automatically:
-
-- `Nornir <https://github.com/nornir-automation/nornir>`_ ``pip install nornir``
-- `nornir_netmiko <https://github.com/ktbyers/nornir_netmiko/>`_ ``pip install nornir_netmiko``
-- `nornir_napalm <https://github.com/nornir-automation/nornir_napalm/>`_ ``pip install nornir_napalm``
+.. note:: Keep in mind that execution module functions executed on same machine where proxy-minion process runs.
 
 Introduction
 ------------
 
 This execution module complements Nornir Proxy module to interact with devices over SSH, Telnet, 
-NETCONF or any other methods supported by Nornir connection plugins
+NETCONF or any other methods supported by Nornir connection plugins.
 
 Things to keep in mind:
 
-- on each call, Nornir object instance re-initiated with latest pillar data
-- ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-module
-- with multiprocessing on, dedicated process starts for each task
-- each process initiates new connections to devices, increasing task execution time
+* ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-minion
+* with multiprocessing on, dedicated process starts for each task consuming resources
+* tasks executed one after another, but task execution against hosts happening in order
+    controlled by logic of Nornir runner in use, usually in parallel using threading.
 
 Commands timeout
 ----------------
 
 It is recommended to increase
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
-or use ``--timeout=60`` option to wait for minion return, as on each call Nornir
-has to initiate connections to devices and all together it might take more than
-5 seconds for task to complete.
+or use ``--timeout=60`` option to wait for minion return, as all together it might take more than
+5 seconds for task to complete. Alternatively, use ``--async`` option and query results afterwards::
+
+    [root@localhost /]# salt nrp1 nr.cli "show clock" --async
+    
+    Executed command with job ID: 20210211120453972915
+    [root@localhost /]# salt-run jobs.lookup_jid 20210211120453972915
+    nrp1:
+        ----------
+        IOL1:
+            ----------
+            show clock:
+                
+                *08:17:22.691 EET Sat Feb 13 2021
+        IOL2:
+            ----------
+            show clock:
+                *08:17:22.632 EET Sat Feb 13 2021
+    [root@localhost /]# 
 
 AAA considerations
 ------------------
 
-Quiet often, AAA servers (Radius, Tacacs) might get overloaded with authentication
+Quiet often AAA servers (Radius, Tacacs) might get overloaded with authentication
 and authorization requests coming from devices due to Nornir establishing
-connections with them, that effectively results in jobs failures. This problem
-equally true for jobs executed from CLI as well as for scheduled jobs.
+connections with them, that effectively results in jobs failures.
 
 To overcome above problems Nornir proxy-module uses ``RetryRunner`` by default.
 ``RetryRunner`` runner included in
 `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library and was
-developed to address aforemention issues.
-
-Devices connections limits
---------------------------
-
-Beacause Nornir proxy has to initiate new connection to devices for each task, running
-too many tasks might hit certain devices' limits, such as:
-
-- maximum allowed number of simultaneous VTY connections
-- maximum allowed number of simultaneous connections per user
-
-As a result, it make sense to increase above numbers and engineer tasks execution
-to work within these limits.
+developed to address aforementioned issue in addition to implementing retry logic.
 
 Targeting Nornir Hosts
 ----------------------
 
 Nornir interacts with many devices and has it's own inventory,
 additional filtering capabilities introduced in
-`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library
+`nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library
 to narrow down tasks execution to certain hosts/devices.
 
 Sample command to demonstrate targeting capabilites::
 
- salt nornir-proxy-1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
+    salt nornir-proxy-1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
 
 Jumphosts or Bastions
 ---------------------
 
 ``RetryRunner`` included in
-`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library has
+`nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library has
 support for ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"``
-to interact with devices behind jumposts, other tasks and runners plugins
+to interact with devices behind jumphosts, other tasks and runners plugins
 does not support that.
 
 Sample jumphost definition in host's inventory data in proxy-minion pillar::
@@ -105,6 +91,18 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
             port: 22
             password: admin
             username: admin
+
+Nornir Execution module functions
+---------------------------------
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.inventory
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.task
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cli
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cfg
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cfg_gen
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.tping
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.stats
+
 """
 
 # Import python libs

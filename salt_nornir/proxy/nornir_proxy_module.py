@@ -2,11 +2,7 @@
 Nornir Proxy module
 ===================
 
-.. versionadded:: v3001
-
-:maturity:   new
-:depends:    Nornir
-:platform:   unix
+Nornir Proxy Module reference.
 
 Dependencies
 ------------
@@ -30,22 +26,15 @@ Single Nornir proxy-minion can work with hundreds of devices as opposed to
 conventional proxy-minion that normally dedicated to managing one device/system
 only.
 
-As a result, Nornir proxy-minion requires less resources to run tasks, during
-idle state only one process is active, that significantly reduces the amount
-of memory required on the system.
+As a result, Nornir proxy-minion requires less resources to run tasks against same
+number of devices. During idle state only one process is active, that significantly 
+reduces amount of memory required on the system.
 
-Proxy-module recommended way of operating is ``multiprocessing``
-set to ``True``, so that each task executed in dedicated process. That would
-imply these consequences:
+Proxy-module recommended way of operating is ``multiprocessing`` set to ``True`` - 
+default value, so that each task executed in dedicated process.
 
-- multiple tasks run handled by different, forked processes
-- each process initiates dedicated connections to devices, increasing overall execution time
-- multiprocessing mode allows to eliminate problems with memory leaks
-
-Pillar
-------
-
-Proxy parameters:
+Nornir proxy pillar parameters
+------------------------------
 
 - ``proxytype`` nornir
 - ``multiprocessing`` set to ``True`` is a recommended way to run this proxy
@@ -88,6 +77,8 @@ Nornir proxy-minion pillar example:
       watchdog_interval: 30
       child_process_timeout: 660
       job_wait_timeout: 600
+      memory_threshold_mbyte: 300
+      memory_threshold_action: log
       runner:
          plugin: threaded
          options:
@@ -104,22 +95,6 @@ Nornir proxy-minion pillar example:
         platform: ios
         location: B2
         groups: [lab]
-      IOL3:
-        hostname: 192.168.217.11
-        platform: ios
-        location: B3
-        groups: [lab]
-      LAB-R1:
-        hostname: 192.168.1.10
-        platform: ios
-        password: user
-        username: user
-        data:
-          jumphost:
-            hostname: 172.16.0.10
-            port: 22
-            password: admin
-            username: admin
 
     groups:
       lab:
@@ -134,10 +109,39 @@ Nornir proxy-minion pillar example:
 Nornir runners
 --------------
 
-Runners in nornir define how to run tasks for hosts. If no ``runner``
-parameters provided in proxy-minion pillar, ``RetryRunner`` used.
+Runners in Nornir define how to run tasks against hosts. If no ``runner``
+parameter provided in proxy-minion pillar, ``RetryRunner`` used.
 ``RetryRunner`` runner included in
-`nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library.
+`nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library.
+
+Nornir proxy module special tasks
+---------------------------------
+
+These tasks have special handling by Nornir proxy minion process:
+
+* ``test`` - this task test proxy minion module without invoking any Nornir code
+* ``nr_test`` - this task run dummy task against hosts without initiating any connections to them
+* ``nr_refresh`` - task to run ``_refresh`` function
+* ``nr_restart`` - task to run ``_restart`` function
+
+Sample invocation::
+
+    salt nrp1 nr.task test 
+    salt nrp1 nr.task nr_test 
+    salt nrp1 nr.task nr_refresh 
+    salt nrp1 nr.task nr_restart 
+    
+Nornir Proxy Module functions
+-----------------------------
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.inventory_data
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module._refresh
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module._restart
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
+
 """
 
 # Import python std lib
@@ -548,7 +552,7 @@ def _refresh(*args, **kwargs):
     """
     Function to re-initialise Nornir proxy with latest pillar data.
 
-    This function calls ``shutdown`` function, gets lates pillar
+    This function calls ``shutdown`` function, gets latest pillar
     from master and re-instantiates Nornir object.
     """
     log.info("Nornir-proxy MAIN PID {}, refreshing!".format(os.getpid()))
@@ -817,8 +821,8 @@ def execute_job(task_fun, args, kwargs, cpid):
     wait for job to be completed and return results.
 
     :param task_fun: str, name of nornir task function/plugin to run
-    :param args: list, any arguments to submit to Nornir task *args
-    :param kwargs: dict, any arguments to submit to Nornir task **kwargs
+    :param args: list, any arguments to submit to Nornir task ``*args``
+    :param kwargs: dict, any arguments to submit to Nornir task ``**kwargs``
     :param cpid: int, Process ID (PID) of child process submitting job request
     """
     # add new job in jobs queue
@@ -863,6 +867,31 @@ def stats(*args, **kwargs):
     Function to gather and return stats about Nornir proxy process.
 
     :param stat: name of stat to return, returns all by default
+    
+    Returns dictionary with these parameters:
+    
+    * ``proxy_minion_id`` - if of this proxy minion
+    * ``main_process_is_running`` - set to 0 if not running and to 1 otherwise
+    * ``main_process_start_time`` - ``time.time()`` function to indicate process start time in ``epoch``
+    * ``main_process_start_date`` - ``time.ctime()`` function date to indicate process start time
+    * ``main_process_uptime_seconds`` - int, main proxy minion process uptime
+    * ``main_process_ram_usage_mbyte`` - int, RAM usage
+    * ``main_process_pid`` - main process ID i.e. PID 
+    * ``main_process_host`` - hostname of machine where proxy minion process is running
+    * ``jobs_started`` - int, overall number of jobs started
+    * ``jobs_completed`` - int, overall number of jobs completed
+    * ``jobs_failed``  - int, overall number of jobs failed
+    * ``jobs_job_queue_size`` - int, size of jobs queue, indicating number of jobs waiting to start
+    * ``jobs_res_queue_size`` - int, size of results queue, indicating number of 
+        results waiting to be collected by child process
+    * ``hosts_count`` - int, number of hosts/devices managed by this proxy minion
+    * ``hosts_connections_active`` - int, overall number of connection active to devices
+    * ``hosts_tasks_failed`` - int, overall number of tasks failed for hosts
+    * ``timestamp`` - ``time.ctime()`` timestamp of ``stats`` function run
+    * ``watchdog_runs`` - int, overall number of watchdog thread runs
+    * ``watchdog_child_processes_killed`` - int, number of stale child processes killed by watchdog
+    * ``watchdog_dead_connections_cleaned`` - int, number of stale hosts' connections cleaned by watchdog
+    * ``child_processes_count`` - int, number of child processes currently running
     """
     stat = args[0] if args else kwargs.get("stat", None)
     # get approximate queue sizes
