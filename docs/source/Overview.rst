@@ -6,19 +6,19 @@ Overview of Nornir proxy Minion.
 Why use Nornir with SALT?
 =========================
 
-**First of all**, Salt Nornir modules help to address scaling issues of interacting with
-devices at high numbers - hundreds to tens of thousands - without over consuming 
-resources, accomplish more with less.
+*First of all*, scaling, Salt Nornir modules help to address scaling issues of interacting with
+devices at high numbers (hundreds to tens of thousands) without over consuming 
+resources - accomplish more with less.
 
-To demonstrate, normally for each network device to manage with SALT, there is a 
+To demonstrate, for each network device to manage with SALT, there is a 
 dedicated proxy-minion process must be configured and started together with additional 
 (watchdog) process to manage it. Each pair of processes consumes about 110 MByte (numbers 
-might differ depending on environment and serve as example only) providing in return 
+might differ depending on environment and serve as example only) of RAM providing in return 
 capability to interact with a single device.
 
 .. image:: ./_images/overview_usual_proxy-minion_architecture.png
 
-With Nornir-proxy, while each proxy-minion consumes same amount of RAM and also requires 
+With nornir-proxy, while each proxy-minion consumes same amount of RAM and also requires 
 2 processes to operate, Nornir Proxy minion capable of managing multiple network devices.
 
 .. image:: ./_images/overview_nornir_proxy-minion_architecture.png
@@ -32,7 +32,7 @@ devices, crawling them over several minutes.
 Optimal number of devices managed by single Nornir proxy depends on the environment it operates in
 and should be decided on a case by case basis.
 
-**Secondly**, Nornir is Python, SALT is Python, Nornir is pluggable framework, SALT is pluggable 
+*Secondly*, Nornir is Python, SALT is Python, Nornir is pluggable framework, SALT is pluggable 
 framework, Nornir is open-source, SALT has open-source community version - sounds like a nice fit 
 and it really is. 
 
@@ -72,6 +72,13 @@ This architecture helps avoid these problems:
 Above architecture prone to these **drawbacks**:
 
 * Double targeting required to narrow down tasks execution to a subset of hosts
-* In addition to knowing how pillar works, one will have to know how [Nornir inventory](https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html) structured to use it effectively, as Nornir inventory integrated in proxy-minion pillar
+* In addition to knowing how pillar works, one will have to know how `Nornir inventory <https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html>`_ 
+    structured to use it effectively, as Nornir inventory integrated in proxy-minion pillar
 * Tasks executed sequentially one after another, if a lot of tasks scheduled simultaneously, they will consume resource waiting to execute
 
+To address double targeting, Nornir filtering capabilities utilized using additional filtering functions, reference nornir-salt module 
+`FFun function <https://nornir-salt.readthedocs.io/en/latest/Functions.html#ffun>`_ for more information. But in short,
+have to use ``Fx`` parameters to filter hosts, for example::
+
+    # target only IOL1 and IOL2 hosts:
+    salt nrp1 nr.cli "show clock" FB="IOL[12]"

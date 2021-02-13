@@ -54,8 +54,8 @@ File ``/etc/salt/master``::
       base:
         - /etc/salt/pillar
 
-Define pillar files
-===================
+Define Proxy Minion pillar configuration
+========================================
 
 Pillar files located on SALT Master machine. 
 
@@ -148,7 +148,7 @@ Or, run in debug mode::
 
     salt-proxy --proxyid=nrp1 -l debug
     
-Accept Proxy minion key on master
+Accept Proxy Minion key on master
 =================================
 
 Run command on salt master machine::
@@ -284,3 +284,5 @@ As example, configure syslog server using Netmiko::
                     IOL2(config)#logging host 1.1.1.2
                     IOL2(config)#end
                     IOL2#
+
+Reference examples section for more information on how to use Nornir Proxy Minion.
