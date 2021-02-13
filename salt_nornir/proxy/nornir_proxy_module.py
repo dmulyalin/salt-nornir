@@ -4,7 +4,6 @@ Nornir Proxy module
 
 .. versionadded:: v3001
 
-:codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 :maturity:   new
 :depends:    Nornir
 :platform:   unix
@@ -35,17 +34,13 @@ As a result, Nornir proxy-minion requires less resources to run tasks, during
 idle state only one process is active, that significantly reduces the amount
 of memory required on the system.
 
-Proxy-module recommended way of operating is :conf_minion:`multiprocessing <multiprocessing>`
+Proxy-module recommended way of operating is ``multiprocessing``
 set to ``True``, so that each task executed in dedicated process. That would
 imply these consequences:
 
-- multiple tasks can run in parallel handled by different processes
+- multiple tasks run handled by different, forked processes
 - each process initiates dedicated connections to devices, increasing overall execution time
 - multiprocessing mode allows to eliminate problems with memory leaks
-
-.. seealso::
-
-    - :mod:`Nornir execution module <salt.modules.nornir_mod>`
 
 Pillar
 ------
@@ -53,7 +48,6 @@ Pillar
 Proxy parameters:
 
 - ``proxytype`` nornir
-- ``proxy_always_alive`` is ignored
 - ``multiprocessing`` set to ``True`` is a recommended way to run this proxy
 - ``process_count_max`` maximum number of processes to use to limit
   a number of simultaneous tasks and maximum number of active connections
@@ -65,14 +59,21 @@ Proxy parameters:
   if no filter provided, task will not run at all. It is a safety measure against
   running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
-- ``runner`` - Nornir runner parameters to use for this proxy module
-- ``child_process_timeout`` - int, how much seconds wait before kill child process,
-  default 660 seconds
+- ``runner`` - dict, Nornir runner parameters dictinary to use for this proxy module
+- ``child_process_timeout`` - int, seconds to wait before forcefully kill child process,
+  default 660s
+- ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
+- ``proxy_always_alive`` - bool, default True, keep connections with devices alive on True
+  and tears them down after each job on False
+- ``job_wait_timeout`` - int, seconds to wait for job return until give up, default 600s
+- ``memory_threshold_mbyte`` - int, value in MBytes above each to trigger ``memory_threshold_action``
+- ``memory_threshold_action`` - str, action to implement if ``memory_threshold_mbyte`` exceeded, 
+  possible actions: ``log``- send syslog message, ``restart`` - restart proxy minion process.
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
-information about ``hosts``, ``groups`` and ``defaults``. Nornir inventory is
-a nested, Python dictionary and it is easy to define it in proxy-minion pillar.
+information about ``hosts``, ``groups`` and ``defaults``. Nornir inventory 
+defined in proxy-minion pillar.
 
 Nornir proxy-minion pillar example:
 
@@ -83,6 +84,10 @@ Nornir proxy-minion pillar example:
       process_count_max: 3
       multiprocessing: True
       nornir_filter_required: True
+      proxy_always_alive: True
+      watchdog_interval: 30
+      child_process_timeout: 660
+      job_wait_timeout: 600
       runner:
          plugin: threaded
          options:
@@ -129,8 +134,8 @@ Nornir proxy-minion pillar example:
 Nornir runners
 --------------
 
-Runners in nornir defines how to run tasks for hosts. If no ``runner``
-parameters provided in proxy-minion pillar, ``RetryRunner`` will be used.
+Runners in nornir define how to run tasks for hosts. If no ``runner``
+parameters provided in proxy-minion pillar, ``RetryRunner`` used.
 ``RetryRunner`` runner included in
 `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library.
 """
@@ -147,10 +152,14 @@ import signal
 import psutil
 
 log = logging.getLogger(__name__)
-minion_process = psutil.Process(os.getpid())
 
-# import SALT libs
-from salt.exceptions import CommandExecutionError
+# import salt libs, wrapping it in try/except for docs to generate
+try:
+    from salt.exceptions import CommandExecutionError, TimeoutError
+except:
+    log.error("Nornir Proxy Module - failed importing SALT libraries")
+
+minion_process = psutil.Process(os.getpid())
 
 # Import third party libs
 try:
@@ -158,11 +167,15 @@ try:
     from nornir.core.task import Result, Task
     from nornir_salt.plugins.functions import FFun
     from nornir_salt.plugins.functions import ResultSerializer
-
+    from nornir_salt.plugins.functions import HostsKeepalive
+    from nornir_salt.plugins.functions import ToFile
+    
     HAS_NORNIR = True
 except ImportError:
-    log.debug("Nornir-proxy - failed importing Nornir modules")
+    log.error("Nornir-proxy - failed importing Nornir modules")
     HAS_NORNIR = False
+    
+
 # -----------------------------------------------------------------------------
 # proxy properties
 # -----------------------------------------------------------------------------
@@ -180,18 +193,21 @@ stats_dict = {
     "main_process_start_time": time.time(),
     "main_process_start_date": time.ctime(),
     "main_process_uptime_seconds": 0,
-    "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1000000,
+    "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1024000,
     "main_process_pid": os.getpid(),
+    "main_process_host": os.uname()[1] if hasattr(os, "uname") else "",
     "jobs_started": 0,
     "jobs_completed": 0,
     "jobs_failed": 0,
     "jobs_job_queue_size": 0,
     "jobs_res_queue_size": 0,
     "hosts_count": 0,
-    # "hosts_connections": 0,
+    "hosts_connections_active": 0,
     "hosts_tasks_failed": 0,
     "timestamp": time.ctime(),
-    "child_processes_killed": 0,
+    "watchdog_runs": 0,
+    "watchdog_child_processes_killed": 0,
+    "watchdog_dead_connections_cleaned": 0,
     "child_processes_count": 0,
     # "child_processes_ram_usage": 0
 }
@@ -204,6 +220,12 @@ nornir_data = {
     "res_queue": None,
     "worker_thread": None,
     "watchdog_thread": None,
+    "proxy_always_alive": True,
+    "watchdog_interval": 30,
+    "child_process_timeout": 660,
+    "job_wait_timeout": 600,
+    "memory_threshold_mbyte": 300,
+    "memory_threshold_action": "log",
 }
 
 # -----------------------------------------------------------------------------
@@ -269,6 +291,15 @@ def init(opts):
     nornir_data["child_process_timeout"] = opts["proxy"].get(
         "child_process_timeout", 660
     )
+    nornir_data["watchdog_interval"] = int(opts["proxy"].get("watchdog_interval", 30))
+    nornir_data["job_wait_timeout"] = int(opts["proxy"].get("job_wait_timeout", 600))
+    nornir_data["proxy_always_alive"] = opts["proxy"].get("proxy_always_alive", True)
+    nornir_data["memory_threshold_mbyte"] = int(
+        opts["proxy"].get("memory_threshold_mbyte", 300)
+    )
+    nornir_data["memory_threshold_action"] = opts["proxy"].get(
+        "memory_threshold_action", "log"
+    )
     nornir_data["initialized"] = True
     # add some stats
     nornir_data["stats"]["proxy_minion_id"] = opts["id"]
@@ -277,8 +308,12 @@ def init(opts):
     # Initiate multiprocessing related queus, locks and threads
     nornir_data["jobs_queue"] = multiprocessing.Queue()
     nornir_data["res_queue"] = multiprocessing.Queue()
-    nornir_data["worker_thread"] = threading.Thread(target=_worker).start()
-    nornir_data["watchdog_thread"] = threading.Thread(target=_watchdog).start()
+    nornir_data["worker_thread"] = threading.Thread(
+        target=_worker, name="{}_worker".format(opts["id"])
+    ).start()
+    nornir_data["watchdog_thread"] = threading.Thread(
+        target=_watchdog, name="{}_watchdog".format(opts["id"])
+    ).start()
     return True
 
 
@@ -298,20 +333,40 @@ def initialized():
 
 def shutdown():
     """
-    Closes connections to devices and deletes Nornir object.
+    This function implements this shutdown protocol:
+
+    1. Signal worker and watchdog threads to stop
+    2. Close all connections to devices
+    3. Close jobs and results queues
+    4. Kill all child processes
+    5. Delete Nornir object
     """
-    nornir_data["nr"].close_connections(on_good=True, on_failed=True)
-    nornir_data["initialized"] = False  # trigger worker and watchdogs threads to stop
-    nornir_data["stats"] = stats_dict.copy()
-    del nornir_data["nr"], nornir_data["worker_thread"], nornir_data["watchdog_thread"]
-    for p in multiprocessing.active_children():
-        os.kill(p.pid, signal.SIGKILL)
-        log.warning(
-            "Nornir-proxy MAIN PID {} received shutdown request, terminated child PID {}".format(
-                os.getpid(), p.pid
+    log.info("Nornir-proxy MAIN PID {}, shutting down Nornir".format(os.getpid()))
+    try:
+        # trigger worker and watchdogs threads to stop
+        nornir_data["initialized"] = False
+        # close connections to devices
+        nornir_data["nr"].close_connections(on_good=True, on_failed=True)
+        # close queues
+        nornir_data["jobs_queue"].close()
+        nornir_data["jobs_queue"].join_thread()
+        nornir_data["res_queue"].close()
+        nornir_data["res_queue"].join_thread()
+        # kill child processes left
+        for p in multiprocessing.active_children():
+            os.kill(p.pid, signal.SIGKILL)
+        # delete old Nornir Object
+        nornir_data["nr"] = None
+        log.info("Nornir-proxy MAIN PID {}, Nornir shutted down".format(os.getpid()))
+        return True
+    except:
+        tb = traceback.format_exc()
+        log.error(
+            "Nornir-proxy MAIN PID {}, Nornir shutdown failed, error: {}".format(
+                os.getpid(), tb
             )
         )
-    return True
+        return False
 
 
 def grains():
@@ -334,6 +389,15 @@ def grains_refresh():
 
 
 def _netmiko_send_commands(task, commands, **kwargs):
+    """
+    Nornir Task function to send show commands to devices using
+    ``nornir_netmiko.tasks.netmiko_send_command`` plugin
+
+    :param kwargs: might contain ``netmiko_kwargs`` argument dictionary
+         for ``nornir_netmiko.tasks.netmiko_send_command`` method
+    :param config: (list) commands list to send to device(s)
+    :return result: Nornir result object with task execution results
+    """
     task_fun = _get_or_import_task_fun("nornir_netmiko.tasks.netmiko_send_command")
     for command in commands:
         task.run(
@@ -346,6 +410,15 @@ def _netmiko_send_commands(task, commands, **kwargs):
 
 
 def _scrapli_send_commands(task, commands, **kwargs):
+    """
+    Nornir Task function to send show commands to devices using
+    ``nornir_scrapli.tasks.send_command`` plugin
+
+    :param kwargs: might contain ``scrapli_kwargs`` argument dictionary
+        for ``nornir_scrapli.tasks.send_command`` method
+    :param config: (list) commands list to send to device(s)
+    :return result: Nornir result object with task execution results
+    """
     task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_command")
     for command in commands:
         task.run(
@@ -358,6 +431,15 @@ def _scrapli_send_commands(task, commands, **kwargs):
 
 
 def _napalm_configure(task, config, **kwargs):
+    """
+    Nornir Task function to send confgiuration to devices using
+    ``nornir_napalm.plugins.tasks.napalm_configure`` plugin
+
+    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
+        for configuration rendering as well as for ``task.run`` method
+    :param config: (str) configuration string to render and send to device(s)
+    :return result: Nornir result object with task execution results
+    """
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
     # push config to devices
@@ -367,35 +449,51 @@ def _napalm_configure(task, config, **kwargs):
 
 
 def _netmiko_send_config(task, config, **kwargs):
+    """
+    Nornir Task function to send confgiuration to devices using
+    ``nornir_netmiko.tasks.netmiko_send_config`` plugin
+
+    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
+        for configuration rendering as well as for ``task.run`` method
+    :param config: (str) configuration string to render and send to device(s)
+    :return result: Nornir result object with task execution results
+    """
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
     # push config to devices
     task_fun = _get_or_import_task_fun("nornir_netmiko.tasks.netmiko_send_config")
     task.run(
-        task=task_fun,
-        config_commands=rendered_config.result.splitlines(),
-        **kwargs
+        task=task_fun, config_commands=rendered_config.result.splitlines(), **kwargs
     )
     return Result(host=task.host)
 
 
 def _scrapli_send_config(task, config, **kwargs):
+    """
+    Nornir Task function to send confgiuration to devices using
+    ``nornir_scrapli.tasks.send_config`` plugin
+
+    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
+        for configuration rendering as well as for ``task.run`` method
+    :param config: (str) configuration string to render and send to device(s)
+    :return result: Nornir result object with task execution results
+    """
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
     # push config to devices
     task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_config")
-    task.run(
-        task=task_fun,
-        config=rendered_config.result,
-        **kwargs
-    )
+    task.run(task=task_fun, config=rendered_config.result, **kwargs)
     return Result(host=task.host)
 
 
 def _cfg_gen(task, config, **kwargs):
     """
-    Task function for cfg_gen method to render template with pillar
-    and Nornir host Inventory data
+    Task function for ``nr.cfg_gen`` function to render template with pillar
+    and Nornir host Inventory data.
+
+    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
+    :param config: (str) configuration string to render
+    :return result: Nornir result object with task execution results
     """
     task.run(
         task=_render_config_template,
@@ -413,6 +511,10 @@ def _render_config_template(task, config, kwargs):
 
     This function also cleans template engine related arguments
     from kwargs.
+
+    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
+    :param config: (str) configuration string to render
+    :return result: Nornir result object with configuration rendering results
     """
     context = kwargs.pop("context", {})
     context.update({"host": task.host})
@@ -426,9 +528,63 @@ def _render_config_template(task, config, kwargs):
     return Result(host=task.host, result=rendered_config)
 
 
+def nr_test(task, **kwargs):
+    """
+    Dummy task that echoes data passed to it. Useful to debug and
+    verify Nornir object.
+
+    :param kwargs: Any <key,value> pair you want
+    :return result: (``dict``) ``**kwargs`` passed to the task
+    """
+    return Result(host=task.host, result=kwargs)
+
+
 # -----------------------------------------------------------------------------
 # proxy module private functions
 # -----------------------------------------------------------------------------
+
+
+def _refresh(*args, **kwargs):
+    """
+    Function to re-initialise Nornir proxy with latest pillar data.
+
+    This function calls ``shutdown`` function, gets lates pillar
+    from master and re-instantiates Nornir object.
+    """
+    log.info("Nornir-proxy MAIN PID {}, refreshing!".format(os.getpid()))
+    time.sleep(10)
+    if shutdown():
+        # get latest pillar data
+        __opts__["pillar"] = __salt__["pillar.items"]()
+        # re-init proxy module
+        init(__opts__)
+        log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
+        return True
+    return False
+
+
+def _restart(*args, **kwargs):
+    """
+    This suicidal function serves as a lastage effort to recover Nornir proxy.
+    It effectively kills main Nornir proxy process by calling ``os.kill``
+    on itself.
+
+    However, SALT starts parent process for each proxy-minion,
+    that parent process will restart nornir-proxy minion once
+    it detects that minion is shutted down. Overall restart and
+    detection time combined might be of **several minutes**.
+
+    Prior to restart, ``shutdown`` function called. Nornir execution
+    module calls will be unresponsive. Use ``_restart`` with caution,
+    ideally, when no other jobs running.
+    """
+    log.warning(
+        "Nornir-proxy MAIN PID {}, restarting in 10 seconds!".format(os.getpid())
+    )
+    time.sleep(10)
+    if shutdown():
+        # kill itself and hope that parent process will revive me
+        os.kill(os.getpid(), signal.SIGKILL)
 
 
 def _get_or_import_task_fun(plugin):
@@ -451,17 +607,52 @@ def _get_or_import_task_fun(plugin):
 
 def _watchdog():
     """
-    Thread worker to maintain nornir proxy process and it's children
-    liveability.
+    Thread worker to maintain nornir proxy process and it's children liveability.
     """
     child_processes = {}
     while nornir_data["initialized"]:
-        mem_usage = minion_process.memory_info().rss / 1000000
-        log.error(
-            "Nornir-proxy MAIN PID {} watchdog, memory usage {}MByte".format(
-                os.getpid(), mem_usage
+        nornir_data["stats"]["watchdog_runs"] += 1
+        # check if can create test pipe to confirm that have not run out of file descriptors
+        try:
+            r, w = multiprocessing.Pipe(duplex=False)
+            r.close()
+            w.close()
+            del r, w
+        except:
+            tb = traceback.format_exc()
+            if "Too many open files" in tb:
+                log.warning(
+                    "Nornir-proxy MAIN PID {} watchdog, detected 'Too many open files' problem, restarting".format(
+                        os.getpid()
+                    )
+                )
+                _restart()
+            else:
+                log.error(
+                    "Nornir-proxy MAIN PID {} watchdog, create test pipe error: {}".format(
+                        os.getpid(), tb
+                    )
+                )
+        # run memory checks
+        try:
+            mem_usage = minion_process.memory_info().rss / 1024000
+            if mem_usage > nornir_data["memory_threshold_mbyte"]:
+                if nornir_data["memory_threshold_action"] == "log":
+                    log.warning(
+                        "Nornir-proxy {} MAIN PID {} watchdog, memory_threshold_mbyte exceeded, memory usage {}MByte".format(
+                            nornir_data["stats"]["proxy_minion_id"],
+                            os.getpid(),
+                            mem_usage,
+                        )
+                    )
+                elif nornir_data["memory_threshold_action"] == "restart":
+                    _restart()
+        except:
+            log.error(
+                "Nornir-proxy MAIN PID {} watchdog, memory usage check error: {}".format(
+                    os.getpid(), traceback.format_exc()
+                )
             )
-        )
         # Handle child processes lifespan
         try:
             for p in multiprocessing.active_children():
@@ -477,9 +668,10 @@ def _watchdog():
                 elif (
                     child_processes[cpid]["age"] > nornir_data["child_process_timeout"]
                 ):
+                    # kill process
                     os.kill(cpid, signal.SIGKILL)
-                    nornir_data["stats"]["child_processes_killed"] += 1
-                    log.error(
+                    nornir_data["stats"]["watchdog_child_processes_killed"] += 1
+                    log.info(
                         "Nornir-proxy MAIN PID {} watchdog, terminating child PID {}: {}".format(
                             os.getpid(), cpid, child_processes[cpid]
                         )
@@ -490,13 +682,25 @@ def _watchdog():
                         time.time() - child_processes[cpid]["first_seen"]
                     )
         except:
-            tb = traceback.format_exc()
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, child processes error: {}".format(
-                    os.getpid(), tb
+                    os.getpid(), traceback.format_exc()
                 )
             )
-        time.sleep(30)
+        # keepalive connections and clean up dead connections if any
+        try:
+            if nornir_data["proxy_always_alive"]:
+                stats = HostsKeepalive(nornir_data["nr"])
+                nornir_data["stats"]["watchdog_dead_connections_cleaned"] += stats[
+                    "dead_connections_cleaned"
+                ]
+        except:
+            log.error(
+                "Nornir-proxy MAIN PID {} watchdog, HostsKeepalive check error: {}".format(
+                    os.getpid(), traceback.format_exc()
+                )
+            )
+        time.sleep(nornir_data["watchdog_interval"])
 
 
 def _worker():
@@ -510,12 +714,27 @@ def _worker():
         try:
             # get job from queue
             job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
-            if job is None:
-                break
             # run job
             nornir_data["stats"]["jobs_started"] += 1
+            # check if its a call for special task
+            if job["task_fun"] == "test":
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
+                continue
+            elif job["task_fun"] == "nr_refresh":
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
+                _refresh()
+                continue
+            elif job["task_fun"] == "nr_restart":
+                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
+                _restart()
+                continue
+            # execute nornir task
             task_fun = _get_or_import_task_fun(job["task_fun"])
-            log.info("Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"]))
+            log.info(
+                "Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"])
+            )
             ret = run(task_fun, *job["args"], **job["kwargs"], name=job["name"])
             output = ResultSerializer(ret, job.get("add_details", False))
             nornir_data["stats"]["hosts_tasks_failed"] += len(
@@ -534,6 +753,16 @@ def _worker():
         # submit job results in results queue
         nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
         del job, ret, output
+        # close connections to devices if proxy_always_alive is False
+        if nornir_data["proxy_always_alive"] == False:
+            try:
+                nornir_data["nr"].close_connections(on_good=True, on_failed=True)
+            except:
+                log.error(
+                    "Nornir-proxy MAIN PID {} worker thread, Nornir close_connections error: {}".format(
+                        os.getpid(), traceback.format_exc()
+                    )
+                )
 
 
 # -----------------------------------------------------------------------------
@@ -549,7 +778,7 @@ def inventory_data(**kwargs):
     """
     # filter hosts to return inventory for
     hosts = FFun(nornir_data["nr"], kwargs=kwargs)
-    return hosts.dict()
+    return hosts.dict()["inventory"]
 
 
 def run(task, *args, **kwargs):
@@ -582,24 +811,60 @@ def run(task, *args, **kwargs):
     )
 
 
-def get_jobs_queue():
+def execute_job(task_fun, args, kwargs, cpid):
     """
-    Function to return jobs queue to submit jobs into
+    Function to submit job request in Nornir Proxy minion jobs queue,
+    wait for job to be completed and return results.
+
+    :param task_fun: str, name of nornir task function/plugin to run
+    :param args: list, any arguments to submit to Nornir task *args
+    :param kwargs: dict, any arguments to submit to Nornir task **kwargs
+    :param cpid: int, Process ID (PID) of child process submitting job request
     """
-    return nornir_data["jobs_queue"]
+    # add new job in jobs queue
+    nornir_data["jobs_queue"].put(
+        {
+            "task_fun": task_fun,
+            "args": args,
+            "kwargs": kwargs,
+            "pid": cpid,
+            "name": "{} CPID {}".format(task_fun, cpid)
+            if kwargs.pop("add_cpid_to_task_name", False)
+            else task_fun,
+            "add_details": kwargs.pop("add_details", False),
+        }
+    )
+    # wait for job to complete and return results
+    start_time = time.time()
+    while (time.time() - start_time) < nornir_data["job_wait_timeout"]:
+        time.sleep(0.1)
+        try:
+            res = nornir_data["res_queue"].get(block=True, timeout=0.1)
+            if res["pid"] == cpid:
+                break
+            else:
+                nornir_data["res_queue"].put(res)
+        except queue.Empty:
+            continue
+    else:
+        raise TimeoutError(
+            "Nornir-proxy MAIN PID {}, CPID '{}', {}s job_wait_timeout expired.".format(
+                os.getpid(), cpid, nornir_data["job_wait_timeout"]
+            )
+        )
+    # save results to file if requested to do so
+    if "tf" in kwargs:
+        ToFile(res["output"], **kwargs)
+    return res["output"]
 
 
-def get_results_queue():
+def stats(*args, **kwargs):
     """
-    Function to return results queue to get results from
-    """
-    return nornir_data["res_queue"]
+    Function to gather and return stats about Nornir proxy process.
 
-
-def stats():
+    :param stat: name of stat to return, returns all by default
     """
-    Function to gather and return stats about Nornir proxy process
-    """
+    stat = args[0] if args else kwargs.get("stat", None)
     # get approximate queue sizes
     try:
         jobs_job_queue_size = nornir_data["jobs_queue"].qsize()
@@ -610,12 +875,31 @@ def stats():
     # update stats
     nornir_data["stats"].update(
         {
-            "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1000000,
-            "main_process_uptime_seconds": time.time() - nornir_data["stats"]["main_process_start_time"],
+            "main_process_ram_usage_mbyte": minion_process.memory_info().rss / 1024000,
+            "main_process_uptime_seconds": time.time()
+            - nornir_data["stats"]["main_process_start_time"],
             "timestamp": time.ctime(),
             "jobs_job_queue_size": jobs_job_queue_size,
             "jobs_res_queue_size": jobs_res_queue_size,
             "child_processes_count": len(multiprocessing.active_children()),
+            "hosts_connections_active": sum(
+                [
+                    len(host.connections)
+                    for host in nornir_data["nr"].inventory.hosts.values()
+                ]
+            ),
         }
     )
-    return nornir_data["stats"]
+    # check if need to return single stat
+    if isinstance(stat, str):
+        try:
+            return {stat: nornir_data["stats"][stat]}
+        except KeyError:
+            raise CommandExecutionError(
+                "Not valid stat name '{}', valid options - {}".format(
+                    stat, list(nornir_data["stats"].keys())
+                )
+            )
+    # return full stats otherwise
+    else:
+        return nornir_data["stats"]

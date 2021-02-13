@@ -1,7 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Nornir State module
+Nornir State Module
 ===================
+
+.. versionadded:: v3001
+
+:maturity:   new
+:depends:    Nornir
+:platform:   unix
+
+Dependencies
+------------
+
+This module does not have any external dependencies
+
+Introduction
+------------
 
 This state module uses Nornir proxy execution module to apply configuration
 to devices.
@@ -12,7 +26,7 @@ plugin to handle idempotancy.
 Sample usage
 ------------
 
-File salt://states/nr_state_test.sls content located on Master::
+File ``salt://states/nr_state_test.sls`` content located on Master::
 
     apply_logging_commands:
       nr.cfg:
@@ -35,7 +49,7 @@ File salt://states/nr_state_test.sls content located on Master::
         - plugin: "nornir_netmiko.tasks.netmiko_send_config"
         - config_commands: "logging host 3.3.3.3"
 
-File salt://templates/nr_state_test_ntp.j2 content located on Master::
+File ``salt://templates/nr_state_test_ntp.j2`` content located on Master::
 
     {%- if host.platform|lower == 'ios' %}
     ntp server 1.1.1.1
@@ -45,7 +59,7 @@ File salt://templates/nr_state_test_ntp.j2 content located on Master::
 
 Apply state running command on master::
 
-    salt nr_minion_id state.apply  nr_state_test
+    salt nr_minion_id state.apply nr_state_test
 
 """
 # Import python libs

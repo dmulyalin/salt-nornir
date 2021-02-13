@@ -1,18 +1,15 @@
 """
-Nornir Execution module
+Nornir Execution Module
 =======================
 
 .. versionadded:: v3001
 
-:codeauthor: Denis Mulyalin <d.mulyalin@gmail.com>
 :maturity:   new
 :depends:    Nornir
 :platform:   unix
 
 Dependencies
 ------------
-
-- :mod:`Nornir proxy minion <salt.proxy.nornir>`
 
 Nornir 3.x uses modular approach for plugins. As a result  required
 plugins need to be installed separately from Nornir Core library. Main
@@ -29,9 +26,8 @@ plugin to install is:
 Introduction
 ------------
 
-This execution module complements `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
-based :mod:`proxy minion <salt.proxy.nornir>` to interact with devices over SSH, Telnet, NETCONF or
-any other supported connection methods.
+This execution module complements Nornir Proxy module to interact with devices over SSH, Telnet, 
+NETCONF or any other methods supported by Nornir connection plugins
 
 Things to keep in mind:
 
@@ -115,19 +111,23 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
 import logging
 import os
 import time
-import queue
 import traceback
 
-# import salt libs
-from salt.exceptions import CommandExecutionError
-
 log = logging.getLogger(__name__)
+
+
+# import salt libs, wrapping it in try/except for docs to generate
+try:
+    from salt.exceptions import CommandExecutionError
+except:
+    log.error("Nornir Execution Module - failed importing SALT libraries")
 
 # import nornir libs
 try:
     from nornir import InitNornir
     from nornir_salt import tcp_ping
     from nornir_salt.plugins.functions import FindString
+
     HAS_NORNIR = True
 except ImportError:
     log.error("Nornir Execution Module - failed importing libraries")
@@ -145,44 +145,8 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 # execution module private functions
 # -----------------------------------------------------------------------------
-
-
-def _get_results(task_fun, args, kwargs, add_details):
-    """
-    Function to subm,it work request in parent nornir-proxy
-    process and retrieve results from results queue.
-    """
-    jobs_queue = __proxy__["nornir.get_jobs_queue"]()
-    results_queue = __proxy__["nornir.get_results_queue"]()
-    start_time = time.time()
-    cpid = os.getpid()
-    # submit work request to main proxy-minion process
-    jobs_queue.put(
-        {
-            "task_fun": task_fun,
-            "args": args,
-            "kwargs": kwargs,
-            "pid": cpid,
-            "name": "{} CPID {}".format(task_fun, cpid),
-            "add_details": add_details
-        }
-    )
-    # wait 10 minites for job results return to avoid deadlocks
-    while (time.time() - start_time) < 600:
-        time.sleep(0.1)
-        try:
-            res = results_queue.get(block=True, timeout=0.1)
-            if res["pid"] == cpid:
-                return res["output"]
-            results_queue.put(res)
-        except queue.Empty:
-            continue
-        except:
-            tb = traceback.format_exc()
-            log.error("Nornir-proxy child PID {}, failed get job '{}' results, error: '{}'".format(cpid, task_fun, tb))
-    log.error("Nornir-proxy child PID {}, job '{}' got no results after 10min waiting.".format(cpid, task_fun))
-
-
+    
+    
 # -----------------------------------------------------------------------------
 # callable module function
 # -----------------------------------------------------------------------------
@@ -211,19 +175,17 @@ def task(plugin, *args, **kwargs):
     :param plugin: ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
-    :param args: arguments to pass on to task plugin
-    :param kwargs: keyword arguments to pass on to task plugin
+    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
 
     Sample usage::
 
         salt nornir-proxy-1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
         salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
+        salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko.netmiko_send_command" command_string="show clock"
+        salt nornir-proxy-1 nr.task nr_test a=b c=d add_details=False
     """
-    return _get_results(
-        task_fun=plugin,
-        args=args,
-        kwargs=kwargs,
-        add_details=kwargs.pop("add_details", True)
+    return __proxy__["nornir.execute_job"](
+        task_fun=plugin, args=args, kwargs=kwargs, cpid=os.getpid()
     )
 
 
@@ -236,6 +198,7 @@ def cli(*commands, **kwargs):
     :param Fx: filters to filter hosts
     :param netmiko_kwargs: kwargs to pass on to netmiko send_command methods
     :param add_details: boolean, to include details in result or not
+    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
     :param plugin: name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
     :param match: regular expression pattern to search for in results,
         similar to Cisco ``inlclude`` or Juniper ``match`` pipe commands
@@ -246,28 +209,25 @@ def cli(*commands, **kwargs):
          salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
          salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
          salt nornir-proxy-1 nr.cli "show run" FL="SW1,RTR1,RTR2" match="CPE[123]+" before=1
+         salt nornir-proxy-1 nr.cli "show clock" FO='{"platform__any": ["ios", "nxos_ssh", "cisco_xr"]}' for filtering
     """
-    __pub_jid = kwargs.get("__pub_jid")
     commands = kwargs.pop("commands", commands)
     kwargs["commands"] = [commands] if isinstance(commands, str) else commands
-    plugin = kwargs.get("plugin", "netmiko").lower()
+    plugin = kwargs.pop("plugin", "netmiko").lower()
     if plugin.lower() == "netmiko":
-        task_fun="_netmiko_send_commands"
+        task_fun = "_netmiko_send_commands"
         kwargs["connection_name"] = "netmiko"
     elif plugin.lower() == "scrapli":
-        task_fun="_scrapli_send_commands"
+        task_fun = "_scrapli_send_commands"
         kwargs["connection_name"] = "scrapli"
-    result = _get_results(
-        task_fun=task_fun,
-        args=[],
-        kwargs=kwargs,
-        add_details=kwargs.pop("add_details", False)
+    result = __proxy__["nornir.execute_job"](
+        task_fun=task_fun, args=[], kwargs=kwargs, cpid=os.getpid()
     )
     if "match" in kwargs:
-        return FindString(result, pattern=kwargs["match"], before=kwargs.get("before", 0))
-    else:
-        return result
-
+        result = FindString(
+            result, pattern=kwargs["match"], before=kwargs.get("before", 0)
+        )
+    return result
 
 
 def cfg(*commands, **kwargs):
@@ -286,6 +246,8 @@ def cfg(*commands, **kwargs):
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
 
+    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
+
     .. warning:: ``dry_run`` not supported by ``netmiko`` plugin
 
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -302,6 +264,7 @@ def cfg(*commands, **kwargs):
     # get arguments
     filename = kwargs.pop("filename", None)
     plugin = kwargs.pop("plugin", "napalm")
+    kwargs.setdefault("add_details", True)
     # get configuration
     config = commands if commands else kwargs.pop("commands", None)
     config = "\n".join(config) if isinstance(config, (list, tuple)) else config
@@ -310,7 +273,11 @@ def cfg(*commands, **kwargs):
             filename, saltenv=kwargs.get("saltenv", "base")
         )
     if not config:
-        raise CommandExecutionError("Configuration not found. filename: {}; commands: {}".format(filename, commands))
+        raise CommandExecutionError(
+            "Configuration not found. filename: {}; commands: {}".format(
+                filename, commands
+            )
+        )
     kwargs["config"] = config
     # decide on task name to run
     if plugin.lower() == "napalm":
@@ -323,11 +290,8 @@ def cfg(*commands, **kwargs):
         task_fun = "_scrapli_send_config"
         kwargs["connection_name"] = "scrapli"
     # work and return results
-    return _get_results(
-        task_fun=task_fun,
-        args=[],
-        kwargs=kwargs,
-        add_details=kwargs.pop("add_details", True)
+    return __proxy__["nornir.execute_job"](
+        task_fun=task_fun, args=[], kwargs=kwargs, cpid=os.getpid()
     )
 
 
@@ -345,6 +309,8 @@ def cfg_gen(filename, *args, **kwargs):
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
     :param add_details: boolean, to include details in result or not
+
+    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
 
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host's
@@ -374,11 +340,8 @@ def cfg_gen(filename, *args, **kwargs):
     kwargs["config"] = config
     kwargs["filename"] = filename
     # work and return results
-    return _get_results(
-        task_fun="_cfg_gen",
-        args=[],
-        kwargs=kwargs,
-        add_details=kwargs.pop("add_details", False)
+    return __proxy__["nornir.execute_job"](
+        task_fun="_cfg_gen", args=[], kwargs=kwargs, cpid=os.getpid()
     )
 
 
@@ -390,6 +353,9 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     :param ports (list of int, optional): tcp ports to ping, defaults to host's port or 22
     :param timeout (int, optional): defaults to 1
     :param host (string, optional): defaults to ``hostname``
+
+    :param add_details: boolean, to include details in result or not
+    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
 
     Sample usage::
 
@@ -404,39 +370,19 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     kwargs["timeout"] = timeout
     kwargs["host"] = host
     # work and return results
-    return _get_results(
+    return __proxy__["nornir.execute_job"](
         task_fun="nornir_salt.plugins.tasks.tcp_ping",
         args=[],
         kwargs=kwargs,
-        add_details=kwargs.pop("add_details", False)
+        cpid=os.getpid(),
     )
 
 
 def stats(*args, **kwargs):
     """
-    Function to return useful stats for main nornir proxy process
-    """
-    return __proxy__["nornir.stats"]()
+    Function to gather and return stats about Nornir proxy process.
 
+    :param stat: name of stat to return, returns all by default
+    """
+    return __proxy__["nornir.stats"](*args, **kwargs)
 
-def snap(*args, **kwargs):
-    """
-    Function to save task execution result in a file, effectively
-    taking snapshot for future reference.
-    """
-    pass
-
-
-def diff(*args, **kwargs):
-    """
-    Function show difference between two snapshots
-    """
-    pass
-
-
-def discover(*args, **kwargs):
-    """
-    Function to discover hosts dynamically and add them to Inventory
-    for managing
-    """
-    pass
