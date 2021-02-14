@@ -53,10 +53,10 @@ and capabilities should interoperate with Nornir proxy minion seamlessly.
 How it works?
 =============
 
-Wrapping Nornir in salt-proxy allowing effectively run jobs for multiple devices. As a result, single
+Wrapping Nornir in salt-proxy-minion allowing to run jobs against multiple devices. As a result, single
 proxy process can deliver configuration or retrieve state from multiple devices. Moreover, Nornir proxy 
 has support for long running connections to devices and shares access to connections with child 
-processes, as a result recommended way to run this proxy is with ``multiprocessing`` set to ``True``.
+processes. Recommended way to run this proxy is with ``multiprocessing`` set to ``True``.
 
 .. image:: ./_images/Nornir-proxy-minion_architecture.png
 
@@ -82,7 +82,7 @@ have to use ``Fx`` parameters to filter hosts, for example::
 
     # target only IOL1 and IOL2 hosts:
     salt nrp1 nr.cli "show clock" FB="IOL[12]"
-	
+    
 Nornir process watchdog
 =======================
 
@@ -130,3 +130,28 @@ process restart leads to clearing of all previously created pipes and release of
 Future Nornir proxy releases might include a fix for this problem, but other reasons might 
 lead to fd leaks, having mechanism in place to detect and recover from such a problem could 
 be of great benefit regardless. 
+
+How it all fits together
+========================
+
+SALTSTACK software, Nornir framework, nornir_salt and salt_nornir packages - how it fits together?
+
+.. code-block::
+
+    We can solve any problem by introducing an extra level of indirection.
+    
+        David J. Wheeler
+        
+    …except for the problem of too many levels of indirection
+    
+**nornir_salt** - is a collection of Nornir specific plugins, born in the process of creating
+nornir-proxy-minion
+
+**Nornir** - pluggable automation framework to interact with network devices
+
+**salt_nornir** - collection of SALTSTACK modules that rely on Nornir to run tasks
+
+**SALTSTACK** - Python-based, open-source software for event-driven IT automation, remote 
+task execution and configuration management (Wikipedia)
+
+.. image:: ./_images/how_it_fits.png

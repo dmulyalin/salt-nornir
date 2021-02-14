@@ -828,6 +828,9 @@ def execute_job(task_fun, args, kwargs, cpid):
     :param args: list, any arguments to submit to Nornir task ``*args``
     :param kwargs: dict, any arguments to submit to Nornir task ``**kwargs``
     :param cpid: int, Process ID (PID) of child process submitting job request
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
     """
     # add new job in jobs queue
     nornir_data["jobs_queue"].put(

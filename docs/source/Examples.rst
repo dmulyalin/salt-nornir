@@ -503,7 +503,71 @@ Examples::
     
     # targeting all hosts that has name ending with ``accsw1``
     salt -I "proxy:proxytype:nornir" nr.cli "show clock" FB="*accsw1"
-	
+    
 By default Nornir does not use any filtering and simply run task against all devices, 
 there is Nornir proxy minion configuration ``nornir_filter_required`` parameter exists 
 to alter behavior to opposite resulting in error if no ``Fx`` filter provided.
+
+Saving results to files
+=======================
+
+`ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ function
+distributed with ``nornir_salt`` package can be used to save execution module results in 
+files on machine where proxy-minion process running.
+
+Sample ``ToFile`` (tf) function usage::
+
+    [root@localhost /]# salt nrp1 nr.cli "show clock" "show ip int brief" tf="/tmp/nr/{host_name}/show.txt" tf_per_host=True
+    nrp1:
+        ----------
+        IOL1:
+            ----------
+            show clock:
+                *12:05:06.633 EET Sun Feb 14 2021
+            show ip int brief:
+                Interface                  IP-Address      OK? Method Status                Protocol
+                Ethernet0/0                unassigned      YES NVRAM  up                    up      
+                Ethernet0/0.102            10.1.102.10     YES NVRAM  up                    up      
+                Ethernet0/0.107            10.1.107.10     YES NVRAM  up                    up      
+                Ethernet0/0.2000           192.168.217.10  YES NVRAM  up                    up      
+                Ethernet0/1                unassigned      YES NVRAM  up                    up      
+                Ethernet0/2                unassigned      YES NVRAM  up                    up      
+                Ethernet0/3                unassigned      YES NVRAM  administratively down down    
+                Loopback0                  10.0.0.10       YES NVRAM  up                    up      
+                Loopback100                1.1.1.100       YES NVRAM  up                    up      
+        IOL2:
+            ----------
+            show clock:
+                *12:05:06.605 EET Sun Feb 14 2021
+            show ip int brief:
+                Interface                  IP-Address      OK? Method Status                Protocol
+                Ethernet0/0                unassigned      YES NVRAM  up                    up      
+                Ethernet0/0.27             10.1.27.7       YES NVRAM  up                    up      
+                Ethernet0/0.37             10.1.37.7       YES NVRAM  up                    up      
+                Ethernet0/0.107            10.1.107.7      YES NVRAM  up                    up      
+                Ethernet0/0.117            10.1.117.7      YES NVRAM  up                    up      
+                Ethernet0/0.2000           192.168.217.7   YES NVRAM  up                    up      
+                Ethernet0/1                unassigned      YES NVRAM  administratively down down    
+                Ethernet0/2                unassigned      YES NVRAM  administratively down down    
+                Ethernet0/3                unassigned      YES NVRAM  administratively down down    
+                Loopback0                  10.0.0.7        YES NVRAM  up                    up      
+
+    [root@localhost /]# tree /tmp/nr/
+    /tmp/nr/
+    ├── IOL1
+    │   └── show.txt
+    └── IOL2
+        └── show.txt
+    
+    [root@localhost /]# cat /tmp/nr/IOL1/show.txt 
+    *12:05:06.633 EET Sun Feb 14 2021
+    Interface                  IP-Address      OK? Method Status                Protocol
+    Ethernet0/0                unassigned      YES NVRAM  up                    up      
+    Ethernet0/0.102            10.1.102.10     YES NVRAM  up                    up      
+    Ethernet0/0.107            10.1.107.10     YES NVRAM  up                    up      
+    Ethernet0/0.2000           192.168.217.10  YES NVRAM  up                    up      
+    Ethernet0/1                unassigned      YES NVRAM  up                    up      
+    Ethernet0/2                unassigned      YES NVRAM  up                    up      
+    Ethernet0/3                unassigned      YES NVRAM  administratively down down    
+    Loopback0                  10.0.0.10       YES NVRAM  up                    up      
+    Loopback100                1.1.1.100       YES NVRAM  up                    up      

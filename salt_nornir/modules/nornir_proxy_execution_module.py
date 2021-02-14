@@ -155,7 +155,10 @@ def inventory(**kwargs):
     Return inventory dictionary for Nornir hosts
 
     :param Fx: filters to filter hosts
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     Sample Usage::
 
         salt nornir-proxy-1 nr.inventory
@@ -174,7 +177,10 @@ def task(plugin, *args, **kwargs):
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
     :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     Sample usage::
 
         salt nornir-proxy-1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
@@ -201,7 +207,10 @@ def cli(*commands, **kwargs):
     :param match: regular expression pattern to search for in results,
         similar to Cisco ``inlclude`` or Juniper ``match`` pipe commands
     :param before: used with match, number of lines before match to include in results, default is 0
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     Sample Usage::
 
          salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
@@ -243,9 +252,11 @@ def cfg(*commands, **kwargs):
     :param dry_run: boolean, default False, controls whether to apply changes to device or simulate them
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
-
     :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     .. warning:: ``dry_run`` not supported by ``netmiko`` plugin
 
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -307,9 +318,11 @@ def cfg_gen(filename, *args, **kwargs):
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
     :param add_details: boolean, to include details in result or not
-
     :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host's
     inventory data.
@@ -351,10 +364,12 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     :param ports (list of int, optional): tcp ports to ping, defaults to host's port or 22
     :param timeout (int, optional): defaults to 1
     :param host (string, optional): defaults to ``hostname``
-
     :param add_details: boolean, to include details in result or not
     :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-
+    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ 
+        function's OS path to file where to save results, if present, ToFile function called
+        together with provided ``**kwargs``
+        
     Sample usage::
 
         salt nornir-proxy-1 nr.tping
