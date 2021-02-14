@@ -82,3 +82,50 @@ have to use ``Fx`` parameters to filter hosts, for example::
 
     # target only IOL1 and IOL2 hosts:
     salt nrp1 nr.cli "show clock" FB="IOL[12]"
+	
+Nornir process watchdog
+=======================
+
+Slowly crashlooping system is usually preferable to a system that simply stops working.
+
+To address various issues that can happen during lifespan of Nornir Proxy minion process
+each such a process has watchdog thread running. Watchdog constantly execute checks 
+on a predefined intervals controlled by ``watchdog_interval`` parameter (default 30s).
+
+Problems watchdog should be capable of handling:
+
+1. **Memory overconsumption**. ``memory_threshold_mbyte`` and ``memory_threshold_action`` 
+proxy minion settings can help to prevent proxy minion process from running out of memory.
+Normally, because Nornir Proxy minion uses multiprocessing to run tasks instead of 
+threading it is not prone to memory leak issues, however, having 
+capability to log or restart process in response to consuming too much memory can 
+be helpful in extreme cases like bugs in new software releases.
+
+2. **Stale child processes**. During nornir proxy minion testing was detected that some
+child processes started to execute tasks might stuck for unknown reason. Probably 
+bug of some sort. That usually leads to child process running indefinitely, consuming
+system resources and task never been completed. To mitigate that problem, watchdog
+runs lifespan detection for all child process by measuring their age, if age
+grows beyond ``child_process_max_age`` parameter (default 660s), watchdog kills such 
+a process.
+
+3. **Stale connections to devices**. Sometime connections to devices might become unusable.
+For instance device rebooted or network connectivity issue. Nornir plugins usually not 
+capable of recovering from such a problems, as a result watchdog runs connection checks to 
+confirm they are alive, clearing them otherwise.
+
+3.1. **Connections keepalives**. Common connections liveness detection mechanism usually 
+require sending some data down the connection channel, receiving some data from device 
+in response. Because of that, connections effectively kept alive, preventing them from 
+timing out on device end due to inactivity.
+
+4. **Running out of file descriptors (fd) problem**. On Unix systems each process can have
+limited number of file descriptors created, usually around 1000, because Nornir proxy 
+minion uses multiprocessing queues for inter-process communications, effectively creating 
+pipes on a lower level, each such a pipe consume file descriptor. But after child 
+processes destroyed, not all fds deleted for some reason, fd leaking after reaching OS limit
+prevents proxy minion process from running tasks. Watchdog on each run creates and destroys 
+test pipes, restarting Nornir proxy minion process on failure to do so. Future Nornir proxy
+releases might include a fix for this problem, but other reasons might lead to fd leaks, having 
+mechanism in place to detect and recover from such a problem could be of great benefit
+regardless. 

@@ -53,7 +53,7 @@ Nornir proxy pillar parameters
   running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
 - ``runner`` - dict, Nornir runner parameters dictinary to use for this proxy module
-- ``child_process_timeout`` - int, seconds to wait before forcefully kill child process,
+- ``child_process_max_age`` - int, seconds to wait before forcefully kill child process,
   default 660s
 - ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
 - ``proxy_always_alive`` - bool, default True, keep connections with devices alive on True
@@ -79,7 +79,7 @@ Nornir proxy-minion pillar example:
       nornir_filter_required: True
       proxy_always_alive: True
       watchdog_interval: 30
-      child_process_timeout: 660
+      child_process_max_age: 660
       job_wait_timeout: 600
       memory_threshold_mbyte: 300
       memory_threshold_action: log
@@ -230,7 +230,7 @@ nornir_data = {
     "watchdog_thread": None,
     "proxy_always_alive": True,
     "watchdog_interval": 30,
-    "child_process_timeout": 660,
+    "child_process_max_age": 660,
     "job_wait_timeout": 600,
     "memory_threshold_mbyte": 300,
     "memory_threshold_action": "log",
@@ -296,8 +296,8 @@ def init(opts):
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
     )
-    nornir_data["child_process_timeout"] = opts["proxy"].get(
-        "child_process_timeout", 660
+    nornir_data["child_process_max_age"] = opts["proxy"].get(
+        "child_process_max_age", 660
     )
     nornir_data["watchdog_interval"] = int(opts["proxy"].get("watchdog_interval", 30))
     nornir_data["job_wait_timeout"] = int(opts["proxy"].get("job_wait_timeout", 600))
@@ -674,7 +674,7 @@ def _watchdog():
                         "age": 0,
                     }
                 elif (
-                    child_processes[cpid]["age"] > nornir_data["child_process_timeout"]
+                    child_processes[cpid]["age"] > nornir_data["child_process_max_age"]
                 ):
                     # kill process
                     os.kill(cpid, signal.SIGKILL)
