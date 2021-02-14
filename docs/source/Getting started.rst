@@ -24,6 +24,7 @@ Installing``salt_nornir`` should automatically install these dependencies::
     nornir_napalm>=0.1.1
     nornir_salt>=0.3.0
     napalm>=3.0.0
+    psutil
 
 Make sure to update above libraries if required:
 

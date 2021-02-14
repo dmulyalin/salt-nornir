@@ -139,6 +139,8 @@ def inventory(*args, **kwargs):
     :param retry: how many times to retry command if no return from minions, default 3
     :param job_timeout: seconds to wait for return from minions, overrides
         ``--timeout`` option, default 30s
+    :param tk: dictionary, ``**kwargs`` to use with ``tabulate.tabulate`` method, reference
+        `tabulate documentation <https://pypi.org/project/tabulate/>`_
 
     Sample Usage::
 
@@ -153,6 +155,15 @@ def inventory(*args, **kwargs):
 
         salt-run nr.inventory host_name_id --timeout=10
         salt-run nr.inventory host_name_id job_timeout=10 tgt="nornir-proxy-id" tgt_type="glob"
+        
+    Sample output::
+    
+        [root@localhost /]# salt-run nr.inventory IOL1
+        +---+--------+----------+----------------+----------+--------+
+        |   | minion | hostname |       ip       | platform | groups |
+        +---+--------+----------+----------------+----------+--------+
+        | 0 |  nrp1  |   IOL1   | 192.168.217.10 |   ios    |  lab   |
+        +---+--------+----------+----------------+----------+--------+
     """
     ret = []
 

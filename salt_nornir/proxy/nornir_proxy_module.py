@@ -11,13 +11,17 @@ Nornir 3.x uses modular approach for plugins. As a result  required
 plugins need to be installed separately from Nornir Core library. Main
 plugin to install is:
 
-- `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ ``pip install nornir-salt``
+- `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ - ``pip install nornir_salt``
 
-``nornir-salt`` will install these additional dependencies automatically:
+``nornir_salt`` will install these additional dependencies automatically::
 
-- `Nornir <https://github.com/nornir-automation/nornir>`_ ``pip install nornir``
-- `nornir_netmiko <https://github.com/ktbyers/nornir_netmiko/>`_ ``pip install nornir_netmiko``
-- `nornir_napalm <https://github.com/nornir-automation/nornir_napalm/>`_ ``pip install nornir_napalm``
+    netmiko>=3.3.2
+    nornir>=3.0.0
+    nornir_netmiko>=0.1.1
+    nornir_napalm>=0.1.1
+    nornir_salt>=0.3.0
+    napalm>=3.0.0
+    psutil
 
 Introduction
 ------------
@@ -27,11 +31,11 @@ conventional proxy-minion that normally dedicated to managing one device/system
 only.
 
 As a result, Nornir proxy-minion requires less resources to run tasks against same
-number of devices. During idle state only one process is active, that significantly 
-reduces amount of memory required on the system.
+number of devices. During idle state only one proxy minion process is active, 
+that significantly reduces amount of memory required to run the system.
 
-Proxy-module recommended way of operating is ``multiprocessing`` set to ``True`` - 
-default value, so that each task executed in dedicated process.
+Proxy-module required way of operating is ``multiprocessing`` set to ``True`` - 
+default value, that way each task executed in dedicated process.
 
 Nornir proxy pillar parameters
 ------------------------------
