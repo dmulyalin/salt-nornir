@@ -115,7 +115,7 @@ capable of recovering from such a problems, as a result watchdog runs connection
 confirm they are alive, clearing them otherwise.
 
 3.1. **Connections keepalives**. Common connections liveness detection mechanism usually 
-require sending some data down the connection channel, receiving some data from device 
+requires sending some data down the connection channel, receiving some data from device 
 in response. Because of that, connections effectively kept alive, preventing them from 
 timing out on device end due to inactivity.
 
@@ -125,7 +125,8 @@ minion uses multiprocessing queues for inter-process communications, effectively
 pipes on a lower level, each such a pipe consume file descriptor. But after child 
 processes destroyed, not all fds deleted for some reason, fd leaking after reaching OS limit
 prevents proxy minion process from running tasks. Watchdog on each run creates and destroys 
-test pipes, restarting Nornir proxy minion process on failure to do so. Future Nornir proxy
-releases might include a fix for this problem, but other reasons might lead to fd leaks, having 
-mechanism in place to detect and recover from such a problem could be of great benefit
-regardless. 
+test pipes, restarting Nornir proxy minion process on failure to do so. Nornir proxy minion
+process restart leads to clearing of all previously created pipes and release of file descriptors. 
+Future Nornir proxy releases might include a fix for this problem, but other reasons might 
+lead to fd leaks, having mechanism in place to detect and recover from such a problem could 
+be of great benefit regardless. 
