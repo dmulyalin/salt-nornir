@@ -16,7 +16,7 @@ From PyPi::
 
     pip install salt_nornir
     
-Installing``salt_nornir`` should automatically install these dependencies::
+Installing ``salt_nornir`` should automatically install these dependencies::
 
     netmiko>=3.3.2
     nornir>=3.0.0
@@ -149,6 +149,10 @@ Or, run in debug mode::
 
     salt-proxy --proxyid=nrp1 -l debug
     
+Can check proxy logs as well::
+
+    tail -f /var/log/salt/proxy-1
+
 Accept Proxy Minion key on master
 =================================
 

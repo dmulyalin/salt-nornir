@@ -14,8 +14,7 @@ Dependencies
 Introduction
 ------------
 
-Nornir-runner module runs on SALT Master to interact with devices behind Nornir proxies allowing ti interact with
-several Nornir Proxy minion processes.
+Nornir-runner module runs on SALT Master and allows to interact with devices behind Nornir proxy minions.
 
 Nornir Runner module functions
 ------------------------------

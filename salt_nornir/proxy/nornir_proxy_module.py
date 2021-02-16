@@ -9,7 +9,7 @@ Dependencies
 
 Nornir 3.x uses modular approach for plugins. As a result  required
 plugins need to be installed separately from Nornir Core library. Main
-plugin to install is:
+collection of plugins to install is:
 
 - `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ - ``pip install nornir_salt``
 

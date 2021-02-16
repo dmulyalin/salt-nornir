@@ -106,7 +106,7 @@ def cfg(*args, **kwargs):
 
     **Sample Usage**
 
-    File salt://states/nr_state_logging_cfg.sls content located on Master::
+    File ``salt://states/nr_state_logging_cfg.sls`` content located on Master::
 
         apply_logging_commands:
           nr.cfg:
