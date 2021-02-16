@@ -27,11 +27,20 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
+    install_requires=[
+        "netmiko>=3.3.2",
+        "nornir>=3.0.0",
+        "nornir_netmiko>=0.1.1",
+        "nornir_napalm>=0.1.1",
+        "nornir_salt>=0.3.0",
+        "napalm>=3.0.0",
+        "psutil>=2.2.1"
+    ],
     entry_points = """
-	[salt.loader]
+    [salt.loader]
     module_dirs=salt_nornir.loader:module_dirs
-	proxy_dirs=salt_nornir.loader:proxy_dirs	
-	states_dirs=salt_nornir.loader:states_dirs	
-	runner_dirs=salt_nornir.loader:runner_dirs
-	"""
+    proxy_dirs=salt_nornir.loader:proxy_dirs    
+    states_dirs=salt_nornir.loader:states_dirs    
+    runner_dirs=salt_nornir.loader:runner_dirs
+    """
 )
