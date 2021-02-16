@@ -286,4 +286,11 @@ As example, configure syslog server using Netmiko::
                     IOL2(config)#end
                     IOL2#
 
-Reference examples section for more information on how to use Nornir Proxy Minion.
+Additional resources
+====================
+
+Reference :ref:`salt_nornir_examples` section for more information on how to use Nornir Proxy Minion.
+
+`SALTSTACK official documentation <https://docs.saltproject.io/en/latest/>`_
+
+Collection of useful SALTSTACK resource `awesome-saltstack <https://github.com/hbokh/awesome-saltstack>`_

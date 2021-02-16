@@ -52,7 +52,7 @@ Nornir proxy pillar parameters
   if no filter provided, task will not run at all. It is a safety measure against
   running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
-- ``runner`` - dict, Nornir runner parameters dictinary to use for this proxy module
+- ``runner`` - dict, Nornir runner parameters dictionary to use for this proxy module
 - ``child_process_max_age`` - int, seconds to wait before forcefully kill child process,
   default 660s
 - ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
@@ -114,9 +114,28 @@ Nornir runners
 --------------
 
 Runners in Nornir define how to run tasks against hosts. If no ``runner``
-parameter provided in proxy-minion pillar, ``RetryRunner`` used.
-``RetryRunner`` runner included in
-`nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library.
+dictionary provided in proxy-minion pillar, Nornir initialized using
+`RetryRunner <https://nornir-salt.readthedocs.io/en/latest/Runner%20Plugins.html#retryrunner-plugin>`_
+plugin with these default settings::
+
+    runner = {
+        "plugin": "RetryRunner",
+        "options": {
+            "num_workers": 100,
+            "num_connectors": 10,
+            "connect_retry": 3,
+            "connect_backoff": 1000,
+            "connect_splay": 100,
+            "task_retry": 3,
+            "task_backoff": 1000,
+            "task_splay": 100,
+            "reconnect_on_fail": True,
+            "task_timeout": 600
+        },
+    }
+        
+``RetryRunner`` runner included in `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ 
+library.
 
 Nornir proxy module special tasks
 ---------------------------------
@@ -276,6 +295,8 @@ def init(opts):
                 "task_retry": 3,
                 "task_backoff": 1000,
                 "task_splay": 100,
+                "reconnect_on_fail": True,
+                "task_timeout": 600
             },
         }
         if not opts["proxy"].get("runner")

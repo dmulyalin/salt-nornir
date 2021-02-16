@@ -1,3 +1,5 @@
+.. _salt_nornir_examples:
+
 Examples
 ########
 
@@ -20,7 +22,8 @@ With Scrapli plugin::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=scrapli
     
-Make sure that host has Scrapli connection options specified in inventory, e.g.::
+Make sure that Scrapli library installed on minion machine and hosts' connection options specified in 
+inventory, e.g.::
 
     hosts:
       IOL1:
