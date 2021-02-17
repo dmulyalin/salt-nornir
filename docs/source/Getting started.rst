@@ -22,7 +22,7 @@ Installing ``salt_nornir`` should automatically install these dependencies::
     nornir>=3.0.0
     nornir_netmiko>=0.1.1
     nornir_napalm>=0.1.1
-    nornir_salt>=0.3.0
+    nornir_salt>=0.3.1
     napalm>=3.0.0
     psutil
 
@@ -41,6 +41,8 @@ Configure SALT Master
 Master configuration file located on SALT Master machine - machine where you installed 
 ``salt-master`` software.
 
+Backup original master config file - ``mv /etc/salt/master /etc/salt/master.old``
+    
 File ``/etc/salt/master``::
 
     interface: 0.0.0.0 # indicates IP address to listen/use for connections
@@ -58,7 +60,7 @@ File ``/etc/salt/master``::
 Define Proxy Minion pillar configuration
 ========================================
 
-Pillar files located on SALT Master machine. 
+Pillar files located on SALT Master machine. Create pillar directory if required - ``mkdir /etc/salt/pillar/``.
 
 File ``/etc/salt/pillar/nrp1.sls``::
 
@@ -106,7 +108,9 @@ Configure Proxy Minion
 Proxy minion configuration files located on SALT Minion machine - machine where you installed 
 ``salt-minion`` software.
 
-File ``/etc/salt/minion``::
+Backup original proxy configuration file - ``mv /etc/salt/proxy /etc/salt/proxy.old``.
+
+File ``/etc/salt/proxy``::
 
     master: 192.168.1.1 # IP address or FQDN of master machine
     multiprocessing: false # default, but overridden in Nornir proxy minion pillar

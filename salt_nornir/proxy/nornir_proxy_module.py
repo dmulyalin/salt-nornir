@@ -19,7 +19,7 @@ collection of plugins to install is:
     nornir>=3.0.0
     nornir_netmiko>=0.1.1
     nornir_napalm>=0.1.1
-    nornir_salt>=0.3.0
+    nornir_salt>=0.3.1
     napalm>=3.0.0
     psutil
 
