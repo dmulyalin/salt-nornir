@@ -1,0 +1,13 @@
+wr_: 
+  function: nr.cli
+  args: ["wr"]
+  kwargs: {"FO": {"platform": "arista_eos"}}
+  description: "Save Arista devices configuration"
+  
+configure_snmp:
+  - function: nr.cfg
+    args: ["snmp host 1.2.3.4 test", "snmp host 1.2.3.5 test"]
+    kwargs: {"FB": "*", "plugin": "netmiko"}
+  - function: nr.cfg
+    args: ["snmp-server local-interface Ethernet 1"]
+    kwargs: {"FB": "*", "plugin": "netmiko"}

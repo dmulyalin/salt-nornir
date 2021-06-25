@@ -1,0 +1,10 @@
+- task: "show version"
+  test: contains
+  pattern: "cEOS"
+  name: check ceos version
+  cli: {FB: "ceos[12]"}
+- test: contains_lines
+  pattern: ["1.1.1.10", "1.1.1.11"]
+  task: "show ntp associations"
+  name: check NTP config
+  cli: {FB: ceos2}

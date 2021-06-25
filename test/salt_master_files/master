@@ -1,0 +1,14 @@
+auto_accept: True
+file_recv: True
+interface: 0.0.0.0
+pki_dir: /etc/salt/pki/master
+
+file_roots:
+  base:
+    - /etc/salt/
+    - /etc/salt/states/
+    - /etc/salt/templates/
+
+pillar_roots:
+  base:
+    - /etc/salt/pillar/

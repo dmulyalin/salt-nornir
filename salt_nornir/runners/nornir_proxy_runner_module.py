@@ -35,6 +35,7 @@ log = logging.getLogger(__name__)
 try:
     import salt
     from salt.exceptions import CommandExecutionError
+
     HAS_SALT = True
 except:
     log.error("Nornir Runner Module - failed importing SALT libraries")
@@ -47,17 +48,16 @@ try:
     HAS_TABULATE = True
 except ImportError:
     HAS_TABULATE = False
-    
+
 
 if HAS_SALT:
     # initiate execution modules client to run 'salt "*" command' commands
     client = salt.client.LocalClient()
-    
+
     # initiate runner modules client to run 'salt "*" command' commands
     opts = salt.config.master_config("/etc/salt/master")
     opts["quiet"] = True
     runner = salt.runner.RunnerClient(opts)
-
 
 
 __virtualname__ = "nr"
@@ -80,8 +80,8 @@ def _run_job(tgt, fun, arg, kwarg, tgt_type, timeout, retry):
     Helper function to send execution module command using ``client.run_job``
     method and collect results using ``client.get_event_iter_returns``. Implements
     basic retry mechanism.
-    
-    If ``client.get_event_iter_returns`` return no results, ``_run_job`` will retry 
+
+    If ``client.get_event_iter_returns`` return no results, ``_run_job`` will retry
     the command until minions return results or ``retry`` threshold reached, in
     latter case ``CommandExecutionError`` raised with job details
     """
@@ -148,15 +148,15 @@ def inventory(*args, **kwargs):
         salt-run nr.inventory FB="host_name_id" FP="10.1.2.0/24" tk='{"tablefmt": "jira"}'
 
     If it takes too long to get output because of non-responding/unreachable minions,
-    specify ``--timeout`` or ``job_timeout`` option to shorten waiting time, ``job_timeout`` 
-    overrides ``--timeout``. Alternatively, instead of targeting all nornir based proxy 
+    specify ``--timeout`` or ``job_timeout`` option to shorten waiting time, ``job_timeout``
+    overrides ``--timeout``. Alternatively, instead of targeting all nornir based proxy
     minions, ``tgt`` and ``tgt_type`` can be used to target a subset of them::
 
         salt-run nr.inventory host_name_id --timeout=10
         salt-run nr.inventory host_name_id job_timeout=10 tgt="nornir-proxy-id" tgt_type="glob"
-        
+
     Sample output::
-    
+
         [root@localhost /]# salt-run nr.inventory IOL1
         +---+--------+----------+----------------+----------+--------+
         |   | minion | hostname |       ip       | platform | groups |
@@ -181,7 +181,9 @@ def inventory(*args, **kwargs):
     verbose = kwargs.pop("verbose", False)
     use_tabulate = kwargs.pop("use_tabulate", True)
     tk = kwargs.pop("tk", {"tablefmt": "pretty", "showindex": True})
-    timeout = kwargs.pop("job_timeout") if kwargs.get("job_timeout") else __opts__["timeout"]
+    timeout = (
+        kwargs.pop("job_timeout") if kwargs.get("job_timeout") else __opts__["timeout"]
+    )
     retry = kwargs.pop("retry", 3)
 
     # send nr.inventory command
@@ -258,10 +260,10 @@ def cli(*args, **kwargs):
 
          salt-run nr.cli hostname-id "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
          salt-run nr.cli hostname-id commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
-         
+
     If it takes too long to get output because of non-responding/unreachable minions,
-    specify ``--timeout`` or ``job_timeout`` option to shorten waiting time, ``job_timeout`` 
-    overrides ``--timeout``. Alternatively, instead of targeting all nornir based proxy 
+    specify ``--timeout`` or ``job_timeout`` option to shorten waiting time, ``job_timeout``
+    overrides ``--timeout``. Alternatively, instead of targeting all nornir based proxy
     minions, ``tgt`` and ``tgt_type`` can be used to target a subset of them::
 
         salt-run nr.inventory host_name_id --timeout=10
@@ -290,7 +292,9 @@ def cli(*args, **kwargs):
     tgt = kwargs.pop("tgt", "proxy:proxytype:nornir")
     tgt_type = kwargs.pop("tgt_type", "pillar")
     verbose = kwargs.pop("verbose", False)
-    timeout = kwargs.pop("job_timeout") if kwargs.get("job_timeout") else __opts__["timeout"]
+    timeout = (
+        kwargs.pop("job_timeout") if kwargs.get("job_timeout") else __opts__["timeout"]
+    )
     retry = kwargs.pop("retry", 3)
 
     # send nr.cli command
@@ -313,16 +317,17 @@ def cli(*args, **kwargs):
                 ret.update(result["ret"])
     return ret
 
+
 def call(*arg, **kwargs):
     """
     Method to call arbitrary command against all Nornir-proxy minions,
     including Nornir-proxy minion excution module functions
-    
+
     Sample Usage::
-    
-        salt-run nr.call test.ping  
+
+        salt-run nr.call test.ping
         salt-run nr.call nr.cli "show clock" FB="*" tgt="nr-minion-id*" tgt_type="glob"
-        
-    
+
+
     """
     pass

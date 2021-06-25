@@ -1,0 +1,10 @@
+FROM centos:7
+
+RUN yum install -y python3
+RUN python3 -m pip install pip --upgrade
+RUN rpm --import https://repo.saltproject.io/py3/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
+RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3002.repo | tee /etc/yum.repos.d/salt.repo
+RUN yum install -y salt-master
+RUN python3 -m pip install pytest
+
+ENTRYPOINT ["salt-master", "-l", "debug"]

@@ -1,0 +1,8 @@
+<get-config>
+     <source><running/></source>
+     <filter type="subtree">
+          <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+               <interface></interface>
+          </interfaces>
+     </filter>
+</get-config>

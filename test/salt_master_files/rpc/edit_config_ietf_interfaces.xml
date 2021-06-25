@@ -1,0 +1,10 @@
+<config>
+    <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+        <interface>
+            <name>Ethernet1</name>
+            <config>
+                <description>Configured by NETCONF</description>
+            </config>
+        </interface>
+    </interfaces>
+</config>

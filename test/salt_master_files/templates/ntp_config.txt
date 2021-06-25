@@ -1,0 +1,2 @@
+ntp server 2.2.2.2
+ntp server 2.2.2.3

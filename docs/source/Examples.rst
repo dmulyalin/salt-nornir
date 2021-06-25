@@ -204,7 +204,7 @@ absolute path ``/etc/salt/template/nr_syslog_cfg.j2``::
 
 Content of state file ``/etc/salt/states/nr_cfg_syslog_and_ntp_state.sls``::
 
-    # apply loggin confgiuration using jinja2 template
+    # apply logging configuration using jinja2 template
     configure_logging:
       nr.cfg:
         - filename: salt://templates/nr_syslog_cfg.j2
