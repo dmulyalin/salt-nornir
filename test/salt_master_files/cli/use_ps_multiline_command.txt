@@ -1,0 +1,4 @@
+enable
+conf t
+do show ip int brief
+exit

@@ -1,4 +1,4 @@
 def run(result):
-    """  Function to test True return """
+    """Function to test True return"""
 
     return True

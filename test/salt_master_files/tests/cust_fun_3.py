@@ -1,5 +1,5 @@
 def run(result):
-    """  Function to test when task is a list """
+    """Function to test when task is a list"""
     ret = []
     for item in result:
         if item.name == "show clock":

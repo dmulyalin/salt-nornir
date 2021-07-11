@@ -16,7 +16,7 @@ setup(
     url="https://github.com/dmulyalin/salt-nornir",
     packages=find_packages(),
     include_package_data=True,
-    data_files=[('', ['LICENSE'])],
+    data_files=[("", ["LICENSE"])],
     classifiers=[
         "Topic :: Utilities",
         "Programming Language :: Python :: 3.6",
@@ -31,13 +31,13 @@ setup(
         "nornir_napalm>=0.1.1",
         "nornir_salt>=0.3.1",
         "napalm>=3.0.0",
-        "psutil>=2.2.1"
+        "psutil>=2.2.1",
     ],
-    entry_points = """
+    entry_points="""
     [salt.loader]
     module_dirs=salt_nornir.loader:module_dirs
     proxy_dirs=salt_nornir.loader:proxy_dirs    
     states_dirs=salt_nornir.loader:states_dirs    
     runner_dirs=salt_nornir.loader:runner_dirs
-    """
+    """,
 )

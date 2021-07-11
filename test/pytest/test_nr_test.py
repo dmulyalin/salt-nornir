@@ -37,7 +37,7 @@ def test_nr_test_inline_contains():
 
 
 def test_nr_test_inline_contains_tabulate():
-    """ Check tabulate formatting, need to have tabulate installed"""
+    """Check tabulate formatting, need to have tabulate installed"""
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.test",
@@ -417,3 +417,34 @@ def test_nr_test_suite_with_cli_params():
         elif item["name"] == "check NTP config":
             assert item["result"] == "FAIL"
             assert item["host"] == "ceos2"
+
+
+def test_nr_test_inline_contains_with_FB_filter():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["show clock", "contains", "Clock source: local"],
+        kwarg={"FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert len(ret["nrp1"]) == 1
+    for item in ret["nrp1"]:
+        assert item["result"] == "PASS"
+        assert item["criteria"] == "Clock source: local"
+        assert item["test"] == "contains"
+        assert item["host"] == "ceos1"
+        assert "name" in item
+
+
+def test_nr_test_inline_contains_with_render():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["ping {{ host.name }}", "contains", "packet loss"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert len(ret["nrp1"]) == 2
+    for item in ret["nrp1"]:
+        assert item["result"] == "PASS"

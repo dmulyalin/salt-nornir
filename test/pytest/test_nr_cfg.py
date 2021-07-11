@@ -372,16 +372,9 @@ def test_nr_cfg_from_non_existing_file_fail():
         tgt_type="glob",
         timeout=60,
     )
-    for host, results in ret["nrp1"].items():
-        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["_netmiko_send_config"]["changed"] is False
-        assert results["_netmiko_send_config"]["exception"] is not None
-        assert results["_netmiko_send_config"]["failed"] is True
-        assert isinstance(results["_netmiko_send_config"]["result"], str)
-        assert (
-            "CommandExecutionError: Failed to get"
-            in results["_netmiko_send_config"]["result"]
-        )
+    for host, results in ret.items():
+        assert isinstance(results, str)
+        assert "CommandExecutionError: Failed to get" in results
 
 
 def test_nr_cfg_inline_commands_plugin_scrapli():
@@ -392,7 +385,7 @@ def test_nr_cfg_inline_commands_plugin_scrapli():
             ----------
             ceos1:
                 ----------
-                send_config:
+                scrapli_send_config:
                     ----------
                     changed:
                         True
@@ -406,7 +399,7 @@ def test_nr_cfg_inline_commands_plugin_scrapli():
                         ntp server 1.1.1.2
             ceos2:
                 ----------
-                send_config:
+                scrapli_send_config:
                     ----------
                     changed:
                         True
@@ -428,11 +421,11 @@ def test_nr_cfg_inline_commands_plugin_scrapli():
         timeout=60,
     )
     for host, results in ret["nrp1"].items():
-        assert results["send_config"]["changed"] is True
-        assert results["send_config"]["exception"] is None
-        assert results["send_config"]["failed"] is False
-        assert isinstance(results["send_config"]["result"], str)
-        assert len(results["send_config"]["result"]) > 0
+        assert results["scrapli_send_config"]["changed"] is True
+        assert results["scrapli_send_config"]["exception"] is None
+        assert results["scrapli_send_config"]["failed"] is False
+        assert isinstance(results["scrapli_send_config"]["result"], str)
+        assert len(results["scrapli_send_config"]["result"]) > 0
 
 
 def test_nr_cfg_inline_commands_plugin_napalm():

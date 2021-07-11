@@ -53,6 +53,7 @@ def test_ncclient_dir_call():
         assert "dir" in data, "No 'dir' output from '{}'".format(host_name)
         assert isinstance(data["dir"], list)
         assert len(data["dir"]) > 0
+        assert "Traceback (most recent " not in data["dir"], "dir call returned error"
 
 
 def test_ncclient_connected_call():
@@ -112,9 +113,12 @@ def test_ncclient_server_capabilities_call():
         ), "No 'server_capabilities' output from '{}'".format(host_name)
         assert isinstance(data["server_capabilities"], list)
         assert len(data["server_capabilities"]) > 0
+        assert (
+            "Traceback (most recent " not in data["server_capabilities"]
+        ), "server_capabilities call returned error"
 
 
-def test_ncclient_get_config_call_with_filter_from_file():
+def test_ncclient_get_config_call_with_filter_list_from_file():
     """
     Test get_config method call
 
@@ -151,6 +155,48 @@ def test_ncclient_get_config_call_with_filter_from_file():
         )
         assert isinstance(data["get_config"], str)
         assert len(data["get_config"]) > 0
+        assert "Traceback" not in data["get_config"], "get_config returned error"
+
+
+def test_ncclient_get_config_call_with_filter_with_ftype_from_file():
+    """
+    Test get_config method call
+
+    ret should look like::
+
+        nrp1:
+            ----------
+            ceos1:
+                ----------
+                get_config:
+                    <rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="...">
+                      <data time-modified="2021-04-25T02:28:21.162756196Z">
+                        <interfaces xmlns="http://openconfig.net/yang/interfaces">
+                          <interface>
+                            <name>Ethernet1</name>
+                            ...
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nc",
+        arg=["get_config"],
+        kwarg={
+            "filter": "salt://rpc/get_config_filter_ietf_interfaces.xml",
+            "ftype": "subtree",
+            "source": "running",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    for host_name, data in ret["nrp1"].items():
+        assert "get_config" in data, "No 'get_config' output from '{}'".format(
+            host_name
+        )
+        assert isinstance(data["get_config"], str)
+        assert len(data["get_config"]) > 0
+        assert "Traceback" not in data["get_config"], "get_config returned error"
 
 
 def test_ncclient_edit_config_call():
@@ -188,6 +234,9 @@ def test_ncclient_edit_config_call():
         assert isinstance(data["edit_config"], str)
         assert len(data["edit_config"]) > 0
         assert "ok" in data["edit_config"]
+        assert (
+            "Traceback (most recent " not in data["edit_config"]
+        ), "edit_config call returned error"
 
 
 def test_ncclient_locked_edit_config_call():
@@ -257,6 +306,9 @@ def test_ncclient_help_call():
         assert "help" in data, "No 'help' output from '{}'".format(host_name)
         assert isinstance(data["help"], str)
         assert len(data["help"]) > 0
+        assert (
+            "Traceback (most recent call last)" not in data["help"]
+        ), "Help output contains error"
 
 
 def test_scrapli_netconf_dir_call():
@@ -291,6 +343,7 @@ def test_scrapli_netconf_dir_call():
         assert "dir" in data, "No 'dir' output from '{}'".format(host_name)
         assert isinstance(data["dir"], list)
         assert len(data["dir"]) > 0
+        assert "Traceback (most recent " not in data["dir"], "dir call returned error"
 
 
 def test_scrapli_netconf_help_call():
@@ -325,6 +378,7 @@ def test_scrapli_netconf_help_call():
         assert "help" in data, "No 'help' output from '{}'".format(host_name)
         assert isinstance(data["help"], str)
         assert len(data["help"]) > 0
+        assert "Traceback (most recent " not in data["help"], "help call returned error"
 
 
 def test_scrapli_netconf_server_capabilities_call():
@@ -356,6 +410,9 @@ def test_scrapli_netconf_server_capabilities_call():
         ), "No 'server_capabilities' output from '{}'".format(host_name)
         assert isinstance(data["server_capabilities"], list)
         assert len(data["server_capabilities"]) > 0
+        assert (
+            "Traceback (most recent " not in data["server_capabilities"]
+        ), "server_capabilities call returned error"
 
 
 def test_scrapli_netconf_get_config_call_with_filter_from_file():
@@ -396,6 +453,9 @@ def test_scrapli_netconf_get_config_call_with_filter_from_file():
         )
         assert isinstance(data["get_config"], str)
         assert len(data["get_config"]) > 0
+        assert (
+            "Traceback (most recent " not in data["get_config"]
+        ), "get_config call returned error"
 
 
 def test_scrapli_netconf_edit_config_call():
@@ -423,7 +483,7 @@ def test_scrapli_netconf_edit_config_call():
             "plugin": "scrapli",
         },
         tgt_type="glob",
-        timeout=60,
+        timeout=120,
     )
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
@@ -465,7 +525,7 @@ def test_scrapli_netconf_locked_edit_config_call():
             "plugin": "scrapli",
         },
         tgt_type="glob",
-        timeout=60,
+        timeout=120,
     )
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
@@ -501,11 +561,11 @@ def test_scrapli_netconf_rpc_call():
         fun="nr.nc",
         arg=["rpc"],
         kwarg={
-            "data": "salt://rpc/get_config_rpc_ietf_interfaces.xml",
+            "filter_": "salt://rpc/get_config_rpc_ietf_interfaces.xml",
             "plugin": "scrapli",
         },
         tgt_type="glob",
-        timeout=60,
+        timeout=120,
     )
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
@@ -513,3 +573,4 @@ def test_scrapli_netconf_rpc_call():
         assert "rpc" in data, "No 'rpc' output from '{}'".format(host_name)
         assert isinstance(data["rpc"], str)
         assert len(data["rpc"]) > 0
+        assert "Traceback (most recent " not in data["rpc"], "RPC call returned error"

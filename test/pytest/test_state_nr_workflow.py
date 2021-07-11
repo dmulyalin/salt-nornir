@@ -141,22 +141,22 @@ def test_state_nr_workflow_report_all():
 
 
 def test_state_nr_workflow_some_steps_has_report_false():
-    """ Some of the steps have report=False """
+    """Some of the steps have report=False"""
     pass
 
 
 def test_state_nr_workflow_with_common_filter():
-    """ Set FL=ceos1 to run step agains one host only """
+    """Set FL=ceos1 to run step agains one host only"""
     pass
 
 
 def test_state_nr_workflow_inline_test_step_to_dict_true():
-    """ Test when having inline test defined with dictionary results """
+    """Test when having inline test defined with dictionary results"""
     pass
 
 
 def test_state_nr_workflow_inline_test_step_to_dict_false():
-    """ Test when having inline test defined with list results """
+    """Test when having inline test defined with list results"""
     pass
 
 

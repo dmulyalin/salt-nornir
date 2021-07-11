@@ -35,12 +35,6 @@ or to cEOS bash shell:
 
 $  docker exec -it ceos1 bash
 
-## To run the tests on master
-
-$ docker exec -it salt-master bash
-$ cd /tmp/pytest/
-$ pytest -vv
-
 ## Misc
 
 To rebuild containers:
@@ -53,8 +47,3 @@ To fix master not accepting minion keys need to delete all the previously accept
 
 $ docker exec -it salt-master bash
 $ salt-key -D -y
-
-To fix Minion not connecting to master might need to delete minion's SALT master keys
-
-$ docker exec -it salt-minion bash
-$ rm /etc/salt/pki/proxy/minion_master.pub

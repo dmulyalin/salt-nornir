@@ -45,7 +45,7 @@ def test_nr_cfg_gen_from_static_file():
         tgt_type="glob",
         timeout=60,
     )
-    task_name = "Rendered salt://templates/ntp_config.txt config"
+    task_name = "salt_cfg_gen"
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
         assert task_name in results
@@ -86,13 +86,11 @@ def test_nr_cfg_gen_from_template_file():
         tgt_type="glob",
         timeout=60,
     )
-    task_name = "Rendered salt://templates/ntp_config_template.txt config"
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert task_name in results
-        assert isinstance(results[task_name], str)
-        assert len(results[task_name]) > 0
-        assert "ntp" in results[task_name] and "logging" in results[task_name]
+        assert isinstance(results["salt_cfg_gen"], str)
+        assert len(results["salt_cfg_gen"]) > 0
+        assert "ntp" in results["salt_cfg_gen"] and "logging" in results["salt_cfg_gen"]
 
 
 def test_nr_cfg_gen_from_static_file_per_host():
@@ -120,7 +118,7 @@ def test_nr_cfg_gen_from_static_file_per_host():
         tgt_type="glob",
         timeout=60,
     )
-    task_name = "Rendered salt://templates/per_host_cfg_snmp/{{ host.name }}.txt config"
+    task_name = "salt_cfg_gen"
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
         assert task_name in results
@@ -157,7 +155,7 @@ def test_nr_cfg_gen_from_template_file_per_host():
         tgt_type="glob",
         timeout=60,
     )
-    task_name = "Rendered salt://templates/per_host_cfg_snmp_template/{{ host.name }}.txt config"
+    task_name = "salt_cfg_gen"
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
         assert task_name in results

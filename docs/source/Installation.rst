@@ -19,6 +19,15 @@ module, ``salt_nornir`` should be installed on SALT Master machine as well.
 For installation of SALTSTACK master and minion/proxy-minion modules please
 reference `official documentation <https://repo.saltproject.io/>`_.
 
+SALTSTACK versions tested
+=========================
+
+Nornir Proxy minion was tested and confirmed working with these versions of SALTSTACK:
+
+* salt 3002.6
+* salt 3003.1
+
+Other SALTSTACK versions might work as well, but not yet tested.
 
 Common installation issues
 ==========================
@@ -40,3 +49,8 @@ try::
 try::
 
     python3 -m pip install -U pip setuptools
+	
+Using docker containers
+=======================
+
+TBD

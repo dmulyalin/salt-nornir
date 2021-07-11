@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Nornir State Module
 ===================
@@ -230,6 +231,7 @@ def _run_workflow_step(
             "nr.cfg_gen",
             "nr.tping",
             "nr.test",
+			"nr.nc"
         ]:
             step["kwargs"]["add_details"] = True
 
@@ -288,6 +290,7 @@ def _run_workflow_step(
             "nr.cfg",
             "nr.test",
             "nr.do",
+			"nr.nc"
         ]:
             if isinstance(result, dict):
                 for host_name, host_results in result.items():

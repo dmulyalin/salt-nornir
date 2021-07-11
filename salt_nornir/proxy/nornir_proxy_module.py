@@ -65,12 +65,9 @@ Nornir proxy pillar parameters
   possible actions: ``log``- send syslog message, ``restart`` - restart proxy minion process.
 - ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
   per-host basis, default is "/var/salt-nornir/{proxy_id}/files/"
-- ``default_nr_cli_plugin`` - str, ``netmiko`` (default) or ``scrapli`` plugin to use with 
-  ``nr.cli`` function by default
-- ``default_nr_cfg_plugin`` - str, ``napalm`` (default), ``netmiko`` or ``scrapli`` plugin 
-  to use with ``nr.cfg`` function  by default
-- ``default_nr_nc_plugin`` - str, ``ncclient`` (default) or ``scrapli`` plugin to use with 
-  ``nr.nc`` function  by default
+- ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function
+- ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function
+- ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
@@ -93,9 +90,9 @@ Nornir proxy-minion pillar example:
       memory_threshold_mbyte: 300
       memory_threshold_action: log
       files_base_path: "/var/salt-nornir/{proxy_id}/files/"
-      default_nr_cli_plugin: netmiko
-      default_nr_cfg_plugin: napalm
-      default_nr_nc_plugin: ncclient
+      nr_cli: {}
+      nr_cfg: {}
+      nr_nc: {}
       runner:
          plugin: threaded
          options:
@@ -206,6 +203,16 @@ try:
 except:
     log.error("Nornir Proxy Module - failed importing SALT libraries")
 
+try:
+    # starting from SALT 3003 need to use loader_context to reconstruct
+    # __salt__ dunder within treads:
+    # details: https://github.com/saltstack/salt/issues/59962
+    from salt.loader_context import loader_context
+
+    HAS_LOADER_CONTEXT = True
+except ImportError:
+    HAS_LOADER_CONTEXT = False
+
 minion_process = psutil.Process(os.getpid())
 
 # Import third party libs
@@ -218,7 +225,6 @@ try:
         HostsKeepalive,
         TabulateFormatter,
     )
-    from nornir_salt.plugins.tasks import netmiko_send_commands
     from nornir_salt.plugins.tasks import nr_test
     from nornir_salt.plugins.processors import (
         TestsProcessor,
@@ -230,7 +236,6 @@ try:
 except ImportError:
     log.error("Nornir-proxy - failed importing Nornir modules")
     HAS_NORNIR = False
-
 
 # -----------------------------------------------------------------------------
 # proxy properties
@@ -338,6 +343,7 @@ def init(opts):
     nornir_data["nr"] = InitNornir(
         logging={"enabled": False}, runner=runner_config, inventory=inventory_config
     )
+    # add parameters from proxy configuration
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
     )
@@ -356,15 +362,9 @@ def init(opts):
     nornir_data["files_base_path"] = opts["proxy"].get(
         "files_base_path", "/var/salt-nornir/{}/files/".format(opts["id"])
     )
-    nornir_data["default_nr_cli_plugin"] = opts["proxy"].get(
-        "default_nr_cli_plugin", "netmiko"
-    )
-    nornir_data["default_nr_cfg_plugin"] = opts["proxy"].get(
-        "default_nr_cfg_plugin", "napalm"
-    )
-    nornir_data["default_nr_nc_plugin"] = opts["proxy"].get(
-        "default_nr_nc_plugin", "ncclient"
-    )
+    nornir_data["nr_cli"] = opts["proxy"].get("nr_cli", {})
+    nornir_data["nr_cfg"] = opts["proxy"].get("nr_cfg", {})
+    nornir_data["nr_nc"] = opts["proxy"].get("nr_nc", {})
     nornir_data["initialized"] = True
     # add some stats
     nornir_data["stats"]["proxy_minion_id"] = opts["id"]
@@ -374,14 +374,16 @@ def init(opts):
     nornir_data["jobs_queue"] = multiprocessing.Queue()
     nornir_data["res_queue"] = multiprocessing.Queue()
     nornir_data["worker_thread"] = threading.Thread(
-        target=_worker, name="{}_worker".format(opts["id"])
+        target=_worker,
+        name="{}_worker".format(opts["id"]),
+        args=(__salt__.loader() if HAS_LOADER_CONTEXT else None,),
     )
     nornir_data["worker_thread"].start()
     nornir_data["watchdog_thread"] = threading.Thread(
         target=_watchdog, name="{}_watchdog".format(opts["id"])
     )
     nornir_data["watchdog_thread"].start()
-    nornir_data["file_download_lock"] = multiprocessing.Lock()
+    nornir_data["connections_lock"] = multiprocessing.Lock()
     return True
 
 
@@ -449,255 +451,6 @@ def grains_refresh():
     Does nothing, returns empty dictionary
     """
     return grains()
-
-
-# -----------------------------------------------------------------------------
-# Nornir task functions
-# -----------------------------------------------------------------------------
-
-
-def _ncclient_call(task, *args, **kwargs):
-    """
-    Function to call any of ncclient manager connection object methods. Main
-    purpose of this fauntion is to render ``config`` argument using SALT
-    templating capabilities.
-
-    :param *arg: (list) any arguments to use with call method
-    :param **kwargs: (dict) any keyword arguments to use with call method
-    """
-    # render whatever can be a template or a file
-    if kwargs.get("config"):
-        kwargs["config"] = _render_config_template(
-            task, kwargs["config"], kwargs
-        ).result
-    if kwargs.get("filter"):
-        # as per https://ncclient.readthedocs.io/en/latest/manager.html#filter-params
-        # filter should be a tuple of (type, criteria)
-        rendered_filter = _render_config_template(task, kwargs["filter"][1], kwargs)
-        kwargs["filter"] = tuple([kwargs["filter"][0], rendered_filter.result])
-    if kwargs.get("data"):
-        kwargs["data"] = _render_config_template(task, kwargs["data"], kwargs).result
-
-    # run task
-    task_fun = _get_or_import_task_fun("nornir_salt.plugins.tasks.ncclient_call")
-    task.run(task=task_fun, name=kwargs["call"], *args, **kwargs)
-
-    return Result(host=task.host)
-
-
-def _scrapli_netconf_call(task, *args, **kwargs):
-    """
-    Function to call one of scrapli_netconf task function. Main
-    purpose of this fauntion is to render ``config`` argument using SALT
-    templating capabilities.
-
-    :param *arg: (list) any arguments to use with scrapli_netconf task
-    :param **kwargs: (dict) any keyword arguments to use with scrapli_netconf task
-    """
-    # render whatever can be a template or a file
-    if kwargs.get("config"):
-        kwargs["config"] = _render_config_template(
-            task, kwargs["config"], kwargs
-        ).result
-    if kwargs.get("filter_"):
-        kwargs["filter_"] = _render_config_template(
-            task, kwargs["filter_"], kwargs
-        ).result
-    # render filters for get_config rpc
-    if kwargs.get("filters"):
-        kwargs["filters"] = _render_config_template(
-            task, kwargs["filters"], kwargs
-        ).result
-    # render data for rpc call, assuming "data" keyword only used for rpc call
-    # assign rendering results to "filter_" key as rpc called: result = conn.rpc(filter_=commit_filter)
-    if kwargs.get("data"):
-        kwargs["filter_"] = _render_config_template(
-            task, kwargs.pop("data"), kwargs
-        ).result
-
-    # run task
-    task_fun = _get_or_import_task_fun("nornir_salt.plugins.tasks.scrapli_netconf_call")
-    task.run(task=task_fun, name=kwargs["call"], *args, **kwargs)
-
-    return Result(host=task.host)
-
-
-def _scrapli_send_commands(task, commands, **kwargs):
-    """
-    Nornir Task function to send show commands to devices using
-    ``nornir_scrapli.tasks.send_command`` plugin
-
-    :param kwargs: might contain ``scrapli_kwargs`` argument dictionary
-        for ``nornir_scrapli.tasks.send_command`` method
-    :param config: (list) commands list to send to device(s)
-    :return result: Nornir result object with task execution results
-    """
-    task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_command")
-    for command in commands:
-        task.run(
-            task=task_fun,
-            command=command,
-            name=command,
-            **kwargs.get("scrapli_kwargs", {})
-        )
-    return Result(host=task.host)
-
-
-def _napalm_configure(task, config, **kwargs):
-    """
-    Nornir Task function to send confgiuration to devices using
-    ``nornir_napalm.plugins.tasks.napalm_configure`` plugin
-
-    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
-        for configuration rendering as well as for ``task.run`` method
-    :param config: (str) configuration string to render and send to device(s)
-    :return result: Nornir result object with task execution results
-    """
-    # render configuration
-    rendered_config = _render_config_template(task, config, kwargs)
-    # push config to devices
-    task_fun = _get_or_import_task_fun("nornir_napalm.plugins.tasks.napalm_configure")
-    task.run(task=task_fun, configuration=rendered_config.result, **kwargs)
-    return Result(host=task.host)
-
-
-def _netmiko_send_config(task, config, commit=True, **kwargs):
-    """
-    Nornir Task function to send confgiuration to devices using
-    ``nornir_netmiko.tasks.netmiko_send_config`` plugin
-
-    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
-        for configuration rendering as well as for ``task.run`` method
-    :param config: (str) configuration string to render and send to device(s)
-    :param commit: (bool or dict) by default commit is ``True``, as a result host
-        connection commit method will be called. If ``commit`` argument is a
-        dictionary, it will be supplied to commit call using ``**commit``.
-    :param kwargs: any additional ``**kwargs`` for ``netmiko_send_config`` function.
-    :return result: Nornir result object with task execution results
-
-    Parameters supplied to ``netmiko_send_config`` function call that override
-    Netmiko default values::
-
-        cmd_verify: False
-    """
-    kwargs.setdefault("cmd_verify", False)
-    # render configuration
-    rendered_config = _render_config_template(task, config, kwargs)
-    # push config to devices
-    task_fun = _get_or_import_task_fun("nornir_netmiko.tasks.netmiko_send_config")
-    task.run(
-        task=task_fun, config_commands=rendered_config.result.splitlines(), **kwargs
-    )
-    # check if need to commit
-    if commit:
-        conn = task.host.get_connection("netmiko", task.nornir.config)
-        commit = commit if isinstance(commit, dict) else {}
-        try:
-            conn.commit(**commit)
-            conn.exit_config_mode()
-            log.debug(
-                "salt-nornir {} config commited, exited config mode.".format(
-                    task.host.name
-                )
-            )
-        except AttributeError:
-            pass
-        except:
-            tb = traceback.format_exc()
-            log.error("_netmiko_send_config: commit error\n{}".format(tb))
-            for task_result in task.results:
-                task_result.failed = True
-                task_result.exception = tb
-
-    return Result(host=task.host)
-
-
-def _scrapli_send_config(task, config, **kwargs):
-    """
-    Nornir Task function to send confgiuration to devices using
-    ``nornir_scrapli.tasks.send_config`` plugin
-
-    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
-        for configuration rendering as well as for ``task.run`` method
-    :param config: (str) configuration string to render and send to device(s)
-    :param commit: not implemented yet
-    :return result: Nornir result object with task execution results
-    """
-    # render configuration
-    rendered_config = _render_config_template(task, config, kwargs)
-    # push config to devices
-    task_fun = _get_or_import_task_fun("nornir_scrapli.tasks.send_config")
-    task.run(task=task_fun, config=rendered_config.result, **kwargs)
-    return Result(host=task.host)
-
-
-def _cfg_gen(task, config, filename, **kwargs):
-    """
-    Task function for ``nr.cfg_gen`` function to render template with pillar
-    and Nornir host Inventory data.
-
-    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
-    :param config: (str) configuration string to render
-    :param filename: (str) path to file with configuration, e.g. salt://path/to/cfg.txt
-    :return result: Nornir result object with task execution results
-    """
-    content = config if config else filename
-    task.run(
-        task=_render_config_template,
-        name="Rendered {} config".format(filename),
-        config=content,
-        kwargs=kwargs,
-    )
-    return Result(host=task.host)
-
-
-def _render_config_template(task, config, kwargs):
-    """
-    Helper function to render config template with adding task.host
-    to context.
-
-    This function also cleans template engine related arguments
-    from kwargs.
-
-    :param kwargs: arguments for ``file.apply_template_on_contents`` salt function
-    :param config: (str) configuration string to render
-    :return result: Nornir result object with configuration rendering results
-    """
-    context = kwargs.pop("context", {})
-    context.update({"host": task.host})
-    saltenv = kwargs.pop("saltenv", "base")
-    defaults = kwargs.pop("defaults", {})
-    template_engine = kwargs.pop("template_engine", "jinja")
-    rendered_config = __salt__["file.apply_template_on_contents"](
-        contents=config,
-        template=template_engine,
-        context=context,
-        defaults=defaults,
-        saltenv=saltenv,
-    )
-    # check if per-host path was provided, e.g. filename=salt://path/to/{{ host.name }}_cfg.txt
-    if rendered_config.startswith("salt://"):
-        # need to download files one by one usign lock, otherwise salt throws errors
-        config_content = None
-        with nornir_data["file_download_lock"]:
-            try:
-                config_content = __salt__["cp.get_file_str"](
-                    rendered_config, saltenv=saltenv
-                )
-            except:
-                pass
-        if not config_content:
-            raise CommandExecutionError(
-                "Failed to get '{}' configuration file".format(rendered_config)
-            )
-        rendered_config = __salt__["file.apply_template_on_contents"](
-            contents=config_content,
-            template=template_engine,
-            context=context,
-            defaults=defaults,
-            saltenv=saltenv,
-        )
-    return Result(host=task.host, result=rendered_config)
 
 
 # -----------------------------------------------------------------------------
@@ -778,7 +531,7 @@ def _load_custom_task_fun_from_text(function_text, function_name):
     return data[function_name]
 
 
-def _get_or_import_task_fun(plugin):
+def _get_or_import_task_fun(plugin, loader=None):
     """
     Tries to get task function from globals() dictionary,
     if its not there tries to import task and inject it
@@ -789,7 +542,12 @@ def _get_or_import_task_fun(plugin):
         task_function = globals()[task_fun]
     # check if plugin referring to file on master, load and compile it if so
     elif plugin.startswith("salt://"):
-        function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
+        function_text = None
+        if HAS_LOADER_CONTEXT and loader != None:
+            with loader_context(loader):
+                function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
+        else:
+            function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
         if not function_text:
             raise CommandExecutionError(
                 "Nornir-proxy PID {}, failed download task function file: {}".format(
@@ -899,21 +657,29 @@ def _watchdog():
             )
         # keepalive connections and clean up dead connections if any
         try:
-            if nornir_data["proxy_always_alive"]:
-                stats = HostsKeepalive(nornir_data["nr"])
-                nornir_data["stats"]["watchdog_dead_connections_cleaned"] += stats[
-                    "dead_connections_cleaned"
-                ]
+            if nornir_data["proxy_always_alive"] and nornir_data[
+                "connections_lock"
+            ].acquire(block=False):
+                try:
+                    stats = HostsKeepalive(nornir_data["nr"])
+                    nornir_data["stats"]["watchdog_dead_connections_cleaned"] += stats[
+                        "dead_connections_cleaned"
+                    ]
+                except Exception as e:
+                    raise e
+                finally:
+                    nornir_data["connections_lock"].release()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, HostsKeepalive check error: {}".format(
                     os.getpid(), traceback.format_exc()
                 )
             )
+
         time.sleep(nornir_data["watchdog_interval"])
 
 
-def _worker():
+def _worker(loader=None):
     """
     Target function for worker thread to run jobs from
     jobs_queue submitted by execution module processes
@@ -941,11 +707,15 @@ def _worker():
                 nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
                 _restart()
             # execute nornir task
-            task_fun = _get_or_import_task_fun(job["task_fun"])
+            task_fun = _get_or_import_task_fun(job["task_fun"], loader)
             log.info(
                 "Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"])
             )
-            output = run(task_fun, *job["args"], **job["kwargs"], name=job["name"])
+            # lock connections and run the task
+            with nornir_data["connections_lock"]:
+                output = run(
+                    task_fun, loader, *job["args"], **job["kwargs"], name=job["name"]
+                )
             nornir_data["stats"]["hosts_tasks_failed"] += len(
                 nornir_data["nr"].data.failed_hosts
             )
@@ -994,6 +764,78 @@ def _fire_events(result):
             )
 
 
+def _load_and_render_files(hosts, render, kwargs):
+    """
+    Helper function to iterate over hosts and render content for each of them.
+
+    Rendering results saved in host's ``__task__`` attribute as a dictionary
+    keyed by the items from ``render`` list.
+
+    :param hosts: (obj) Nornir object with hosts inventory
+    :param render: (list or str) list of keys or comma separated string
+        of key names from kwargs to run rendering for
+    :param kwargs: (dict) dictionary with data to render
+    """
+    context = kwargs.pop("context", {})
+    saltenv = kwargs.pop("saltenv", "base")
+    defaults = kwargs.pop("defaults", {})
+    template_engine = kwargs.pop("template_engine", "jinja")
+    render = render.split(",") if isinstance(render, str) else render
+
+    def __render(data):
+        # do initial data rendering
+        ret = __salt__["file.apply_template_on_contents"](
+            contents=data,
+            template=template_engine,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv,
+        )
+        # check if per-host data was provided, e.g. filename=salt://path/to/{{ host.name }}_cfg.txt
+        if ret.startswith("salt://"):
+            content = __salt__["cp.get_file_str"](ret, saltenv=saltenv)
+            if not content:
+                raise CommandExecutionError(
+                    "Failed to get '{}' file content".format(ret)
+                )
+            # render final file
+            ret = __salt__["file.apply_template_on_contents"](
+                contents=content,
+                template=template_engine,
+                context=context,
+                defaults=defaults,
+                saltenv=saltenv,
+            )
+        return ret
+
+    for host_name, host_object in hosts.inventory.hosts.items():
+        context.update({"host": host_object})
+        host_object.data["__task__"] = {}
+        for key in render:
+            if isinstance(kwargs.get(key), str):
+                rendered = __render(kwargs[key])
+            elif isinstance(
+                kwargs.get(key),
+                (
+                    list,
+                    tuple,
+                ),
+            ):
+                rendered = [__render(item) for item in kwargs[key]]
+            else:
+                continue
+            log.debug(
+                "Nornir-proxy MAIN PID {} worker thread, rendered '{}' '{}' data for '{}' host".format(
+                    os.getpid(), key, type(kwargs[key]), host_name
+                )
+            )
+            host_object.data["__task__"][key] = rendered
+
+    # clean up kwargs from render keys to force tasks to use hosts's __task__ attribute
+    for key in render:
+        _ = kwargs.pop(key) if key in kwargs else None
+
+
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -1010,7 +852,7 @@ def inventory_data(**kwargs):
     return hosts.dict()["inventory"]
 
 
-def run(task, *args, **kwargs):
+def run(task, loader, *args, **kwargs):
     """
     Function for worker Thread to run Nornir tasks.
 
@@ -1032,6 +874,9 @@ def run(task, *args, **kwargs):
     event_failed = kwargs.pop("event_failed", False)  # events
     diff = kwargs.pop("diff", "")  # diff processor
     last = kwargs.pop("last", 1)  # diff processor
+    render = kwargs.pop(
+        "render", ["config", "data", "filter", "filter_", "filters", "filename"]
+    )  # render data
 
     # set dry_run argument
     nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
@@ -1073,6 +918,13 @@ def run(task, *args, **kwargs):
             "Nornir-proxy 'nornir_filter_required' setting is True but no filter provided"
         )
 
+    # load and render files
+    if render and HAS_LOADER_CONTEXT:
+        with loader_context(loader):
+            _load_and_render_files(hosts, render, kwargs)
+    elif render:
+        _load_and_render_files(hosts, render, kwargs)
+
     # run tasks
     result = hosts.run(
         task,
@@ -1080,8 +932,16 @@ def run(task, *args, **kwargs):
         **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
 
+    # post clean-up rendered data from hosts inventory
+    if render:
+        for host_name, host_object in hosts.inventory.hosts.items():
+            _ = host_object.data.pop("__task__", None)
+
     # fire events for failed tasks if requested to do so
-    if event_failed:
+    if event_failed and HAS_LOADER_CONTEXT:
+        with loader_context(loader):
+            _fire_events(result)
+    elif event_failed:
         _fire_events(result)
 
     # run post processing
@@ -1095,7 +955,7 @@ def run(task, *args, **kwargs):
 
 def execute_job(task_fun, args, kwargs, cpid):
     """
-    Function to submit job request in Nornir Proxy minion jobs queue,
+    Function to submit job request to Nornir Proxy minion jobs queue,
     wait for job to be completed and return results.
 
     :param task_fun: str, name of nornir task function/plugin to run
@@ -1224,6 +1084,53 @@ def stats(*args, **kwargs):
     # return full stats otherwise
     else:
         return nornir_data["stats"]
+
+
+def nr_version():
+    """
+    Function to return a report of installed packages
+    and their versions, useful for troubleshooting dependencies.
+    """
+    try:
+        from pkg_resources import working_set
+
+    except ImportError:
+        return (
+            "Failed importing pkg_resources, install: python3 -m pip install setuptools"
+        )
+
+    formatter = "{:>20} : {:<20}"
+    libs = {
+        "scrapli": "",
+        "scrapli-netconf": "",
+        "scrapli-community": "",
+        "paramiko": "",
+        "netmiko": "",
+        "napalm": "",
+        "nornir": "",
+        "ncclient": "",
+        "nornir-netmiko": "",
+        "nornir-napalm": "",
+        "nornir-scrapli": "",
+        "nornir-utils": "",
+        "tabulate": "",
+        "xmltodict": "",
+        "pyyaml": "",
+        "jinja2": "",
+        "ttp": "",
+        "salt-nornir": "",
+        "nornir-salt": "",
+        "lxml": "",
+        "psutil": "",
+    }
+
+    # get version of packages installed
+    for pkg in working_set:
+        if pkg.project_name.lower() in libs:
+            libs[pkg.project_name.lower()] = pkg.version
+
+    # form report and return it
+    return ("\n").join([formatter.format(k, libs[k]) for k in sorted(libs)])
 
 
 def nr_data(key):

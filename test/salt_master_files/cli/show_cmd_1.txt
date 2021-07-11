@@ -1,0 +1,2 @@
+show ip int brief
+show clock

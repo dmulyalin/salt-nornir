@@ -25,7 +25,7 @@ if HAS_SALT:
 
 
 def test_nr_cli_with_event_failed():
-    """ Test firing event for failed tasks """
+    """Test firing event for failed tasks"""
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
