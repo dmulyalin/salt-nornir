@@ -27,12 +27,12 @@ Nornir Proxy minion was tested and confirmed working with these versions of SALT
 * salt 3002.6
 * salt 3003.1
 
-Other SALTSTACK versions might work as well, but not yet tested.
+Other SALTSTACK versions should work as well, but not yet tested.
 
 Common installation issues
 ==========================
 
-Issues mainly arise around installing all required dependencies. General rule of thumb - try Googling errors you getting or search stackoverflow.
+Issues mainly arise around installing all required dependencies. General rule of thumb - try Googling errors you getting or search StackOverflow.
 
 **1** ``PyYAML`` dependency - if getting error while doing ``pip install salt_nornir``::
 

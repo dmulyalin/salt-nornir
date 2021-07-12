@@ -17,7 +17,7 @@ Things to keep in mind:
 * ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-minion
 * with multiprocessing on, dedicated process starts for each task consuming resources
 * tasks executed one after another, but task execution against hosts happening in order
-    controlled by logic of Nornir runner in use, usually in parallel using threading.
+  controlled by logic of Nornir runner in use, usually in parallel using threading.
 
 Commands timeout
 ----------------
@@ -51,7 +51,7 @@ Quiet often AAA servers (Radius, Tacacs) might get overloaded with authenticatio
 and authorization requests coming from devices due to Nornir establishing
 connections with them, that effectively results in jobs failures.
 
-To overcome above problems Nornir proxy-module uses ``RetryRunner`` by default.
+To overcome that problem Nornir proxy-module uses ``RetryRunner`` by default.
 ``RetryRunner`` runner included in
 `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ library and was
 developed to address aforementioned issue in addition to implementing retry logic.
@@ -59,12 +59,12 @@ developed to address aforementioned issue in addition to implementing retry logi
 Targeting Nornir Hosts
 ----------------------
 
-Nornir interacts with many devices and has it's own inventory,
-additional filtering capabilities introduced in
+Nornir can manage several many devices and uses it's own inventory,
+additional filtering ``Fx`` functions introduced in
 `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library
 to narrow down tasks execution to certain hosts/devices.
 
-Sample command to demonstrate targeting capabilites::
+Sample command to demonstrate targeting capabilities::
 
     salt nornir-proxy-1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
 
@@ -73,9 +73,9 @@ Jumphosts or Bastions
 
 ``RetryRunner`` included in
 `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library has
-support for ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"``
-to interact with devices behind jumphosts, other tasks and runners plugins
-does not support that.
+support for ``nr.cli`` and ``nr.cfg`` with ``plugin="netmiko"`` and 
+``nr.nc`` with ``plugin="ncclient"`` functions to interact with devices 
+behind SSH jumphosts. 
 
 Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
@@ -95,7 +95,7 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
 Nornir Execution module functions summary
 -----------------------------------------
 
-Table to summarize functions available in Nornir Proxy Execution Module. 
+Table to summarize functions available in Nornir Proxy Execution Module and their purpose. 
 
 +--------------+---------------------------------------------------+--------------------+
 | nr.function  | description                                       | supported plugins  |
@@ -122,9 +122,12 @@ Table to summarize functions available in Nornir Proxy Execution Module.
 | nc           | Function to work with devices using NETCONF       | ncclient (default),|
 |              |                                                   | scrapli_netconf    |
 +--------------+---------------------------------------------------+--------------------+
-| do           | Function to execute alias with a set of steps     |                    |
-|              | calling other execution functions, allows to      |                    |
+| do           | Function to execute aliases with a set of steps   |                    |
+|              | calling other execution functions. Allows to      |                    |
 |              | construct simple workflows                        |                    |
++--------------+---------------------------------------------------+--------------------+
+| version      | Function to produce installed packages versions   |                    |
+|              | report                                            |                    |
 +--------------+---------------------------------------------------+--------------------+
 
 Nornir Execution module functions
@@ -139,6 +142,7 @@ Nornir Execution module functions
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.stats
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.test
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nc
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.version
 """
 
 # Import python libs

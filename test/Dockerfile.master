@@ -7,4 +7,17 @@ RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3003.repo | tee /
 RUN yum install -y salt-master
 RUN python3 -m pip install pytest
 
+COPY . /tmp/salt_nornir/
+
+# do misc libs installation
+RUN python3 -m pip install -U pip setuptools 
+RUN python3 -m pip install tabulate
+
+# install SALT nornir libs from local volume
+RUN python3 -m pip install /tmp/salt_nornir/ --ignore-installed PyYAML
+
+# must run nornir_salt installation from local files one more time
+# as salt_nornir pulls older version of nornir_salt from PyPi during installation
+RUN python3 -m pip install /tmp/salt_nornir/nornir_salt
+
 ENTRYPOINT ["salt-master", "-l", "debug"]

@@ -17,6 +17,13 @@ services:
       - type: bind
         source: ./test/salt_master_files/
         target: /etc/salt/
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.6/site-packages/salt_nornir/
+      - type: bind
+        source: ./nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.6/site-packages/nornir_salt/
         
   salt-minion:
     container_name: salt-minion

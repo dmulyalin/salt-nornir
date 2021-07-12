@@ -126,14 +126,13 @@ def _run_job(tgt, fun, arg, kwarg, tgt_type, timeout, retry):
 
 def inventory(*args, **kwargs):
     """
-    Function to return inventory data for certain hosts summirised in a
-    table format.
+    Function to return brief inventory data for certain hosts in a table format.
 
     :param FB: glob pattern matching hostnames of devices behind Nornir
     :param Fx: additional filters to filter hosts, e.g. FG, FP, FL etc.
     :param tgt: nornir proxy minion target, by default targets all - "proxy:proxytype:nornir"
     :param tgt_type: SALT targeting type to use, by default "pillar"
-    :param verbose: boolean, returns ``nr.cli`` output as is if True, flattens to dictinary
+    :param verbose: boolean, returns ``nr.cli`` output as is if True, flattens to dictionary
         keyed by devices hostnames if False, default False
     :param retry: how many times to retry command if no return from minions, default 3
     :param job_timeout: seconds to wait for return from minions, overrides
@@ -238,7 +237,7 @@ def cli(*args, **kwargs):
     :param Fx: additional filters to filter hosts, e.g. FG, FP, FL etc.
     :param tgt: nornir proxy minion target, by default targets all - "proxy:proxytype:nornir"
     :param tgt_type: SALT targeting type to use, by default "pillar"
-    :param verbose: boolean, returns ``nr.cli`` output as is if True, flattens to dictinary
+    :param verbose: boolean, returns ``nr.cli`` output as is if True, flattens to dictionary
         keyed by devices hostnames if False, default False
     :param retry: how many times to retry command if no return from minions, default 3
     :param job_timeout: seconds to wait for return from minions, overrides
@@ -253,7 +252,7 @@ def cli(*args, **kwargs):
     :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
     :param plugin: name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
     :param match: regular expression pattern to search for in results,
-        similar to Cisco ``inlclude`` or Juniper ``match`` pipe commands
+        similar to Cisco ``include`` or Juniper ``match`` pipe commands
     :param before: used with match, number of lines before match to include in results, default is 0
 
     Sample Usage::
@@ -321,7 +320,7 @@ def cli(*args, **kwargs):
 def call(*arg, **kwargs):
     """
     Method to call arbitrary command against all Nornir-proxy minions,
-    including Nornir-proxy minion excution module functions
+    including Nornir-proxy minion execution module functions
 
     Sample Usage::
 

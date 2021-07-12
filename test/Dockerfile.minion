@@ -7,7 +7,7 @@ RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3003.repo | tee /
 RUN yum install -y salt-minion
 RUN python3 -m pip install ipdb
 
-ADD . /tmp/salt_nornir/
+COPY . /tmp/salt_nornir/
 COPY test/proxy /etc/salt/proxy
 
 # do misc libs installation

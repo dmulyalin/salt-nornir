@@ -514,13 +514,12 @@ to alter behavior to opposite resulting in error if no ``Fx`` filter provided.
 Saving results to files
 =======================
 
-`ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_ function
-distributed with ``nornir_salt`` package can be used to save execution module results in 
-files on machine where proxy-minion process running.
+``ToFileProcessor`` distributed with ``nornir_salt`` package can be used to save execution 
+module functions results to the file system of machine where proxy-minion process running.
 
-Sample ``ToFile`` (tf) function usage::
+Sample usage::
 
-    [root@localhost /]# salt nrp1 nr.cli "show clock" "show ip int brief" tf="/tmp/nr/{host_name}/show.txt" tf_per_host=True
+    [root@localhost /]# salt nrp1 nr.cli "show clock" "show ip int brief" tf="show_commands_output"
     nrp1:
         ----------
         IOL1:
@@ -555,14 +554,12 @@ Sample ``ToFile`` (tf) function usage::
                 Ethernet0/3                unassigned      YES NVRAM  administratively down down    
                 Loopback0                  10.0.0.7        YES NVRAM  up                    up      
 
-    [root@localhost /]# tree /tmp/nr/
-    /tmp/nr/
-    ├── IOL1
-    │   └── show.txt
-    └── IOL2
-        └── show.txt
+    [root@localhost /]# tree /var/salt-nornir/nrp1/files/
+    ├── show_commands_output__11_July_2021_07_11_26__IOL1.txt
+    ├── show_commands_output__11_July_2021_07_11_26__IOL2.txt
+    ├── tf_aliases.json
     
-    [root@localhost /]# cat /tmp/nr/IOL1/show.txt 
+    [root@localhost /]# cat /var/salt-nornir/nrp1/files/show_commands_output__11_July_2021_07_11_26__IOL1.txt
     *12:05:06.633 EET Sun Feb 14 2021
     Interface                  IP-Address      OK? Method Status                Protocol
     Ethernet0/0                unassigned      YES NVRAM  up                    up      

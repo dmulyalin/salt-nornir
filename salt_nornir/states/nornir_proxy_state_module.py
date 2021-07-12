@@ -11,11 +11,13 @@ Introduction
 This state module uses Nornir proxy execution module to apply configuration
 to devices.
 
-..warning:: This module does not implement idempotent behaviour, it is up to Nornir task
-plugin to handle idempotancy.
+.. warning:: This module does not implement idempotent behavior, it is up to Nornir task
+  plugin to handle idempotency.
 
-Sample usage
-------------
+Example
+-------
+
+Example using ``nr.cfg`` and ``nr.task`` state module functions within SALT state.
 
 File ``salt://states/nr_state_test.sls`` content located on Master::
 
@@ -95,8 +97,7 @@ def __virtual__():
 
 def cfg(*args, **kwargs):
     """
-    Enforce configuration state on device using Nornir
-    execution module ``nr.cfg`` function.
+    Configure devices using Nornir execution module ``nr.cfg`` function.
 
     :param commands: list of commands to send to device
     :param filename: path to file with configuration
@@ -125,7 +126,7 @@ def cfg(*args, **kwargs):
 
     Apply state::
 
-        salt nr_minion_id state.apply  nr_state_logging_cfg
+        salt nr_minion_id state.apply nr_state_logging_cfg
 
     """
     state_name = kwargs.pop("name")
@@ -151,10 +152,10 @@ def cfg(*args, **kwargs):
 
 def task(*args, **kwargs):
     """
-    Enforce configuration state on device using Nornir
-    execution module ``nr.task`` function.
+    Interact with devices using ``nr.task`` Execution Module function.
 
-    :param plugin: ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
+    :param plugin: ``path.to.plugin.task_fun`` to use, should form valid 
+      python import statement - ``from path.to.plugin import task_fun``
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
     :param args: arguments to pass on to task plugin
@@ -198,7 +199,7 @@ def _run_workflow_step(
     step, steps_failed, steps_passed, common_filters, report_all, report, all_hosts
 ):
     """
-    Helper function to run single workflow step.
+    Helper function to run single work flow step.
 
     :param step: (dict) step parameters
     :param steps_failed: (dict) dictionary keyed by steps names with values set to failed hosts
@@ -231,7 +232,7 @@ def _run_workflow_step(
             "nr.cfg_gen",
             "nr.tping",
             "nr.test",
-			"nr.nc"
+            "nr.nc"
         ]:
             step["kwargs"]["add_details"] = True
 
@@ -290,7 +291,7 @@ def _run_workflow_step(
             "nr.cfg",
             "nr.test",
             "nr.do",
-			"nr.nc"
+            "nr.nc"
         ]:
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
@@ -420,13 +421,14 @@ def _decide_state_execution_status(options, ret):
 
 def workflow(*args, **kwargs):
     """
-    State function to execute workflow steps with conditions capabilities support for
-    these Nornir proxy execution module functions: "nr.task", "nr.cli", "nr.cfg_gen",
-    "nr.cfg", "nr.test", "nr.do"
+    State function to execute work flow steps using SALT Execution modules functions. 
+    
+    ``run_if_x`` conditions supported only by these SALT Execution Module functions: 
+    "nr.task", "nr.cli", "nr.cfg_gen", "nr.cfg", "nr.test", "nr.do" 
 
     **State Global Options**
 
-    State Global Options must be defined under ``options`` key. If none of the ``fail_if_...``
+    State Global Options defined under ``options`` key. If none of the ``fail_if_x``
     conditions defined, state execution considered successful unconditionally.
 
     :param report_all: (bool) if True (default) adds skipped steps in summary report
@@ -439,7 +441,7 @@ def workflow(*args, **kwargs):
 
     **Individual Step Arguments**
 
-    Each step in a workflow must have a number of manadatory and optional attributes defined.
+    Each step in a work flow can have a number of mandatory and optional attributes defined.
 
     :param name: (str) mandatory, name of this step
     :param function: (str) mandatory, name of Nornir Execution Module function to run
@@ -447,23 +449,23 @@ def workflow(*args, **kwargs):
     :param kwargs: (dict) ``**kwargs`` for Nornir Execution Module function
     :param args: (list) ``*args`` for Nornir Execution Module function
     :param report: (bool) if True (default) adds step execution results in detailed report
-    :param run_if_fail_any: (list) this step will run if ``any`` of the steps in a list failed
-    :param run_if_pass_any: (list) this step will run if ``any`` of the steps in a list passed
+    :param run_if_fail_any: (list) this step will run if ``any`` of the previous steps in a list failed
+    :param run_if_pass_any: (list) this step will run if ``any`` of the previous steps in a list passed
 
-    If function reference ``nr.test`` with test suite, each test suite test added to summary
-    report, in addition step arguments ``run_if_...`` conditions **must** reference test suite
-    individual tests' names and not step's ``name`` attribute.
+    If function reference ``nr.test`` with test suite, each test suite test item added to summary
+    report, in addition, step's arguments ``run_if_x`` conditions **must** reference test suite
+    individual tests' names attribute.
 
     .. warning:: if you use per host filename feature, e.g. ``filename="salt://path/to/{{ host.name }}.cfg"``
-        make sure to either disable state file jinja2 rendering using ``#!yaml`` shebang at the beginning
-        of the state file or escape double curly braces in filename argument.
+       make sure to either disable state file jinja2 rendering using ``#!yaml`` shebang at the beginning
+       of the state file or escape double curly braces in filename argument.
 
-    Execution of steps runs on a per host basis, or, say better, each step
-    determines a set of hosts it needs to run for using ``FL`` filters and ``run_if_...`` conditions.
+    Execution of steps done on a per host basis, or, say better, each step
+    determines a set of hosts it needs to run for using ``Fx`` filters and ``run_if_x`` conditions.
 
     Sample state ``salt://states/configure_ntp.sls``::
 
-        change_step_1:
+        main_workflow:
           nr.workflow:
             - options:
                 fail_if_any_host_fail_any_step: []

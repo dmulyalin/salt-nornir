@@ -165,3 +165,7 @@ process restart leads to clearing of all previously created pipes and release of
 Future Nornir proxy releases might include a fix for this problem, but other reasons might 
 lead to fd leaks, having mechanism in place to detect and recover from such a problem could 
 be of great benefit regardless. 
+
+5. **Worker thread stops for some reason**. Some tasks might lead to worker thread exit on error,
+that wold stop execution of further submitted tasks. To solve that problem watchdog thread calls
+worker thread's ``is_alive`` method verify its status, restarting it if it stopped.

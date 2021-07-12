@@ -32,7 +32,7 @@ only.
 
 As a result, Nornir proxy-minion requires less resources to run tasks against same
 number of devices. During idle state only one proxy minion process is active,
-that significantly reduces amount of memory required to run the system.
+that significantly reduces amount of memory required to manage devices.
 
 Proxy-module required way of operating is ``multiprocessing`` set to ``True`` -
 default value, that way each task executed in dedicated process.
@@ -64,7 +64,7 @@ Nornir proxy pillar parameters
 - ``memory_threshold_action`` - str, action to implement if ``memory_threshold_mbyte`` exceeded,
   possible actions: ``log``- send syslog message, ``restart`` - restart proxy minion process.
 - ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
-  per-host basis, default is "/var/salt-nornir/{proxy_id}/files/"
+  per-host basis, default is ``/var/salt-nornir/{proxy_id}/files/``
 - ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function
 - ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function
 - ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function
@@ -180,7 +180,8 @@ Nornir Proxy Module functions
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module._refresh
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module._restart
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
-
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_version
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_data
 """
 
 # Import python std lib
@@ -193,7 +194,13 @@ import time
 import traceback
 import signal
 import psutil
-import resource
+
+try:
+    import resource
+    
+    HAS_RESOURCE_LIB = True
+except ImportError:
+    HAS_RESOURCE_LIB = False    
 
 log = logging.getLogger(__name__)
 
@@ -573,16 +580,17 @@ def _watchdog():
         nornir_data["stats"]["watchdog_runs"] += 1
         # run FD limit checks
         try:
-            fd_in_use = len(os.listdir("/proc/{}/fd/".format(os.getpid())))
-            fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
-            # restart if reached 95% of available file descriptors limit
-            if fd_in_use > fd_limit * 0.95:
-                log.critical(
-                    "Nornir-proxy MAIN PID {} watchdog, file descriptors in use: {}, limit: {}, reached 95% threshold, restarting".format(
-                        os.getpid(), fd_in_use, fd_limit
+            if HAS_RESOURCE_LIB:
+                fd_in_use = len(os.listdir("/proc/{}/fd/".format(os.getpid())))
+                fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+                # restart if reached 95% of available file descriptors limit
+                if fd_in_use > fd_limit * 0.95:
+                    log.critical(
+                        "Nornir-proxy MAIN PID {} watchdog, file descriptors in use: {}, limit: {}, reached 95% threshold, restarting".format(
+                            os.getpid(), fd_in_use, fd_limit
+                        )
                     )
-                )
-                _restart()
+                    _restart()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, file descritors usage check error: {}".format(
@@ -1045,8 +1053,9 @@ def stats(*args, **kwargs):
         jobs_res_queue_size = -1
     # get File Descriptors limit and usage
     try:
-        fd_count = len(os.listdir("/proc/{}/fd/".format(os.getpid())))
-        fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+        if HAS_RESOURCE_LIB:
+            fd_count = len(os.listdir("/proc/{}/fd/".format(os.getpid())))
+            fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
     except:
         fd_count = -1
         fd_limit = -1
@@ -1122,6 +1131,7 @@ def nr_version():
         "nornir-salt": "",
         "lxml": "",
         "psutil": "",
+        "salt": "",
     }
 
     # get version of packages installed
@@ -1136,7 +1146,7 @@ def nr_version():
 def nr_data(key):
     """
     Helper function to return values from nornir_data dictionary,
-    used by nr.cli, nr.cfg anf nr.nc execution module functions to
-    retrieve default plugins to use.
+    used by ``nr.cli``, ``nr.cfg`` anf ``nr.nc`` execution module functions to
+    retrieve default kwargs values from respective proxy settings' attributes.
     """
     return nornir_data.get(key, None)
