@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Nornir State Module
 ===================
@@ -232,41 +231,66 @@ def _run_workflow_step(
             "nr.cfg_gen",
             "nr.tping",
             "nr.test",
-            "nr.nc"
+            "nr.nc",
+            "nr.http"
         ]:
             step["kwargs"]["add_details"] = True
 
         # form FL filter based on run_if criteria
-        if step.get("run_if_fail_any") or step.get("run_if_pass_any"):
-            FL = set()
-            for required_step in step.get("run_if_fail_any", []):
+        FL = set(all_hosts)
+        if step.get("run_if_fail_any"):
+            hosts_failed_any_required_step = set()
+            for required_step in step["run_if_fail_any"]:
                 if not required_step in steps_failed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_fail_any requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
                         )
                     )
-                FL.update(steps_failed[required_step])
-            for required_step in step.get("run_if_pass_any", []):
+                # add all hosts that failed this step
+                hosts_failed_any_required_step.update(steps_failed[required_step])
+            FL = hosts_failed_any_required_step.intersection(FL)
+        if step.get("run_if_pass_any"):
+            hosts_passed_any_required_step = set()
+            for required_step in step["run_if_pass_any"]:
                 if not required_step in steps_passed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_pass_any requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
                         )
                     )
-                FL.update(steps_passed[required_step])
-        # run for all hosts otherwise
-        else:
-            FL = set(all_hosts)
+                # add all hosts that passed this step
+                hosts_passed_any_required_step.update(steps_passed[required_step])
+            FL = hosts_passed_any_required_step.intersection(FL)   
+        if step.get("run_if_fail_all"):
+            for required_step in step["run_if_fail_all"]:
+                if not required_step in steps_failed:
+                    raise CommandExecutionError(
+                        "Step '{a}' run_if_fail_all requires '{b}', but '{b}' not executed".format(
+                            a=step["name"], b=required_step
+                        )
+                    )
+                # leave only hosts that failed required step
+                FL = steps_failed[required_step].intersection(FL)
+        if step.get("run_if_pass_all"):
+            for required_step in step["run_if_pass_all"]:
+                if not required_step in steps_passed:
+                    raise CommandExecutionError(
+                        "Step '{a}' run_if_pass_all requires '{b}', but '{b}' not executed".format(
+                            a=step["name"], b=required_step
+                        )
+                    )
+                # leave only hosts that passed required step
+                FL = steps_passed[required_step].intersection(FL)
 
         # form FL filter by intersecting it with FL kwargs argument if any
         if "FL" in step["kwargs"]:
             step["kwargs"]["FL"] = list(set(step["kwargs"]["FL"]).intersection(FL))
         else:
-            step["kwargs"]["FL"] = FL
+            step["kwargs"]["FL"] = list(FL)
 
         # get list of hosts matched by this step
-        matched_hosts = __salt__["nr.inventory"](**step["kwargs"])
+        matched_hosts = __salt__["nr.nornir"]("inventory", **step["kwargs"])
         matched_hosts = list(matched_hosts["hosts"].keys())
 
         # handle when have no hosts to run step against
@@ -290,8 +314,8 @@ def _run_workflow_step(
             "nr.cfg_gen",
             "nr.cfg",
             "nr.test",
-            "nr.do",
-            "nr.nc"
+            "nr.nc",
+            "nr.http"
         ]:
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
@@ -317,6 +341,17 @@ def _run_workflow_step(
                         report["summary"][task_result["host"]].append(
                             {task_result["name"]: "PASS"}
                         )
+        elif step["function"] == "nr.do":
+            # decide on test execution result - fail or pass
+            if result["failed"] == True:
+                steps_failed[step["name"]] = set(matched_hosts)
+            else:
+                steps_passed[step["name"]] = set(matched_hosts)
+            # form report content
+            for host_name in set(matched_hosts):
+                report["summary"][host_name].append(
+                    {step["name"]: "FAIL" if result["failed"] else "PASS"}
+                )
         else:
             steps_passed[step["name"]] = set(matched_hosts)
 
@@ -422,14 +457,10 @@ def _decide_state_execution_status(options, ret):
 def workflow(*args, **kwargs):
     """
     State function to execute work flow steps using SALT Execution modules functions. 
-    
-    ``run_if_x`` conditions supported only by these SALT Execution Module functions: 
-    "nr.task", "nr.cli", "nr.cfg_gen", "nr.cfg", "nr.test", "nr.do" 
 
     **State Global Options**
 
-    State Global Options defined under ``options`` key. If none of the ``fail_if_x``
-    conditions defined, state execution considered successful unconditionally.
+    State Global Options defined under ``options`` key.
 
     :param report_all: (bool) if True (default) adds skipped steps in summary report
     :param fail_if_any_host_fail_any_step: (list) steps to decide if state execution failed
@@ -437,7 +468,10 @@ def workflow(*args, **kwargs):
     :param fail_if_all_host_fail_any_step: (list) steps to decide if state execution failed
     :param fail_if_all_host_fail_all_step: (list) steps to decide if state execution failed
     :param filters: (dict) set of ``Fx`` filters to apply for all steps, per-step
-        filters have higher priority.
+        filters have higher priority. If no ``Fx`` filters provided, state steps run
+        without any filters, depending on proxy ``nornir_filter_required`` setting,
+        steps might fail (if ``nornir_filter_required`` is True) or run for all hosts
+        (if ``nornir_filter_required`` is False).
 
     **Individual Step Arguments**
 
@@ -445,23 +479,36 @@ def workflow(*args, **kwargs):
 
     :param name: (str) mandatory, name of this step
     :param function: (str) mandatory, name of Nornir Execution Module function to run
-        e.g. ``nr.cli``, ``nr.task``, ``nr.cfg``, ``nr.test`` etc.
-    :param kwargs: (dict) ``**kwargs`` for Nornir Execution Module function
-    :param args: (list) ``*args`` for Nornir Execution Module function
+    :param kwargs: (dict) ``**kwargs`` for Execution Module function
+    :param args: (list) ``*args`` for Execution Module function
     :param report: (bool) if True (default) adds step execution results in detailed report
     :param run_if_fail_any: (list) this step will run if ``any`` of the previous steps in a list failed
     :param run_if_pass_any: (list) this step will run if ``any`` of the previous steps in a list passed
-
-    If function reference ``nr.test`` with test suite, each test suite test item added to summary
-    report, in addition, step's arguments ``run_if_x`` conditions **must** reference test suite
-    individual tests' names attribute.
+    :param run_if_fail_all: (list) this step will run if ``all`` of the previous steps in a list failed
+    :param run_if_pass_all: (list) this step will run if ``all`` of the previous steps in a list passed
+    
+    While workflow steps can call any execution module function, ``run_if_x`` 
+    properly supported only for Nornir Execution Module functions: ``nr.task``, 
+    ``nr.cli``, ``nr.cfg_gen``, ``nr.cfg``, ``nr.test``, ``nr.nc``, ``nr.http``, 
+    ``nr.do`` - for all other functions step considered as ``PASS`` unconditionally.    
+    
+    If function reference ``nr.test`` with test suite, each test suite test 
+    item added to summary report, in addition, step's arguments ``run_if_x`` 
+    conditions **must** reference test suite individual tests' names attribute.
 
     .. warning:: if you use per host filename feature, e.g. ``filename="salt://path/to/{{ host.name }}.cfg"``
-       make sure to either disable state file jinja2 rendering using ``#!yaml`` shebang at the beginning
-       of the state file or escape double curly braces in filename argument.
+       make sure to either disable state file jinja2 rendering using ``#!yaml`` 
+       shebang at the beginning of the state file or escape double curly braces 
+       in filename argument.
 
     Execution of steps done on a per host basis, or, say better, each step
-    determines a set of hosts it needs to run for using ``Fx`` filters and ``run_if_x`` conditions.
+    determines a set of hosts it needs to run for using ``Fx`` filters and 
+    ``run_if_x`` conditions. If multiple ``run_if_x`` conditions specified,
+    host must satisfy all of them - AND logic - for step to be executed
+    for that host.
+    
+    If no ``run_if_x`` conditions provided, step executed for all hosts matched
+    by ``filters`` provided in state global options and/or step ``**kwargs``.
 
     Sample state ``salt://states/configure_ntp.sls``::
 
@@ -515,6 +562,89 @@ def workflow(*args, **kwargs):
     Sample usage::
 
         salt nrp1 state.sls configure_ntp
+        
+    Executing workflow returns detailed and summary reports. Detailed
+    report contains run details for each step being executed. Summary
+    report contains per-host brief report of all steps statuses, where
+    status can be:
+    
+    * ``PASS`` - step passed, Nornir Execution Module task result ``failed`` 
+        attribute is False or ``success`` attribute is True
+    * ``FAIL`` - step failed, Nornir Execution Module task result ``failed`` 
+        attribute is True or ``success`` attribute is False
+    * ``SKIP`` - step skipped and not executed, usually due to ``run_if_x`` 
+        conditions not met for the host
+    * ``ERROR`` - State Module encountered exception while running this step
+    
+    Sample report::
+    
+        nrp1:
+        ----------
+                  ID: change_step_1
+            Function: nr.workflow
+              Result: True
+             Comment: 
+             Started: 12:01:58.578925
+            Duration: 5457.171 ms
+             Changes:   
+                      ----------
+                      details:
+                          |_
+                            ----------
+                            apply_logging_config:
+                                ----------
+                                ceos1:
+                                    ----------
+                                    netmiko_send_config:
+                                        ----------
+                                        changed:
+                                            True
+                                        connection_retry:
+                                            0
+                                        diff:
+                                        exception:
+                                            None
+                                        failed:
+                                            False
+                                        result:
+                                            configure terminal
+                                            ceos1(config)#logging host 5.5.5.5
+                                            ceos1(config)#end
+                                            ceos1#
+                                        task_retry:
+                                            0
+                                ceos2:
+                                    ----------
+                                    netmiko_send_config:
+                                        ----------
+                                        changed:
+                                            True
+                                        connection_retry:
+                                            0
+                                        diff:
+                                        exception:
+                                            None
+                                        failed:
+                                            False
+                                        result:
+                                            configure terminal
+                                            ceos2(config)#logging host 5.5.5.5
+                                            ceos2(config)#end
+                                            ceos2#
+                                        task_retry:
+                                            0
+                      summary:
+                          ----------
+                          ceos1:
+                              |_
+                                ----------
+                                apply_logging_config:
+                                    PASS
+                          ceos2:
+                              |_
+                                ----------
+                                apply_logging_config:
+                                    PASS        
     """
     steps_failed, steps_passed = {}, {}
     options = kwargs.pop("options", {})
@@ -522,7 +652,7 @@ def workflow(*args, **kwargs):
     common_filters = options.get("filters", {})
 
     # get all hosts names
-    all_hosts = __salt__["nr.inventory"](**common_filters)
+    all_hosts = __salt__["nr.nornir"]("inventory", **common_filters)
     all_hosts = list(all_hosts["hosts"].keys())
 
     # form report and ret strutures

@@ -342,7 +342,9 @@ Scheduler configuration in proxy minion pillar file ``/etc/salt/pillar/nrp1.sls`
 
     schedule:
       stats_to_elasticsearch:
-        function: nr.stats
+        function: nr.nornir
+        args: 
+          - stats
         seconds: 60
         return_job: False
         returner: elasticsearch

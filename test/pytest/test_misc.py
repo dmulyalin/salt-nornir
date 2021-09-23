@@ -83,7 +83,7 @@ def test_to_file_processor():
     tf_aliases = client.cmd(
         tgt="nrp1",
         fun="cmd.run",
-        arg=["cat /var/salt-nornir/nrp1/files/tf_aliases.json"],
+        arg=["cat /var/salt-nornir/nrp1/files/tf_index_nrp1.json"],
     )
     tf_aliases = json.loads(tf_aliases["nrp1"])
 
@@ -100,3 +100,38 @@ def test_to_file_processor():
 
     assert str(res["nrp1"]["ceos1"]["show clock"]) == file_content_ceos1["nrp1"]
     assert str(res["nrp1"]["ceos2"]["show clock"]) == file_content_ceos2["nrp1"]
+
+    
+def test_results_dump_directive():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname"],
+        kwarg={"dump": "show_clock_full_results"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    tf_aliases = client.cmd(
+        tgt="nrp1",
+        fun="cmd.run",
+        arg=["cat /var/salt-nornir/nrp1/files/tf_index_nrp1.json"],
+    )
+    tf_aliases = json.loads(tf_aliases["nrp1"])
+
+    file_content = client.cmd(
+        tgt="nrp1",
+        fun="cmd.run",
+        arg=["cat {}".format(tf_aliases["show_clock_full_results"]["nrp1"][0]["filename"])],
+    )
+    file_content = file_content["nrp1"]
+    # print(file_content)
+    # print(pprint.pformat(res, indent=2, width=150))
+    assert (
+        "ceos1" in file_content and
+        "ceos2" in file_content and
+        "show hostname" in file_content and
+        "Hostname: ceos" in file_content and
+        "FQDN" in file_content 
+    )
+
+# test_results_dump_directive()

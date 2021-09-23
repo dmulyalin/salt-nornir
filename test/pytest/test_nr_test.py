@@ -448,3 +448,22 @@ def test_nr_test_inline_contains_with_render():
     assert len(ret["nrp1"]) == 2
     for item in ret["nrp1"]:
         assert item["result"] == "PASS"
+
+def test_nr_test_inline_contains_failure():
+    """
+    This test should produce an error as tests must be a list of lists
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "tests": ["", "contains", "NTP"]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert len(ret["nrp1"]) == 2
+    for host_name, res in ret["nrp1"].items():
+        assert "nornir-salt:TestsProcessor task_instance_completed error" in res
+        assert "Traceback" in res["nornir-salt:TestsProcessor task_instance_completed error"]

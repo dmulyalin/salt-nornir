@@ -430,3 +430,133 @@ def test_nr_cli_netmiko_from_file_use_ps_multiline():
             "do show ip int brief" in data["enable"]
         ), "{} - no 'do show ip int brief' command".format(host_name)
         assert "exit" in data["enable"], "{} - no 'exit' command".format(host_name)
+
+    
+def test_nr_cli_netmiko_run_ttp_from_string():
+    template = """
+<input name="version">
+commands = ["show version"]
+</input>
+
+<input name="interfaces">
+commands = ["show run"]
+</input>
+
+<group name="facts" input="version">
+cEOS tools version: {{ tools_version }}
+Kernel version: {{ kernel_version }}
+</group>
+  
+<group name="interf" input="interfaces">
+interface {{ interface }}
+   description {{ description | re(".*") }}
+   ip address {{ ip }}/{{ mask }}
+</group>
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko", "run_ttp": template, "enable": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+                                           'tools_version': '1.1'}},
+                                {'interf': [{'description': 'Configured by '
+                                                            'NETCONF',
+                                             'interface': 'Ethernet1',
+                                             'ip': '10.0.1.4',
+                                             'mask': '24'},
+                                            {'interface': 'Loopback1',
+                                             'ip': '1.1.1.1',
+                                             'mask': '24'},
+                                            {'description': 'Lopback2 for '
+                                                            'Customer 27123',
+                                             'interface': 'Loopback2',
+                                             'ip': '2.2.2.2',
+                                             'mask': '24'},
+                                            {'description': 'Customer #56924 '
+                                                            'service',
+                                             'interface': 'Loopback3',
+                                             'ip': '1.2.3.4',
+                                             'mask': '24'}]}]},
+          'ceos2': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+                                           'tools_version': '1.1'}},
+                                {'interf': [{'description': 'Configured by '
+                                                            'NETCONF',
+                                             'interface': 'Ethernet1',
+                                             'ip': '10.0.1.5',
+                                             'mask': '24'},
+                                            {'description': 'MGMT Range xYz',
+                                             'interface': 'Loopback100',
+                                             'ip': '100.12.3.4',
+                                             'mask': '22'},
+                                            {'description': 'NTU workstation '
+                                                            'service',
+                                             'interface': 'Loopback101',
+                                             'ip': '1.101.2.2',
+                                             'mask': '32'},
+                                            {'description': 'Customer ID '
+                                                            '67123A5',
+                                             'interface': 'Loopback102',
+                                             'ip': '5.5.5.5',
+                                             'mask': '24'}]}]}}}
+    
+# test_nr_cli_netmiko_run_ttp_from_string()
+
+
+def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=[],
+        kwarg={"run_ttp": "salt://ttp/run_ttp_test_1.txt", "enable": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+                                           'tools_version': '1.1'}},
+                                {'interf': [{'description': 'Configured by '
+                                                            'NETCONF',
+                                             'interface': 'Ethernet1',
+                                             'ip': '10.0.1.4',
+                                             'mask': '24'},
+                                            {'interface': 'Loopback1',
+                                             'ip': '1.1.1.1',
+                                             'mask': '24'},
+                                            {'description': 'Lopback2 for '
+                                                            'Customer 27123',
+                                             'interface': 'Loopback2',
+                                             'ip': '2.2.2.2',
+                                             'mask': '24'},
+                                            {'description': 'Customer #56924 '
+                                                            'service',
+                                             'interface': 'Loopback3',
+                                             'ip': '1.2.3.4',
+                                             'mask': '24'}]}]},
+          'ceos2': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+                                           'tools_version': '1.1'}},
+                                {'interf': [{'description': 'Configured by '
+                                                            'NETCONF',
+                                             'interface': 'Ethernet1',
+                                             'ip': '10.0.1.5',
+                                             'mask': '24'},
+                                            {'description': 'MGMT Range xYz',
+                                             'interface': 'Loopback100',
+                                             'ip': '100.12.3.4',
+                                             'mask': '22'},
+                                            {'description': 'NTU workstation '
+                                                            'service',
+                                             'interface': 'Loopback101',
+                                             'ip': '1.101.2.2',
+                                             'mask': '32'},
+                                            {'description': 'Customer ID '
+                                                            '67123A5',
+                                             'interface': 'Loopback102',
+                                             'ip': '5.5.5.5',
+                                             'mask': '24'}]}]}}}
+    
+# test_nr_cli_netmiko_run_ttp_download_from_salt_master()

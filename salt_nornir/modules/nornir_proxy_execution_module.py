@@ -4,23 +4,23 @@ Nornir Execution Module
 
 Nornir Execution module reference. 
 
-.. note:: Keep in mind that execution module functions executed on same machine where proxy-minion process runs.
-
 Introduction
 ------------
 
-This execution module complements Nornir Proxy module to interact with devices over SSH, Telnet,
-NETCONF or any other methods supported by Nornir connection plugins.
+This execution module complements Nornir Proxy Minion Module to interact 
+with devices over SSH, Telnet, NETCONF or any other methods supported by 
+Nornir connection plugins.
 
 Things to keep in mind:
 
+* execution module functions executed on same machine where proxy-minion process runs
 * ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-minion
-* with multiprocessing on, dedicated process starts for each task consuming resources
+* with multiprocessing on, dedicated process starts for each task
 * tasks executed one after another, but task execution against hosts happening in order
   controlled by logic of Nornir runner in use, usually in parallel using threading.
 
 Commands timeout
-----------------
+++++++++++++++++
 
 It is recommended to increase
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
@@ -36,7 +36,6 @@ or use ``--timeout=60`` option to wait for minion return, as all together it mig
         IOL1:
             ----------
             show clock:
-                
                 *08:17:22.691 EET Sat Feb 13 2021
         IOL2:
             ----------
@@ -45,7 +44,7 @@ or use ``--timeout=60`` option to wait for minion return, as all together it mig
     [root@localhost /]# 
 
 AAA considerations
-------------------
+++++++++++++++++++
 
 Quiet often AAA servers (Radius, Tacacs) might get overloaded with authentication
 and authorization requests coming from devices due to Nornir establishing
@@ -57,25 +56,24 @@ To overcome that problem Nornir proxy-module uses ``RetryRunner`` by default.
 developed to address aforementioned issue in addition to implementing retry logic.
 
 Targeting Nornir Hosts
-----------------------
+++++++++++++++++++++++
 
-Nornir can manage several many devices and uses it's own inventory,
+Nornir can manage many devices and uses it's own inventory,
 additional filtering ``Fx`` functions introduced in
 `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library
 to narrow down tasks execution to certain hosts/devices.
 
 Sample command to demonstrate targeting capabilities::
 
-    salt nornir-proxy-1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
+    salt nrp1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
 
 Jumphosts or Bastions
----------------------
++++++++++++++++++++++
 
-``RetryRunner`` included in
-`nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library has
+``RetryRunner`` included in `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_ library has
 support for ``nr.cli`` and ``nr.cfg`` with ``plugin="netmiko"`` and 
 ``nr.nc`` with ``plugin="ncclient"`` functions to interact with devices 
-behind SSH jumphosts. 
+behind SSH Jumphosts. 
 
 Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
@@ -92,57 +90,502 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
             password: admin
             username: admin
 
-Nornir Execution module functions summary
------------------------------------------
+Common CLI Arguments
+--------------------
+
+A number of Command Line Interface arguments can be supplied to Nornir Proxy 
+Module Execution Module functions to influence various aspects of task execution 
+process.
+
+.. list-table::
+   :widths: 15 85
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - `Fx`_ 
+     - Filters to target subset of devices using FFun Nornir-Salt function
+   * - `diff`_ 
+     - Calls Nornir-Salt DiffProcessor to produce results difference
+   * - `dp`_ 
+     - Allows to call any function supported by Nornir-Salt DataProcessor     
+   * - `dump`_ 
+     - Saves complete task results to local file system using Nornir-Salt DumpResults function       
+   * - `event_failed`_ 
+     - Emit events on Salt Events Bus for failed tasks     
+   * - `match`_ 
+     - Filters text output using Nornir-Salt DataProcessor match function 
+   * - `render`_ 
+     - Renders arguments content using Salt renderer system
+   * - `run_ttp`_ 
+     - Calls Nornir-Salt DataProcessor run_ttp function to parse results using TTP
+   * - `table`_ 
+     - Formats results to text table using Nornir-Salt TableFormatter     
+   * - `tests`_ 
+     - Run tests for task results using Nornir-Salt TestsProcessor
+   * - `tf`_ 
+     - Saves results to local file system using Nornir-Salt ToFileProcessor
+   * - `to_dict`_ 
+     - Transforms results to structured data using Nornir-Salt ResultSerializer
+   * - `xml_flake`_ 
+     - Uses Nornir-Salt DataProcessor xml_flake function to filter XML output
+
+Fx
+++
+
+Uses Nornir-Salt ``FFun`` function to form a subset of hosts to run this task for.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http,``
+``nr.tping, nr.inventory``
+
+CLI Arguments:
+
+* ``Fx`` - any of nornir-Salt ``FFun`` supported filters
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
+
+diff
+++++
+
+Uses Nornir-Salt ``DiffProcessor`` to produce difference between current task results
+and previous results saved by ``ToFileProcessor``.
+
+Supported functions: ``nr.task, nr.cli, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``diff`` - ``ToFileProcessor`` file group name to run difference with
+* ``last`` - ``ToFileProcessor`` file version number, default is 1
+
+Sample usage::
+
+    salt nrp1 nr.cli "show ip route" diff="show_route" last=1
+
+dp
+++
+
+Nornir Processor plugins tap into task execution flow to perform additional actions or
+process task results.
+
+To invoke processor plugin need to supply execution module functions with processors 
+arguments providing required parameters to control processor plugin behavior.
+
+All supported processors executed in this order::
+
+    DataProcessor -> TestsProcessor -> DiffProcessor -> ToFileProcessor
+
+Uses Nornir-Salt ``DataProcessor`` plugin designed to process Nornir task results.
+
+Any supported DataProcessor can be used that way. 
+
+CLI argument ``dp`` can be comma-separated string or list of DataProcessor function names 
+or dictionary keyed by DataProcessor function names with values set to dictionary which 
+contains ``kwargs`` for DataProcessor function, ``dp`` key can be used to define functions 
+order.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``dp`` - data processor list to process task results through
+
+Sample usage::
+
+    salt nrp1 nr.nc get_config dp="xml_to_json"
+    salt nrp1 nr.nc get_config dp="load_xml, flatten"
+    salt nrp1 nr.nc get_config dp='["load_xml", "flatten"]'
+    salt nrp1 nr.cli "show version" dp='[{"fun": "match", "pattern": "Version"}]'
+    salt nrp1 nr.nc get_config source=running dp='[{"fun": "xml_flatten"}, {"fun": "key_filter", "pattern": "*bgp*, *BGP*"}]'
+    
+Last example will call ``xml_flatten`` function first following with ``key_filter`` with
+``{"pattern": "*bgp*, *BGP*"}`` dictionary arguments.
+
+dump
+++++
+
+Salt Event bus has limit on the amount of data it can transfer from Proxy Minion to Master, 
+because of that results produced by Proxy minion might get trimmed beyond certain threshold.
+
+This can be addressed in several ways:
+
+* increase event bus data transmission threshold
+* use returner to return results to external database or other system
+
+In addition to above option, Nornir Proxy Minion can make use of Salt-Nornir ``DumpResults`` 
+function to save complete results of task execution to local file system. That data 
+can be later retrieved from proxy Minion machine.
+
+Another usecase that ``DumpResults`` function can help to solve is results logging for audit,
+review or historical data purposes.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``dump`` - ``ToFileProcessor`` file group name where to save results
+
+Sample usage::
+
+    salt nrp1 nr.cli "show run" dump="show_run_output"
+
+Results saved to proxy minion local file system under ``files_base_path``, default is::
+
+    /var/salt-nornir/{proxy_id}/files/{filegroup}__{timestamp}__{rand}__{proxy_id}.txt
+
+Where:
+
+* ``proxy_id`` - Nornir Proxy Minion ID
+* ``filegroup`` - ``ToFileProcessor`` file group name where to save results
+* ``timestamp`` - date timestamp
+* ``rand`` - random integer between 1 and 1000
+
+event_failed
+++++++++++++
+
+Salt Event bus allows Proxy Minion processes to emit events, so that salt-master reactor
+system can act upon them and trigger execution of various actions.
+
+``event_failed`` allows to instruct Nornir Proxy minion to emit events for failed tasks.
+
+Event's tag formed using this formatter::
+
+    nornir-proxy/{proxy_id}/{host}/task/failed/{name}
+    
+Where:
+
+* ``proxy_id`` - Nornir Proxy Minion ID
+* ``host`` - hostname of device that failed this task
+* ``name`` - name of the failed task
+    
+Event body contains task execution results dictionary.
+
+Failed tasks determined using results ``failed`` or ``success`` attributes, if ``failed``
+is True or ``success`` is False task considered as failed.
+
+Combining ``event_failed`` with ``nr.test`` function allows to implement event driven 
+automation in response to certain tests failure. Each test translated to a separate 
+task result and ``event_failed`` emit events on a per-test basis enabling to construct 
+very granular react actions on Salt Master.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``event_failed`` - boolean, default is False, if True will emit events for failed tasks.
+
+Sample usage::
+
+    salt nrp1 nr.test suite="salt://tests/suite.txt" event_failed=True
+
+match
++++++
+
+Uses Nornir-Salt ``DataProcessor`` ``match`` function to filter text
+results using regular expression pattern.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``match`` - regex pattern to search for
+* ``before`` - integer indicating how many lines before match to include in results
+
+Sample usage::
+
+    salt nrp1 nr.cli "show version" match="Version.*"
+    salt nrp1 nr.cli "show version" match="Version.*" before=1
+
+render
+++++++
+
+Salt has rendering system built-into it, that system allows to render text files content
+while having access to all Salt Execution Module Functions and inventory data.
+    
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``render`` - list of argument to render content for
+
+For example, to render content for filename argument::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" render='["filename"]'
+    
+Primary use cases for this keyword is revolving around enabling or disabling rendering for 
+certain arguments. Execution Module Function adjust ``render`` keyword list content by 
+themselves and usually do not require any modifications.
+
+run_ttp 
++++++++
+
+Uses Nornir-Salt ``DataProcessor`` ``run_ttp`` function to parse text
+results using TTP library and return structured data.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``run_ttp`` - TTP template reference
+* ``ttp_structure`` - TTP results structure, supported values: ``flat_list`` (default), ``list`` or ``dictionary``
+
+Sample usage::
+
+    salt nrp1 nr.cli "show version" run_ttp="Version: {{ version }}"
+    salt nrp1 nr.cli "show version" run_ttp="salt://ttp/parse_version.txt"
+    salt nrp1 nr.cli "show ip arp" run_ttp="ttp://platform/cisco_ios_show_ip_arp.txt"
+    salt nrp1 nr.cli run_ttp="salt://ttp/parse_commands.txt" ttp_structure=list
+    
+TTP templates can be specified inline, sourced from salt-master using ``salt://path`` or from
+TTP Templates collection repository using ``ttp://path`` providing that it is installed on
+proxy minion machine.
+
+``run_ttp`` with ``nr.cli`` function also supports sourcing commands to collect from devices 
+from within TTP template input tags using ``commands`` argument. For example::
+
+    <input name="version">
+    commands = ["show version"]
+    </input>
+    
+    <input name="interfaces">
+    commands = ["show run"]
+    </input>
+    
+    <group name="facts" input="version">
+    cEOS tools version: {{ tools_version }}
+    Kernel version: {{ kernel_version }}
+    Total memory: {{ total_memory}} kB
+    Free memory: {{ total_memory}} kB
+    </group>
+      
+    <group name="interf" input="interfaces">
+    interface {{ interface }}
+       description {{ description | re(".*") }}
+       ip address {{ ip }}/{{ mask }}
+    </group>
+    
+Supplying above template to ``nr.cli`` function with ``run_ttp`` argument will result 
+in running ``show version`` and ``show run`` commands, placing output in appropriate 
+inputs and parsing it with dedicated groups, returning parsing results.
+
+table
++++++
+
+Uses Nornir-Salt ``TableFormatter`` function to transform task results in a
+text table representation.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``table`` - boolean or table type indicator, supported values: True, ``brief``, ``extend``
+* ``headers`` - list of table headers to form table for
+* ``headers_exclude`` - list of table headers to exclude from final table results
+* ``sortby`` - name of the header to sort table by, default is ``host``
+* ``reverse`` - if True, sorts table in reverse order, False by default
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" table=brief
+    salt nrp1 nr.cli "show clock" table=True
+    salt nrp1 nr.cli "show clock" table=True headers="host, results"
+    salt nrp1 nr.cli "show clock" table=True headers="host, results" sortby="host" reverse=True
+	
+tests
++++++
+
+Uses Nornir-Salt ``TestsProcessor`` to test task results.
+
+Tests can be specified inline as a list of lists or can reference tests suite 
+file on salt-master using ``salt://path`` format.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``tests`` - reference to a list of tests to run
+* ``failed_only`` - boolean, default is False, to indicate if to return results for failed tests only
+* ``remove_tasks`` - boolean, default is True, to indicate if need to remove tested task results
+
+Sample usage::
+
+    salt nrp1 nr.cli "show version" "show clock" tests='[["show version", "contains", "5.2.9b"], ["show clock", "contains", "Source: NTP"]]'
+    salt nrp1 nr.cli "show version" "show clock" tests="salt://tests/suite.txt"
+
+tf
+++
+
+Uses Nornir-Salt ``ToFileProcessor`` to save task execution results to 
+proxy minion local file system under ``files_base_path``, default is 
+``/var/salt-nornir/{proxy_id}/files/``
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``tf`` - ``ToFileProcessor`` file group name where to save results
+
+Sample usage::
+
+    salt nrp1 nr.cfg "logging host 1.1.1.1" tf="logging_config"
+    
+to_dict
++++++++
+
+Uses Nornir-Salt ``ResultSerializer`` function to transform task results in a
+structured data - dictionary or list.
+
+This function used by default for all task results unless ``TableFormatter`` ``table``
+argument provided.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``add_details`` - boolean, default is False, if True will add task execution details to the results
+* ``to_dict`` - boolean, default is True, if False will produce results list structure
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" add_detals=True
+    salt nrp1 nr.cli "show clock" add_detals=True to_dict=False
+    
+xml_flake
++++++++++
+
+Uses Nornir-Salt ``DataProcessor`` ``xml_flake`` function to flatten XML
+results structure to dictionary and filter dictionary keys using glob pattern.
+
+Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``xml_flake`` - glob pattern to filter keys
+
+Sample usage::
+
+    salt nrp1 nr.nc get_config xml_flake="*bgp:config*"
+
+Execution Module Functions
+--------------------------
 
 Table to summarize functions available in Nornir Proxy Execution Module and their purpose. 
 
-+--------------+---------------------------------------------------+--------------------+
-| nr.function  | description                                       | supported plugins  |
-+==============+===================================================+====================+
-| inventory    | To retrive nornir inventory information           |                    |
-+--------------+---------------------------------------------------+--------------------+
-| task         | Function to run any nornir task plugin            |                    |
-+--------------+---------------------------------------------------+--------------------+
-| cli          | Function for show commands output collection over | netmiko (default), |
-|              | ssh or telnet                                     | scrapli            |
-+--------------+---------------------------------------------------+--------------------+
-| cfg          | Function to modify devices configuration over     | napalm (default),  |
-|              | ssh or telnet connections                         | netmiko, scrapli   |
-+--------------+---------------------------------------------------+--------------------+
-| cfg_gen      | Function to generate devices configuration using  |                    |
-|              | SALT templating system with Nornir inventory,     |                    |
-|              | mainly for testing purposes                       |                    |
-+--------------+---------------------------------------------------+--------------------+
-| test         | Function to test show commands output             | napalm (default),  |
-|              | produced by nr.cli function                       | netmiko, scrapli   |
-+--------------+---------------------------------------------------+--------------------+
-| tping        | Function to run TCP ping to devices's hostnames   |                    |
-+--------------+---------------------------------------------------+--------------------+
-| nc           | Function to work with devices using NETCONF       | ncclient (default),|
-|              |                                                   | scrapli_netconf    |
-+--------------+---------------------------------------------------+--------------------+
-| do           | Function to execute aliases with a set of steps   |                    |
-|              | calling other execution functions. Allows to      |                    |
-|              | construct simple workflows                        |                    |
-+--------------+---------------------------------------------------+--------------------+
-| version      | Function to produce installed packages versions   |                    |
-|              | report                                            |                    |
-+--------------+---------------------------------------------------+--------------------+
++-----------------+---------------------------------------------------+--------------------+
+| nr.function     | description                                       | supported plugins  |
++=================+===================================================+====================+
+| `nr.cfg`_       | Function to modify devices configuration over     | napalm (default),  |
+|                 | ssh or telnet connections                         | netmiko, scrapli   |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.cfg_gen`_   | Function to generate devices configuration using  |                    |
+|                 | SALT templating system with Nornir inventory,     |                    |
+|                 | mainly for testing purposes                       |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.cli`_       | Function for show commands output collection over | netmiko (default), |
+|                 | ssh or telnet                                     | scrapli            |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.diff`_      | To diff content of files or network with files    |                    |
+|                 | saved by ``ToFileProcessor``                      |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.do`_        | Function to execute actions with a set of steps   |                    |
+|                 | calling other execution functions. Allows to      |                    |
+|                 | construct simple work flows.                      |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.file`_      | Function to work with files saved by              |                    |
+|                 | ``ToFileProcessor`` - read, delete, list etc.     |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.find`_      | To search for various information in files saved  |                    |
+|                 | by ``ToFileProcessor``                            |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.http`_      | To run HTTP requests against API endpoints        | requests           |
+|                 |                                                   |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.learn`_     | This function is to save task results in files    |                    |
+|                 | using ``ToFileProcessor`` and ``nr.do`` actions   |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.nc`_        | Function to work with devices using NETCONF       | ncclient (default),|
+|                 |                                                   | scrapli_netconf    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.task`_      | Function to run any Nornir task plugin            |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.test`_      | Function to test show commands output             | netmiko (default), |
+|                 | produced by nr.cli function                       | scrapli            |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.tping`_     | Function to run TCP ping to devices's hostnames   |                    |
++-----------------+---------------------------------------------------+--------------------+
 
-Nornir Execution module functions
----------------------------------
+nr.cfg
+++++++
 
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.inventory
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.task
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cli
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cfg
+
+nr.cfg_gen
+++++++++++
+
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cfg_gen
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.tping
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.stats
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.test
+
+nr.cli
+++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.cli
+
+nr.diff
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.diff
+
+nr.do
+++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.do
+
+nr.file
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.file
+
+nr.find
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.find
+
+nr.http
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.http
+
+nr.learn
+++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.learn
+
+nr.nc
++++++
+
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nc
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.version
+
+nr.nornir
++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
+
+nr.task
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.task
+
+nr.test
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.test
+
+nr.tping
+++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.tping
 """
 
 # Import python libs
@@ -166,8 +609,6 @@ try:
     from nornir import InitNornir
     from nornir_salt import tcp_ping
     from nornir_salt.plugins.functions import (
-        FindString,
-        RunTestSuite,
         TabulateFormatter,
     )
 
@@ -184,7 +625,9 @@ except:
 
 __virtualname__ = "nr"
 __proxyenabled__ = ["nornir"]
-
+__func_alias__ = {
+    "nornir_fun": "nornir"
+}
 
 def __virtual__():
     if HAS_NORNIR:
@@ -197,37 +640,15 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def inventory(**kwargs):
-    """
-    Return inventory dictionary for Nornir hosts
-
-    :param Fx: filters to filter hosts
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
-
-    Sample Usage::
-
-        salt nornir-proxy-1 nr.inventory
-        salt nornir-proxy-1 nr.inventory FB="R[12]"
-    """
-    return __proxy__["nornir.inventory_data"](**kwargs)
-
-
 def task(plugin, *args, **kwargs):
     """
     Function to invoke any of supported Nornir task plugins. This function
     performs dynamic import of requested plugin function and executes
     ``nr.run`` using supplied args and kwargs
 
-    :param plugin: ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
-    :param Fx: filters to filter hosts
-    :param add_details: boolean, to include details in result or not
-    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
-
+    :param plugin: (str) ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
+    :param kwargs: (dict) any additional argument to use with specified task plugin
+    
     ``plugin`` attribute can reference file on SALT Master with ``task`` function content,
     that file downloaded from master, compiled and executed. File must contain function
     named ``task`` accepting Nornir task object as a first positional argument, for
@@ -243,15 +664,27 @@ def task(plugin, *args, **kwargs):
     .. note:: ``CONNECTION_NAME`` must be defined within custom task function file if
         RetryRunner in use, otherwise connection retry logic skipped and connections
         to all hosts initiated simultaneously up to the number of num_workers.
-
+    
     Sample usage::
 
-        salt nornir-proxy-1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
-        salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
-        salt nornir-proxy-1 nr.task "nornir_netmiko.tasks.netmiko_send_command" command_string="show clock"
-        salt nornir-proxy-1 nr.task nr_test a=b c=d add_details=False
-        salt nornir-proxy-1 nr.task salt://path/to/task.txt
-        salt nornir-proxy-1 nr.task plugin=salt://path/to/task.py
+        salt nrp1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
+        salt nrp1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
+        salt nrp1 nr.task "nornir_netmiko.tasks.netmiko_send_command" command_string="show clock"
+        salt nrp1 nr.task nr_test a=b c=d add_details=False
+        salt nrp1 nr.task "salt://path/to/task.txt"
+        salt nrp1 nr.task plugin="salt://path/to/task.py"
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.task",
+            arg=["nornir_napalm.plugins.tasks.napalm_cli"],
+            kwarg={"commands": ["show ip arp"]},
+        )        
     """
     return __proxy__["nornir.execute_job"](
         task_fun=plugin, args=args, kwargs=kwargs, cpid=os.getpid()
@@ -265,36 +698,46 @@ def cli(*commands, **kwargs):
 
     :param commands: (list or str) list of commands or single command
     :param filename: (str) path to file with multiline commands string
-    :param Fx: filters to filter hosts
-    :param kwargs: any additional kwargs to pass on to netmiko send_command methods
-    :param add_details: boolean, to include details in result or not
-    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-    :param plugin: name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
-    :param match: regular expression pattern to search for in results,
-        similar to Cisco ``inlclude`` or Juniper ``match`` pipe commands
-    :param before: used with match, number of lines before match to include in results, default is 0
-    :param tf: Nornir-salt ``ToFileProcessor`` function's alias to use to save execution results
+    :param kwargs: (dict) any additional arguments to use with specified ``plugin`` send command method
+    :param plugin: (str) name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
 
     Sample Usage::
 
-         salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
-         salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
-         salt nornir-proxy-1 nr.cli "show run" FL="SW1,RTR1,RTR2" match="CPE[123]+" before=1
-         salt nornir-proxy-1 nr.cli "show clock" FO='{"platform__any": ["ios", "nxos_ssh", "cisco_xr"]}' for filtering
-         salt nornir-proxy-1 nr.cli commands='["ping 1.1.1.1 source {{ host.lo0 }}"]' render=commands
-         salt nornir-proxy-1 nr.cli filename="salt://device_show_commands.txt"
+         salt nrp1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
+         salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" 
+         salt nrp1 nr.cli "show clock" FO='{"platform__any": ["ios", "nxos_ssh", "cisco_xr"]}'
+         
+    Commands can be templates and rendered using Jinja2 Templating Engine::
+    
+         salt nrp1 nr.cli "ping 1.1.1.1 source {{ host.lo0 }}"
+         
+    Commands to run on devices can be sourced from text file on Salt Master, that text file can also be a 
+    template and rendered using SaltStack rendering system::
+    
+         salt nrp1 nr.cli filename="salt://device_show_commands.txt"    
+         
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.cli",
+            arg=["show clock"],
+            kwarg={"plugin": "netmiko"},
+        )      
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")
     kwargs = {**default_kwargs, **kwargs}
-    match = kwargs.pop("match", None)  # match
-    before = kwargs.pop("before", 0)  # match
     plugin = kwargs.pop("plugin", "netmiko")
     kwargs.setdefault("render", ["filename", "commands"])
     # decide on commands to send
+    commands = kwargs.pop("commands", commands)
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
-        kwargs.setdefault("commands", commands)
+        kwargs["commands"] = commands
     # decide on plugin to use
     if plugin.lower() == "netmiko":
         task_fun = "nornir_salt.plugins.tasks.netmiko_send_commands"
@@ -308,9 +751,6 @@ def cli(*commands, **kwargs):
     result = __proxy__["nornir.execute_job"](
         task_fun=task_fun, args=[], kwargs=kwargs, cpid=os.getpid()
     )
-    # do match filtering
-    if match:
-        result = FindString(result, pattern=match, before=before)
     return result
 
 
@@ -327,16 +767,8 @@ def cfg(*commands, **kwargs):
     :param defaults: Default context passed to the template.
     :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` or ``scrapli``
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
-    :param Fx: filters to filter hosts
-    :param add_details: (bool) to include details in result or not
-    :param add_cpid_to_task_name: (bool) include Child Process ID (cpid) for debugging
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
-    :param commit: (bool or dict) by default commit is ``True``. If ``plugin=netmiko``
-        connection ``commit`` method called following with ``exit_config_mode`` call. If
-        ``commit`` argument is a dictionary, it is supplied to commit call using
-        ``**commit``.
+    :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
+        dictionary ``commit`` argument supplied to commit call using ``**commit``
 
     .. warning:: ``dry_run`` not supported by ``netmiko`` plugin
 
@@ -344,26 +776,39 @@ def cfg(*commands, **kwargs):
         command as part of configuration, moreover, scrapli will not exit configuration mode,
         need to send exit command as part of configuration mode as well.
 
-    In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
+    For configuration rendering purposes, in addition to normal `context variables
+    <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host
     inventory data.
 
     Sample usage::
 
-        salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
-        salt nornir-proxy-1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
-        salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
-        salt nornir-proxy-1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
-        salt nornir-proxy-1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True"}'
+        salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
+        salt nrp1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
+        salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
+        salt nrp1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
+        salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True}'
 
     Filename argument can be a template string, for instance::
 
-        salt nornir-proxy-1 nr.cfg filename=salt://templates/{{ host.name }}_cfg.txt
+        salt nrp1 nr.cfg filename=salt://templates/{{ host.name }}_cfg.txt
 
     In that case filename rendered to form path string, after that, path string used to download file
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
-    That behaviour supported only for filenames that start with ``salt://``. This feature allows to
+    That behavior supported only for filenames that start with ``salt://``. This feature allows to
     specify per-host configuration files for applying to devices.
+    
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.cfg",
+            arg=["logging host 1.1.1.1", "ntp server 1.1.1.2"],
+            kwarg={"plugin": "netmiko"},
+        )   
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
@@ -401,42 +846,47 @@ def cfg_gen(*commands, **kwargs):
     This function can be useful to stage/test templates or to generate configuration
     without pushing it to devices.
 
-    :param filename: path to template
-    :param template_engine: template engine to render configuration, default is jinja
-    :param saltenv: name of SALT environment
+    :param filename: (str) path to template
+    :param template_engine: (str) template engine to render configuration, default is jinja
+    :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param add_details: boolean, to include details in result or not
-    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
 
-    In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
-    template engine loaded with additional context variable `host`, to access Nornir host's
+    For configuration rendering purposes, in addition to normal `context variables
+    <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
+    template engine loaded with additional context variable `host`, to access Nornir host
     inventory data.
-
-    Returns rendered configuration.
 
     Sample usage::
 
-        salt nornir-proxy-1 nr.cfg_gen filename=salt://templates/template.j2 FB="R[12]"
+        salt nrp1 nr.cfg_gen filename=salt://templates/template.j2 FB="R[12]"
 
     Sample template.j2 content::
 
         proxy data: {{ pillar.proxy }}
-        jumphost_data: {{ host["jumphost"] }} # "jumphost" defined in host's data
+        jumphost_data: {{ host["jumphost"] }}
         hostname: {{ host.name }}
         platform: {{ host.platform }}
 
     Filename argument can be a template string, for instance::
 
-        salt nornir-proxy-1 nr.cfg_gen filename=salt://template/{{ host.name }}_cfg.txt
+        salt nrp1 nr.cfg_gen filename="salt://template/{{ host.name }}_cfg.txt"
 
     In that case filename rendered to form path string, after that, path string used to download file
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
     That behaviour supported only for filenames that start with ``salt://``. This feature allows to
     specify per-host configuration files for applying to devices.
+    
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.cfg_gen",
+            kwarg={"filename": "salt://template/{{ host.name }}_cfg.txt"},
+        ) 
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
@@ -460,23 +910,29 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     Tests connection to TCP port(s) by trying to establish a three way
     handshake. Useful for network discovery or testing.
 
-    :param ports (list of int, optional): tcp ports to ping, defaults to host's port or 22
-    :param timeout (int, optional): defaults to 1
-    :param host (string, optional): defaults to ``hostname``
-    :param add_details: boolean, to include details in result or not
-    :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
+    :param ports (list of int): tcp ports to ping, defaults to host's port or 22
+    :param timeout (int): defaults to 1
+    :param host (str): defaults to ``hostname``
 
     Sample usage::
 
-        salt nornir-proxy-1 nr.tping
-        salt nornir-proxy-1 nr.tping FB="LAB-RT[123]"
+        salt nrp1 nr.tping
+        salt nrp1 nr.tping FB="LAB-RT[123]"
 
     Returns result object with the following attributes set:
 
     * result (``dict``): Contains port numbers as keys with True/False as values
+    
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.tping",
+            kwarg={"FB": "LAB-RT[123]"},
+        ) 
     """
     kwargs["ports"] = ports
     kwargs["timeout"] = timeout
@@ -490,21 +946,12 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     )
 
 
-def stats(*args, **kwargs):
-    """
-    Function to gather and return stats about Nornir proxy process.
-
-    :param stat: name of stat to return, returns all by default
-    """
-    return __proxy__["nornir.stats"](*args, **kwargs)
-
-
 def test(*args, **kwargs):
     """
     Function to perform tests for certain criteria against show commands output
     from devices obtained using ``nr.cli`` function.
 
-    **nr.test function related arguments**
+    ``nr.test`` function related arguments
 
     :param name: (str) descriptive name of the test, will be added to results
     :param test: (str) type of test to do e.g.: contains, !contains, equal, custom etc.
@@ -519,24 +966,18 @@ def test(*args, **kwargs):
     :param subset: (list or str) list or string with comma separated glob patterns to
         match tests' names to execute. Patterns are not case-sensitive. Uses
         ``fnmatch.fnmatch`` Python built-in function to do matching.
-    :param Fx: filters to filter hosts to run the tests for
-    :param **kwargs: any additional arguments to use with test function
+    :param kwargs: (dict) any additional arguments to use with test function
 
-    **nr.cli function related aruments**
+    ``nr.cli`` function related arguments
 
     :param commands: (str or list) single command or list of commands to get from device
     :param plugin: (str) plugin name to use with ``nr.cli`` function to gather output
         from devices - ``netmiko`` (default) or ``scrapli``
-    :param add_details: (bool) default is True, if set to False results will only contain
-        ``name``, ``result``s and ``host`` keys.
-    :param Fx: filters to filter hosts to collect commands output for
-    :param event_failed: (bool) default is False, if True will fire events on SALT events bus
-        for failed tasks
     :param use_ps: (bool) default is False, if True use netmiko plugin experimental
         ``PromptlesS`` method to collect output from devices
     :param cli: (dict) any additional arguments to pass on to ``nr.cli`` function
 
-    **nornir-salt TestsProcessor plugin related arguments**
+    Nornir-Salt ``TestsProcessor`` plugin related arguments
 
     :param failed_only: (bool) default is False, if True ``nr.test`` returns result for
         failed tests only
@@ -544,9 +985,9 @@ def test(*args, **kwargs):
         tasks output as well e.g. show commands output. By default results only contain
         tests results.
 
-    **nornir-salt TabulateFormatter function related arguments**
+    Nornir-Salt ``TabulateFormatter`` function related arguments
 
-    :param table: (bool, str or dict) dictionary of arguments or alias to table type e.g. "brief" or True
+    :param table: (bool, str or dict) dictionary of arguments or table type indicator e.g. "brief" or True
     :param headers: (list) list of headers to output table for
 
     Sample usage with inline arguments::
@@ -562,7 +1003,7 @@ def test(*args, **kwargs):
         salt np1 nr.test suite=salt://tests/suite_1.txt table=brief
         salt np1 nr.test suite=salt://tests/suite_1.txt table=brief subset="config_test*,rib_check*"
 
-    Where salt://tests/suite_1.txt content is::
+    Where ``salt://tests/suite_1.txt`` content is::
 
         - task: "show run | inc ntp"
           test: contains
@@ -586,6 +1027,17 @@ def test(*args, **kwargs):
             - "show ntp associations"
           name: "Is NTP in sync"
 
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.test",
+            kwarg={"suite": "salt://tests/suite_1.txt"},
+        ) 
+        
     Returns a list of dictionaries with check results, each dictionary contains::
 
         {
@@ -599,8 +1051,7 @@ def test(*args, **kwargs):
             "criteria": Validation criteria used
         }
 
-    Reference
-    `nornir-salt <https://nornir-salt.readthedocs.io/en/latest/Functions.html#run-tests-suite>`_
+    Reference `nornir-salt <https://nornir-salt.readthedocs.io/en/latest/Functions.html#run-tests-suite>`_
     documentation for more details on using test suite.
 
     Each item in a test suite executed individually one after another.
@@ -747,13 +1198,7 @@ def nc(*args, **kwargs):
 
     :param call: (str) ncclient manager or scrapli netconf object method to call
     :param plugin: (str) Name of netconf plugin to use - ncclient (default) or scrapli
-    :param Fx: filters to filter hosts
     :param data: (str) path to file for ``rpc`` method call or rpc content
-    :param fmt: (str) result formatter to use - xml (default), raw_xml, json, yaml, pprint, py
-    :param add_details: (bool) to include additional details in result or not
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
     :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
 
     Special ``call`` arguments/methods:
@@ -801,6 +1246,18 @@ def nc(*args, **kwargs):
         salt nrp1 nr.nc server_capabilities FB="*" plugin=scrapli
         salt nrp1 nr.nc rpc filter_=salt://rpc/get_config_rpc_ietf_interfaces.xml plugin=scrapli
         salt nrp1 nr.nc locked target="candidate" config="salt://rpc/edit_config_ietf_interfaces.xml" plugin=scrapli
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.nc",
+            arg=["get_config"],
+            kwarg={"source": "running", "plugin": "ncclient"},
+        ) 
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")
@@ -825,7 +1282,7 @@ def nc(*args, **kwargs):
 
 def do(*args, **kwargs):
     """
-    Function to perform steps defined under ``nornir:aliases`` configuration
+    Function to perform steps defined under ``nornir:actions`` configuration
     section at:
 
     * Minion's configuration
@@ -835,7 +1292,7 @@ def do(*args, **kwargs):
       config file in order to work)
     * File on master file system
 
-    To retrieve aliases content Salt ``nr.do`` uses ``config.get`` execution module
+    To retrieve actions content Salt ``nr.do`` uses ``config.get`` execution module
     function with ``merge`` key set to ``True``.
 
     Each step definition requires these keywords to be defined:
@@ -846,28 +1303,34 @@ def do(*args, **kwargs):
 
     Any other keywords defined inside the step are ignored.
 
-    :param stop_on_error: (bool) if True (default), stop execution on error in the step, continue otherwise
-    :param filepath: (str) path to file with aliases steps
-    :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`, default ``jinja|yaml``
-    :param describe: (bool) if True, returns alias content without executing it, default is False
-    :param **kwargs: (any) additional ``kwargs`` to use with aliases steps, ``kwargs`` override
+    :param stop_on_error: (bool) if True (default) stops execution on error in step, 
+        continue execution in error if False
+    :param filepath: (str) path to file with actions steps
+    :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`, 
+        default ``jinja|yaml``
+    :param describe: (bool) if True, returns action content without executing it, default is False
+    :param kwargs: (any) additional ``kwargs`` to use with actions steps, ``kwargs`` override
         ``kwargs`` dictionary defined within each step, for example, in command
         ``salt nrp1 nr.do configure_ntp FB="*core*"``, ``FB`` argument will override ``FB`` arguments
-        defined within steps
+        defined within steps.
+    :param tf: (bool) if True, ``ToFileProcessor`` saves each step results in file 
+        named after step name if no ``tf`` argument provided within step, default is False
+    :param diff: (bool) if True, ``DiffProcessor`` runs diff for each step result using files 
+        named after step name if no ``diff`` argument provided within step, default is False
     :returns: dictionary with keys: ``failed`` bool, ``result`` list; ``result`` key contains
         a list of results for steps; If ``stop_on_error`` set to ``True`` and error happens, ``failed``
         key set to ``True``
 
-    .. note:: if ``filepath`` argument provided, aliases defined in other places are ignored; file
+    .. note:: if ``filepath`` argument provided, actions defined in other places are ignored; file
         loaded using Saltstack ``slsutil.renderer`` execution module function, as a result
         file can contain any of Saltstack supported renderers content and can be located
         at any url supported by ``cp.get_url`` execution module function. File content must
-        render to a dictionary keyed by aliases names.
+        render to a dictionary keyed by actions names.
 
-    Sample aliases steps definition using proxy minion pillar:
+    Sample actions steps definition using proxy minion pillar::
 
         nornir:
-          aliases:
+          actions:
             awr:
               function: nr.cli
               args: ["wr"]
@@ -884,7 +1347,7 @@ def do(*args, **kwargs):
                 args: ["show run | inc ntp"]
                 kwargs: {"FB": "*"}
 
-    Sample aliases steps definition using text file under ``filepath``:
+    Sample actions steps definition using text file under ``filepath``::
 
         awr:
           function: nr.cli
@@ -902,12 +1365,12 @@ def do(*args, **kwargs):
             args: ["show run | inc ntp"]
             kwargs: {"FB": "*"}
 
-    Alias ``awr`` has single step defined, while ``configure_ntp`` alias has multiple
+    Action name ``awr`` has single step defined, while ``configure_ntp`` action has multiple
     steps defined, each executed in order.
 
-    Multiple aliases can be supplied to ``nr.do`` call.
+    Multiple actions names can be supplied to ``nr.do`` call.
 
-    .. warning:: having column ``:`` as part of alias name not premitted, as ``:`` used by
+    .. warning:: having column ``:`` as part of action name not premitted, as ``:`` used by
         Salt ``config.get`` execution module function to split arguments on path items.
 
     Sample usage::
@@ -915,15 +1378,29 @@ def do(*args, **kwargs):
         salt nrp1 nr.do awr
         salt nrp1 nr.do configure_ntp awr stop_on_error=False
         salt nrp1 nr.do configure_ntp FB="*core*" add_details=True
-        salt nrp1 nr.do awr filepath="salt://aliases/aliases_file.txt"
+        salt nrp1 nr.do awr filepath="salt://actions/actions_file.txt"
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.do",
+            arg=["configure_ntp", "awr"],
+            kwarg={"FB": "R[12]"},
+        ) 
     """
     ret = {"failed": False, "result": []}
-    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("_")}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     stop_on_error = kwargs.pop("stop_on_error", True)
     filepath = kwargs.pop("filepath", None)
     default_renderer = kwargs.pop("default_renderer", "jinja|yaml")
     describe = kwargs.pop("describe", False)
-
+    tf = kwargs.pop("tf", False)
+    diff = kwargs.pop("diff", False)
+    
     # load file if filepath provided
     if filepath:
         file_content_dict = __salt__["slsutil.renderer"](
@@ -935,41 +1412,54 @@ def do(*args, **kwargs):
             ret["result"].append({filepath: "Failed loading filepath content."})
             return ret
 
-    # run aliases
-    for alias_name in args:
+    # run actions
+    for action_name in args:
         try:
             if filepath:
-                alias_config = file_content_dict.get(alias_name)
+                action_config = file_content_dict.get(action_name)
             else:
-                alias_config = __salt__["config.get"](
-                    key="nornir:aliases:{}".format(alias_name), merge="recurse"
+                action_config = __salt__["config.get"](
+                    key="nornir:actions:{}".format(action_name), merge="recurse"
                 )
-            if not alias_config:
+            if not action_config:
                 raise CommandExecutionError(
-                    "'{}' alias not loaded, content: '{}'".format(
-                        alias_name, alias_config
+                    "'{}' action not loaded, content: '{}'".format(
+                        action_name, action_config
                     )
                 )
             elif describe:
-                ret["result"].append({alias_name: alias_config})
+                ret["result"].append({action_name: action_config})
                 continue
-            elif isinstance(alias_config, dict):
-                alias_config = [alias_config]
+            elif isinstance(action_config, dict):
+                action_config = [action_config]
 
             # run steps
-            for step in alias_config:
+            for step in action_config:    
+                # form step kwargs
                 merged_kwargs = step.get("kwargs", {})
                 merged_kwargs.update(kwargs)
-                result = __salt__[step["function"]](
+                # add tf ToFileProcessor name if tf_each is True
+                if tf == True:
+                    merged_kwargs.setdefault("tf", action_name)
+                # add diff for DiffProcessor
+                if diff:
+                    merged_kwargs.setdefault("diff", action_name)
+                # get fun name
+                fun_name = step["function"].split(".")[1].strip()
+                # run step
+                log.debug("salt_nornir:nr.do running step {}, args {}, kwargs {}".format(
+                    fun_name, step.get("args", []), merged_kwargs
+                ))
+                result = globals()[fun_name](
                     *step.get("args", []), **merged_kwargs
                 )
-                ret["result"].append({alias_name: result})
+                ret["result"].append({action_name: result})
         except:
             tb = traceback.format_exc()
             log.error(
-                "nr.do error while running '{}' alias:\n{}".format(alias_name, tb)
+                "nr.do error while running '{}' action:\n{}".format(action_name, tb)
             )
-            ret["result"].append({alias_name: tb})
+            ret["result"].append({action_name: tb})
             if stop_on_error:
                 ret["failed"] = True
                 break
@@ -977,24 +1467,346 @@ def do(*args, **kwargs):
     return ret
 
 
-def version():
+def http(*args, **kwargs):
     """
-    Function to return a report of installed packages
-    and their version, useful for troubleshooting dependencies.
+    HTTP requests related functions
+    
+    :param method: (str) HTTP method to use
+    :param url: (str) full or partial URL to send request to
+    :param kwargs: (dict) any other kwargs to use with requests.<method> call
+    
+    This function uses nornir_salt http_call task plugin, reference that task
+    plugin diocumentation for additional details.
+    
+    Sample usage::
+    
+        salt nrp1 nr.http get "http://1.2.3.4/api/data/"
+        salt nrp1 nr.http get "https://sandbox-iosxe-latest-1.cisco.com/restconf/data/" verify=False auth='["developer", "C1sco12345"]'
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.http",
+            arg=["get", "http://1.2.3.4/api/data/"],
+        ) 
     """
-    return __proxy__["nornir.nr_version"]()
+    args = list(args)
+    if len(args) == 1:
+        kwargs["method"] = args[0]
+    elif len(args) == 2:
+        kwargs["method"] = args[0]
+        kwargs["url"] = args[1]
+    task_fun = "nornir_salt.plugins.tasks.http_call"
+    kwargs["connection_name"] = "http"
+    # run task
+    return __proxy__["nornir.execute_job"](
+        task_fun=task_fun, args=args, kwargs=kwargs, cpid=os.getpid()
+    )
 
 
-def gnmi(*arg, **kwarg):
-    """GNMI related function"""
-    pass
+def file(*args, **kwargs):
+    """
+    Function to manage Nornir-salt files.
+    
+    :param call: (str) files task to call - ls, rm, read, diff
+    :param kwargs: (dict) any additional kwargs such ``Fx`` filters or call
+        function arguments
+    
+    File tasks description:
+    
+    * ``ls`` - list files of this Proxy Minions, returns list of dictionaries
+    * ``rm`` - removes file with given name and index number
+    * ``read`` - displays content of file with given name and index number
+    * ``diff`` - reads two files and returns diff
+    
+    ``ls`` arguments
+    
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+        the files to list, lists all files by default
+    :return: files list
+    
+    ``rm`` arguments
+    
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+        the files to remove, if set to True will remove all files for all filegroups
+    :return: list of files removed
+    
+    ``read`` arguments
+    
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+        the files to read
+    :param last: (int) version of content to read
+    :return: results reconstructed out of files content  
+    
+    ``diff`` arguments
+    
+    :param filegroup: (str or list) ``tf`` filegroup name to diff
+    :param last: (int or list or str) files to diff, default is ``[1, 2]`` - 
+        last 1 and last 2 files
+    :return: files unified difference 
+    
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.file",
+            arg=["ls"],
+            kwarg={"filegroup": "interfaces"},
+        ) 
+    """
+    # form kwargs content
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
+    kwargs["call"] = kwargs.pop("call", args[0])
+    kwargs["filegroup"] = kwargs.pop("filegroup", list(args[1:]) if len(args) >= 2 else None)   
+    if kwargs["call"] in ["ls", "rm"]:
+        kwargs.setdefault("table", "extend")
+        kwargs.setdefault("headers", ["host", "filegroup", "last", "timestamp", "tasks", "filename", "exception"])
+        
+    return task(
+        plugin="nornir_salt.plugins.tasks.files",
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
+        render=[],
+        **kwargs,
+    )
 
 
-def file(*arg, **kwarg):
-    """Manage Nornir-salt files"""
-    pass
+def learn(*args, **kwargs):
+    """
+    Store task execution results to local filesystem on the minion using
+    ``tf`` (to filename) attribute to form filenames. 
 
+    :param fun: (str) name of execution module function to call
+    :param tf: (str) ``ToFileProcessor`` filegroup name
+    :param args: (list) execution module function arguments
+    :param kwargs: (dict) execution module function key-word arguments
+    
+    This task uses ``ToFileProcessor`` to store results and is a shortcut 
+    to calling individual exection module functions with ``tf`` argument.
+    
+    Supported exection module functions are ``cli, nc, do, http``. By default
+    calls ``nr.do`` function.
+    
+    ``tf`` attribute mandatory except for cases when using ``nr.do``function 
+    e.g. ``salt nrp1 nr.learn mac interface``, in that case ``tf`` set equal 
+    to file group name - ``mac`` and ``interface`` for each action call using 
+    ``nr.do`` function ``tf=True`` attribute.   
+    
+    Sample usage::
+    
+        salt nrp1 nr.learn mac
+        salt nrp1 nr.learn mac ip interface FB="CORE-*"
+        salt nrp1 nr.learn "show version" "show int brief" tf="cli_facts" fun="cli"
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.learn",
+            arg=["mac", "ip"],
+            kwarg={"FB": "CORE-*"},
+        ) 
+    """       
+    supported_functions = ["cli", "do", "http", "nc"]
+    fun = kwargs.pop("fun", "do")
+    kwargs["tf"] = True if fun == "do" else kwargs.get("tf")     
+        
+    # run sanity checks
+    if fun not in supported_functions:
+        raise RuntimeError(
+            "salt-nornir:learn unsupported function '{}', supported '{}'".format(
+                fun, supported_functions
+            )
+        )
+    if not kwargs.get("tf"):
+        raise RuntimeError("salt-nornir:learn no tf attribute provided")
+        
+    # run command with added ToFileProcessor argument
+    return globals()[fun](*args, **kwargs)
+        
+    
+def find(*args, **kwargs):
+    """
+    Search for information stored in Proxy Minion files.
 
-def http(*arg, **kwarg):
-    """HTTP requests related functions"""
-    pass
+    This function does not query devices but only uses information 
+    stored locally by ``ToFileProcessor``.
+    
+    :param headers: (str or list) table headers, default is ``keys``
+    :param table: (str) TabulateFormatter table directive, default is ``extend``
+    :param headers_exclude: (str or list) table headers to exclude, default is
+        ``["changed", "diff", "failed", "name", "connection_retry", "task_retry"]``
+    :param last: (int) file group version of files to search in
+    :param Fx: (str) Nornir host filters
+    :param args: (list) list of ``ToFileProcessor`` filegroup names to search in
+    :param kwargs: (dict) key-value pairs where keys are keys to search for, values
+        are criterie to check
+    :returns: list of dictionaries with matched results
+    
+    Find uses ``DataProcessor`` ``find`` function to do search and supports
+    searching in a list of dictionaries, dictionary and text.
+    
+    If no ``args`` provided ``nr.find`` fails.
+    
+    Sample usage::
+    
+        salt nrp1 nr.find ip ip="1.1.*"
+        salt nrp1 nr.find mac arp mac="1b:cd:34:5f:6c"
+        salt nrp1 nr.find ip ip="1.1.*" last=5 FB="*CORE*"
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.find",
+            arg=["ip"],
+            kwarg={"ip": "1.1.*"},
+        ) 
+    """    
+    # do sanity check
+    if not args:
+        raise CommandExecutionError(
+            "No filegroup  to search in provided - args: '{}', kwargs: '{}'".format(
+                args, kwargs
+            )
+        )
+    
+    # form kwargs content
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}    
+    Fx = {k: kwargs.pop(k) for k in list(kwargs.keys()) if k.startswith("F") and len(k) == 2}
+    
+    # read files content running file_read task and filter it using find function
+    return task(
+        plugin="nornir_salt.plugins.tasks.files",
+        call="read",
+        filegroup=list(set(args)),
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
+        render=[], # do not render anything
+        last=kwargs.pop("last", 1),
+        table=kwargs.pop("table", "extend"),
+        headers=kwargs.pop("headers", "keys"),
+        headers_exclude=kwargs.pop("headers_exclude", ["changed", "diff", "failed", "name", "connection_retry", "task_retry", "exception"]),
+        dp=[{"fun": "find", **kwargs}],
+        **Fx,
+    )
+    
+
+def diff(*args, **kwargs):
+    """
+    Provide difference between current and previously learned information or
+    between versions of files stored by ``ToFileProcessor``.
+
+    :param diff: (str) ``ToFileProcessor`` filegroup name
+    :param last: (int or list or str) filegroup file indexes to diff, default is 1
+    :param kwargs: (dict) any additional kwargs to use with ``nr.file diff``
+        call or ``DiffProcessor``
+    
+    ``diff`` attribute mandatory. 
+    
+    If last is a single digit e.g. 1, diff uses ``nr.do`` function to execute 
+    action named same as ``filegroup`` attribute and uses results to produce diff 
+    with previously saved ``filegroup`` files using ``DiffProcessor``.
+    
+    If ``last`` is a list e.g. ``[2, 5]`` or string ``1, 2``- will use ``nr.file diff`` 
+    call to produce diff for previously saved results without retrieving data from devices.
+    
+    Sample usage::
+
+        salt nrp1 nr.diff interface
+        salt nrp1 nr.diff interface last=1
+        salt nrp1 nr.diff interface last='[1, 5]'
+        salt nrp1 nr.diff interface last="1,5"
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.diff",
+            arg=["interface"],
+            kwarg={"last": 1},
+        ) 
+    """       
+    # form kwargs content
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}  
+    last = kwargs.pop("last", 1)
+
+    # use nr.file diff function to diff files
+    if isinstance(last, (list, str)):
+        kwargs["filegroup"] = kwargs.pop("diff", list(args))
+        return file("diff", last=last, **kwargs)
+    # use nr.do with DiffProcessor to diff device state
+    elif isinstance(last, int):
+        kwargs["diff"] = True
+        return do(last=last, *args, **kwargs)
+
+def nornir_fun(fun, *args, **kwargs):
+    """
+    Function to call various Nornir utility functions.
+    
+    :param fun: (str) utility function name to call
+    :param kwargs: (dict) function arguments
+    
+    Available utility functions:
+    
+    * ``test`` - this method tests proxy minion module worker thread without invoking any Nornir code
+    * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
+    * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
+    * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
+    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return 
+        inventory for a subset of hosts
+    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat 
+        name to return
+    * ``version`` - returns a report of Nornir related packages installed versions
+    * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
+    
+    Sample Usage::
+
+        salt nrp1 nr.nornir inventory FB="R[12]"
+        salt nrp1 nr.nornir stats stat="proxy_minion_id"
+        salt nrp1 nr.nornir version 
+        salt nrp1 nr.nornir shutdown 
+        
+    Sample Python API usage from Salt-Master::
+    
+        import salt.client
+        client = salt.client.LocalClient()
+        
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.nornir",
+            arg=["stats"],
+        ) 
+    """
+    if fun == "inventory":
+        return __proxy__["nornir.inventory_data"](**kwargs)
+    elif fun == "stats":
+        return __proxy__["nornir.stats"](*args, **kwargs)
+    elif fun == "version":
+        return __proxy__["nornir.nr_version"]()
+    elif fun == "shutdown":
+        return __proxy__["nornir.shutdown"]()
+    elif fun == "initialized":
+        return __proxy__["nornir.initialized"]()
+    elif fun == "kill":
+        return __proxy__["nornir.kill_nornir"]()
+    elif fun == "refresh":
+        return __proxy__["nornir.refresh_nornir"]()
+    elif fun == "test":
+        return task(plugin="test")

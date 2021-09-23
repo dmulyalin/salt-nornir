@@ -1,0 +1,18 @@
+<input name="version">
+commands = ["show version"]
+</input>
+
+<input name="interfaces">
+commands = ["show run"]
+</input>
+
+<group name="facts" input="version">
+cEOS tools version: {{ tools_version }}
+Kernel version: {{ kernel_version }}
+</group>
+  
+<group name="interf" input="interfaces">
+interface {{ interface }}
+   description {{ description | re(".*") }}
+   ip address {{ ip }}/{{ mask }}
+</group>

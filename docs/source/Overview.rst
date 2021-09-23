@@ -1,7 +1,9 @@
 Overview
 ########
 
-Overview of Nornir proxy Minion.
+Nornir Proxy Minion is a collection of Salt Stack modules and Nornir Plugins to 
+interact with network devices using Salt Stack command line interface utilities 
+and Python API.
 
 Why use Nornir with SALT?
 =========================
@@ -26,10 +28,10 @@ With nornir-proxy, while each proxy-minion consumes more RAM and also requires
 .. image:: ./_images/overview_nornir_proxy-minion_architecture.png
 
 As a result, the more devices single Nornir proxy minion manage, the less overall resources 
-used. However, the more devices, the longer it usually takes to execute tasks - time vs
-resources problem - at one extreme, single Nornir proxy can manage one device only, giving the 
-fastest execution time, on the other hand, Nornir proxy minion can run tasks against 1000 
-devices, crawling them over several minutes. 
+used compared to usual proxy minion. However, the more devices, the longer it usually takes 
+to execute tasks - time vs resources problem - at one extreme, single Nornir proxy can manage 
+one device only, giving the fastest execution time, on the other hand, Nornir proxy minion can 
+run tasks against 1000 devices, crawling them over several minutes. 
 
 Optimal number of devices managed by single Nornir proxy depends on the environment it operates in
 and should be decided on a case by case basis. 

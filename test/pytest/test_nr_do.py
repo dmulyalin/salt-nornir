@@ -47,7 +47,7 @@ def test_nr_do_call_to_single_step_in_filepath():
         tgt="nrp1",
         fun="nr.do",
         arg=["configure_snmp"],
-        kwarg={"filepath": "salt://aliases/aliases_file.txt"},
+        kwarg={"filepath": "salt://actions/actions_file.txt"},
         tgt_type="glob",
         timeout=60,
     )
@@ -61,7 +61,7 @@ def test_nr_do_call_to_multiple_steps_in_filepath():
         tgt="nrp1",
         fun="nr.do",
         arg=["configure_snmp", "wr_"],
-        kwarg={"filepath": "salt://aliases/aliases_file.txt"},
+        kwarg={"filepath": "salt://actions/actions_file.txt"},
         tgt_type="glob",
         timeout=60,
     )
@@ -71,7 +71,7 @@ def test_nr_do_call_to_multiple_steps_in_filepath():
     assert "wr_" in ret["nrp1"]["result"][-1]
 
 
-def test_nr_do_call_to_non_existing_alias():
+def test_nr_do_call_to_non_existing_action():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.do",
@@ -99,12 +99,12 @@ def test_nr_do_call_to_non_existing_filepath():
     assert "salt://non_exist.txt" in ret["nrp1"]["result"][0]
 
 
-def test_nr_do_call_to_alias_describe_from_filepath():
+def test_nr_do_call_to_action_describe_from_filepath():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.do",
         arg=["configure_snmp"],
-        kwarg={"filepath": "salt://aliases/aliases_file.txt", "describe": True},
+        kwarg={"filepath": "salt://actions/actions_file.txt", "describe": True},
         tgt_type="glob",
         timeout=60,
     )
@@ -113,7 +113,7 @@ def test_nr_do_call_to_alias_describe_from_filepath():
     assert isinstance(ret["nrp1"]["result"][0]["configure_snmp"], list)
 
 
-def test_nr_do_call_to_alias_describe_from_pillar():
+def test_nr_do_call_to_actions_describe_from_pillar():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.do",

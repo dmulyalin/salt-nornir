@@ -140,29 +140,410 @@ def test_state_nr_workflow_report_all():
                 ], "Host {}, {} step result not PASS/SKIP".format(host_name, step_name)
 
 
-def test_state_nr_workflow_some_steps_has_report_false():
-    """Some of the steps have report=False"""
-    pass
+def test_state_nr_workflow_run_if_fail_any():
+    """ Test run_if_fail_any condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_fail_any"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    # verify run
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 6
+        for host_name, steps in v["changes"]["summary"].items():
+            assert steps[-1]["apply_ntp_config"] == "SKIP", "{} apply_ntp_config not skipped".format(host_name)
+            assert steps[-2]["apply_logging_config"] == "PASS", "{} apply_ntp_config not passed".format(host_name)
+            
+# test_state_nr_workflow_ran_if_fail_any()
+    
+def test_state_nr_workflow_run_if_pass_any():
+    """ Test run_if_pass_any condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_pass_any"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    # verify run
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 6
+        for host_name, steps in v["changes"]["summary"].items():
+            assert steps[-1]["apply_ntp_config"] == "SKIP", "{} apply_ntp_config not skipped".format(host_name)
+            assert steps[-2]["apply_logging_config"] == "PASS", "{} apply_ntp_config not passed".format(host_name)
 
+# test_state_nr_workflow_run_if_pass_any()
+
+def test_state_nr_workflow_run_if_fail_all():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_fail_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},
+    # verify run
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 6
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "SKIP"        
+            
+# test_state_nr_workflow_run_if_fail_all()
+
+def test_state_nr_workflow_run_if_pass_all():
+    """ Test run_if_pass_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_pass_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},
+    # verify run
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 6
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "PASS"  
+
+# test_state_nr_workflow_run_if_pass_all()
+
+
+def test_state_nr_workflow_run_if_fail_any_and_all():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_fail_any_and_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 7
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "SKIP" 
+        
+# test_state_nr_workflow_run_if_fail_any_and_all()
+
+def test_state_nr_workflow_run_if_pass_any_and_all():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_pass_any_and_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},   
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 7
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "PASS" 
+        
+# test_state_nr_workflow_run_if_pass_any_and_all()
+
+def test_state_nr_workflow_run_if_fail_any_and_pass_all():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_fail_any_and_pass_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 7
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "SKIP" 
+        
+# test_state_nr_workflow_run_if_fail_any_and_pass_all()
+    
+def test_state_nr_workflow_run_if_pass_any_and_fail_all():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_pass_any_and_fail_all"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'PASS'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 7
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "PASS" 
+        
+# test_state_nr_workflow_run_if_pass_any_and_fail_all()
+
+def test_state_nr_workflow_run_if_all_conditions_combined():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_run_if_all_conditions_combined"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'ceos1_will_fail': 'FAIL'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'SKIP'}],
+    #             'ceos2': [{'ceos1_will_fail': 'PASS'},
+    #                       {'failed_step_1': 'FAIL'},
+    #                       {'failed_step_2': 'FAIL'},
+    #                       {'passed_step_1': 'PASS'},
+    #                       {'passed_step_2': 'PASS'},
+    #                       {'apply_logging_config': 'SKIP'},
+    #                       {'apply_ntp_config': 'PASS'}]}},    
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 7
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "SKIP"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "SKIP" 
+        
+# test_state_nr_workflow_run_if_all_conditions_combined()
+
+def test_state_nr_workflow_no_run_if_conditions():
+    """ Test run_if_fail_all condition """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_no_run_if_conditions"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'PASS'}],
+    #             'ceos2': [{'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'PASS'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 2
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-1]["apply_ntp_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][-2]["apply_logging_config"] == "PASS"
+        
+# test_state_nr_workflow_no_run_if_conditions()
 
 def test_state_nr_workflow_with_common_filter():
     """Set FL=ceos1 to run step agains one host only"""
-    pass
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_with_common_filter"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'apply_logging_config': 'PASS'},
+    #                       {'apply_ntp_config': 'PASS'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 2
+        assert v["changes"]["summary"]["ceos1"][-1]["apply_ntp_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][-2]["apply_logging_config"] == "PASS"
+        assert "ceos2" not in v["changes"]["summary"]
+        
+# test_state_nr_workflow_with_common_filter()
 
+def test_state_nr_workflow_with_nr_do_single_step():
+    """ Runs steps that use nr.do with single item """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_with_nr_do_single_step"],
+        kwarg={""},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'apply_logging_config_nr_do': 'PASS'}],
+    #             'ceos2': [{'apply_logging_config_nr_do': 'PASS'}]}}
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 1
+        assert v["changes"]["summary"]["ceos1"][0]["apply_logging_config_nr_do"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["apply_logging_config_nr_do"] == "PASS"
+        
+# test_state_nr_workflow_with_nr_do_single_step()
 
-def test_state_nr_workflow_inline_test_step_to_dict_true():
-    """Test when having inline test defined with dictionary results"""
-    pass
+def test_state_nr_workflow_with_nr_do_multi_step():
+    """ Runs steps that use nr.do with multiple items """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_with_nr_do_multi_step"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # ... expected result ...
+    # 'summary': {'ceos1': [{'configure_ntp_nr_do': 'PASS'}],
+    #             'ceos2': [{'configure_ntp_nr_do': 'PASS'}]}},
+    for v in ret["nrp1"].values():
+        assert v["result"] == True
+        assert len(v["changes"]["details"]) == 1
+        assert len(v["changes"]["details"][0]["configure_ntp_nr_do"]["result"]) == 3
+        assert v["changes"]["summary"]["ceos1"][0]["configure_ntp_nr_do"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["configure_ntp_nr_do"] == "PASS"
+        
+# test_state_nr_workflow_with_nr_do_multi_step()
 
-
-def test_state_nr_workflow_inline_test_step_to_dict_false():
-    """Test when having inline test defined with list results"""
-    pass
-
-
-def test_state_nr_workflow_with_nr_do_steps():
-    pass
-
-
-def test_state_nr_workflow_change_failed_rollback_step_triggered():
-    pass
+# def test_state_nr_workflow_some_steps_has_report_false():
+#     """Some of the steps have report=False"""
+#     pass
+# 
+# def test_state_nr_workflow_inline_test_step_to_dict_true():
+#     """Test when having inline test defined with dictionary results"""
+#     pass
+# 
+# 
+# def test_state_nr_workflow_inline_test_step_to_dict_false():
+#     """Test when having inline test defined with list results"""
+#     pass
+# 
+# 
+# def test_state_nr_workflow_with_nr_do_steps():
+#     pass
+# 
+# 
+# def test_state_nr_workflow_change_failed_rollback_step_triggered():
+#     pass
+# 

@@ -188,8 +188,8 @@ def inventory(*args, **kwargs):
     # send nr.inventory command
     query_results = _run_job(
         tgt=tgt,
-        fun="nr.inventory",
-        arg=[],
+        fun="nr.nornir",
+        arg=["inventory"],
         kwarg={k: v for k, v in kwargs.items() if not k.startswith("_")},
         tgt_type=tgt_type,
         timeout=timeout,

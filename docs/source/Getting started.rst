@@ -179,11 +179,10 @@ Start using Nornir Proxy Minion
 Run commands to test nornir proxy minion operations::
 
     salt nrp1 test.ping # verify that process is running
-    salt nrp1 nr.stats # check statistics for Nornir proxy minion
-    salt nrp1 nr.task test # test task to verify module operation
+    salt nrp1 nr.nornir stats # check statistics for Nornir proxy minion
+    salt nrp1 nr.nornir test # test task to verify module operation
+    salt nrp1 nr.nornir inventory # to check Nornir inventory content    
     salt nrp1 nr.task nr_test # test task to verify Nornir operation
-    salt nrp1 nr.inventory # to check Nornir inventory content
-    
 
 Test connectivity to devices::
 

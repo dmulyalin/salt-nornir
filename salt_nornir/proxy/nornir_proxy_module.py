@@ -2,26 +2,13 @@
 Nornir Proxy module
 ===================
 
-Nornir Proxy Module reference.
+Nornir Proxy Module is a core component of Nornir Proxy Minion. However,
+users rarely have to interact with it directly unless they writing their
+own Execution or Runner or State or whatever modules for SaltStack.
 
-Dependencies
-------------
-
-Nornir 3.x uses modular approach for plugins. As a result  required
-plugins need to be installed separately from Nornir Core library. Main
-collection of plugins to install is:
-
-- `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_ - ``pip install nornir_salt``
-
-``nornir_salt`` will install these additional dependencies automatically::
-
-    netmiko>=3.3.2
-    nornir>=3.0.0
-    nornir_netmiko>=0.1.1
-    nornir_napalm>=0.1.1
-    nornir_salt>=0.3.1
-    napalm>=3.0.0
-    psutil
+What is important to understand are configuration parameters you can use with 
+Nornir Proxy Minion, as they can help to alter default behavior or control
+various aspects of Nornir Proxy Minion life cycle.
 
 Introduction
 ------------
@@ -32,39 +19,49 @@ only.
 
 As a result, Nornir proxy-minion requires less resources to run tasks against same
 number of devices. During idle state only one proxy minion process is active,
-that significantly reduces amount of memory required to manage devices.
+that significantly reduces amount of memory required to manage device endpoints.
 
 Proxy-module required way of operating is ``multiprocessing`` set to ``True`` -
 default value, that way each task executed in dedicated process.
 
+Dependencies
+------------
+
+Nornir 3.x uses modular approach for plugins. As a result  required
+plugins need to be installed separately from Nornir Core library. Main
+collection of plugins to install is `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_.
+Nornir Salt repository contains many function used by Salt Nornir Proxy
+Minion module and is mandatory to have on the system where proxy minion 
+process runs.
+
 Nornir proxy pillar parameters
 ------------------------------
 
-- ``proxytype`` nornir
-- ``multiprocessing`` set to ``True`` is a recommended way to run this proxy
+- ``proxytype`` - string of value ``nornir``
+- ``multiprocessing`` - boolean, set to ``True`` is a recommended way to run this proxy
 - ``process_count_max`` maximum number of processes to use to limit
   a number of tasks waiting to execute
-- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory
+- ``nornir_filter_required`` - boolean, to indicate if Nornir filter is mandatory
   for tasks executed by this proxy-minion. Nornir has access to
   multiple devices, by default, if no filter provided, task will run for all
   devices, ``nornir_filter_required`` allows to change behaviour to opposite,
   if no filter provided, task will not run at all. It is a safety measure against
   running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
-- ``runner`` - dict, Nornir Runner plugin parameters, default is ``RetryRunner``
-- ``inventory`` - dict, Nornir Inventory plugin parameters, default is ``DictInventory``
-  populated with data from proxy-minion pillar, otherwise pillar data ignored.
-- ``child_process_max_age`` - int, seconds to wait before forcefully kill child process,
-  default 660s
+- ``runner`` - dictionary, Nornir Runner plugin parameters, default is ``RetryRunner``
+- ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is ``DictInventory``
+  populated with data from proxy-minion pillar, pillar data ignored by any other inventory plugins
+- ``child_process_max_age`` - int, seconds to wait before forcefully kill child process, default 660s
 - ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
-- ``proxy_always_alive`` - bool, default True, keep connections with devices alive on True
+- ``proxy_always_alive`` - boolean, default True, keep connections with devices alive on True
   and tears them down after each job on False
 - ``job_wait_timeout`` - int, seconds to wait for job return until give up, default 600s
 - ``memory_threshold_mbyte`` - int, value in MBytes above each to trigger ``memory_threshold_action``
 - ``memory_threshold_action`` - str, action to implement if ``memory_threshold_mbyte`` exceeded,
-  possible actions: ``log``- send syslog message, ``restart`` - restart proxy minion process.
+  possible actions: ``log``- send syslog message, ``restart`` - shutsdown proxy minion process.
 - ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
   per-host basis, default is ``/var/salt-nornir/{proxy_id}/files/``
+- ``files_max_count`` - int, maximum number of files for ``ToFileProcessor`` ``tf`` argument
 - ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function
 - ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function
 - ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function
@@ -90,6 +87,7 @@ Nornir proxy-minion pillar example:
       memory_threshold_mbyte: 300
       memory_threshold_action: log
       files_base_path: "/var/salt-nornir/{proxy_id}/files/"
+      files_max_count: 5
       nr_cli: {}
       nr_cfg: {}
       nr_nc: {}
@@ -153,23 +151,6 @@ plugin with these default settings::
 ``RetryRunner`` runner included in `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_
 library.
 
-Nornir proxy module special tasks
----------------------------------
-
-These tasks have special handling by Nornir proxy minion process:
-
-* ``test`` - this task test proxy minion module without invoking any Nornir code
-* ``nr_test`` - this task runs dummy task against hosts without initiating any connections to them
-* ``nr_refresh`` - task to run ``_refresh`` function
-* ``nr_restart`` - task to run ``_restart`` function
-
-Sample invocation::
-
-    salt nrp1 nr.task test
-    salt nrp1 nr.task nr_test
-    salt nrp1 nr.task nr_refresh
-    salt nrp1 nr.task nr_restart
-
 Nornir Proxy Module functions
 -----------------------------
 
@@ -177,8 +158,8 @@ Nornir Proxy Module functions
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module._refresh
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module._restart
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.refresh_nornir
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.kill_nornir
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_version
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_data
@@ -231,12 +212,14 @@ try:
         ResultSerializer,
         HostsKeepalive,
         TabulateFormatter,
+        DumpResults
     )
     from nornir_salt.plugins.tasks import nr_test
     from nornir_salt.plugins.processors import (
         TestsProcessor,
         ToFileProcessor,
         DiffProcessor,
+        DataProcessor,
     )
 
     HAS_NORNIR = True
@@ -369,6 +352,9 @@ def init(opts):
     nornir_data["files_base_path"] = opts["proxy"].get(
         "files_base_path", "/var/salt-nornir/{}/files/".format(opts["id"])
     )
+    nornir_data["files_max_count"] = int(opts["proxy"].get(
+        "files_max_count", 5
+    ))
     nornir_data["nr_cli"] = opts["proxy"].get("nr_cli", {})
     nornir_data["nr_cfg"] = opts["proxy"].get("nr_cfg", {})
     nornir_data["nr_nc"] = opts["proxy"].get("nr_nc", {})
@@ -410,7 +396,7 @@ def initialized():
 
 def shutdown():
     """
-    This function implements this shutdown protocol:
+    This function implements this protocol to perform graceful shutdown:
 
     1. Signal worker and watchdog threads to stop
     2. Close all connections to devices
@@ -460,12 +446,7 @@ def grains_refresh():
     return grains()
 
 
-# -----------------------------------------------------------------------------
-# proxy module private functions
-# -----------------------------------------------------------------------------
-
-
-def _refresh(*args, **kwargs):
+def refresh_nornir(*args, **kwargs):
     """
     Function to re-initialise Nornir proxy with latest pillar data.
 
@@ -484,29 +465,29 @@ def _refresh(*args, **kwargs):
     return False
 
 
-def _restart(*args, **kwargs):
+def kill_nornir(*args, **kwargs):
     """
-    This suicidal function serves as a lastage effort to recover Nornir proxy.
-    It effectively kills main Nornir proxy process by calling ``os.kill``
-    on itself.
-
-    However, SALT starts parent process for each proxy-minion,
-    that parent process will restart nornir-proxy minion once
-    it detects that minion is shutted down. Overall restart and
-    detection time combined might be of **several minutes**.
-
-    Prior to restart, ``shutdown`` function called. Nornir execution
-    module calls will be unresponsive. Use ``_restart`` with caution,
-    ideally, when no other jobs running.
+    This function kills Nornir process and its child process as fast as possible.
+    
+    .. warning:: this function kills main Nornir peocess and does not recover it
     """
     log.warning(
-        "Nornir-proxy MAIN PID {}, restarting in 10 seconds!".format(os.getpid())
+        "Killing Nornir-proxy MAIN PID {}".format(nornir_data["stats"]["main_process_pid"])
     )
-    time.sleep(10)
-    # Shutdown Nornir object and close connections
-    shutdown()
-    # kill itself and hope that parent process will revive me
+    # kill child processes
+    for p in multiprocessing.active_children():
+        if p.pid == os.getpid():
+            continue
+        os.kill(p.pid, signal.SIGKILL)
+    # kill main process
+    os.kill(nornir_data["stats"]["main_process_pid"], signal.SIGKILL)
+    # kill itself if still can
     os.kill(os.getpid(), signal.SIGKILL)
+    
+    
+# -----------------------------------------------------------------------------
+# proxy module private functions
+# -----------------------------------------------------------------------------
 
 
 def _load_custom_task_fun_from_text(function_text, function_name):
@@ -590,7 +571,7 @@ def _watchdog():
                             os.getpid(), fd_in_use, fd_limit
                         )
                     )
-                    _restart()
+                    shutdown()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, file descritors usage check error: {}".format(
@@ -610,7 +591,7 @@ def _watchdog():
                         )
                     )
                 elif nornir_data["memory_threshold_action"] == "restart":
-                    _restart()
+                    shutdown()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, memory usage check error: {}".format(
@@ -625,7 +606,7 @@ def _watchdog():
                 ).start()
         except:
             log.error(
-                "Nornir-proxy MAIN PID {} watchdog, worker thread is alive check error: {}".format(
+                "Nornir-proxy MAIN PID {} watchdog, worker thread is_alive check error: {}".format(
                     os.getpid(), traceback.format_exc()
                 )
             )
@@ -706,14 +687,6 @@ def _worker(loader=None):
                 nornir_data["stats"]["jobs_completed"] += 1
                 nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
                 continue
-            elif job["task_fun"] == "nr_refresh":
-                nornir_data["stats"]["jobs_completed"] += 1
-                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
-                _refresh()
-                break
-            elif job["task_fun"] == "nr_restart":
-                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
-                _restart()
             # execute nornir task
             task_fun = _get_or_import_task_fun(job["task_fun"], loader)
             log.info(
@@ -844,6 +817,70 @@ def _load_and_render_files(hosts, render, kwargs):
         _ = kwargs.pop(key) if key in kwargs else None
 
 
+def _add_processors(kwargs):
+    """
+    Helper function to exctrat processors arguments and add processors 
+    to Nornir.
+    
+    :param kwargs: (dict) dictionary with kwargs
+    :return: (obj) Nornir object
+    """
+    processors = []
+    
+    # get parameters
+    tf = kwargs.pop("tf", None) # to file
+    tests = kwargs.pop("tests", None)  # tests
+    remove_tasks = kwargs.pop("remove_tasks", True)  # tests
+    failed_only = kwargs.pop("failed_only", False)  # tests
+    diff = kwargs.pop("diff", "")  # diff processor
+    last = kwargs.pop("last", 1) if diff else None # diff processor
+    dp = kwargs.pop("dp", []) # data processor
+    xml_flake = kwargs.pop("xml_flake", "") # data processor xml_flake function
+    match = kwargs.pop("match", "") # data processor match function
+    before = kwargs.pop("before", 0) # data processor match function
+    run_ttp = kwargs.pop("run_ttp", None) # data processor run_ttp function
+    ttp_structure = kwargs.pop("ttp_structure", "flat_list") # data processor run_ttp function
+        
+    # add processors if any
+    if dp:
+        processors.append(DataProcessor(dp))  
+    if xml_flake:
+        processors.append(DataProcessor([{"fun": "xml_flake", "pattern": xml_flake}]))
+    if match:
+        processors.append(DataProcessor([{"fun": "match", "pattern": match, "before": before}]))
+    if run_ttp:
+        processors.append(DataProcessor([{
+            "fun": "run_ttp", 
+            "template": __salt__["cp.get_file_str"](run_ttp, saltenv=kwargs.get("saltenv", "base")) if run_ttp.startswith("salt://") else run_ttp,
+            "res_kwargs": {"structure": ttp_structure}
+        }]))
+    if tests:
+        processors.append(
+            TestsProcessor(tests, remove_tasks=remove_tasks, failed_only=failed_only)
+        )
+    if diff:
+        processors.append(
+            DiffProcessor(
+                diff=diff,
+                last=int(last),
+                base_url=nornir_data["files_base_path"],
+                index=nornir_data["stats"]["proxy_minion_id"]
+            )
+        )
+    # append ToFileProcessor as the last one in the sequence
+    if tf and isinstance(tf, str):
+        processors.append(
+            ToFileProcessor(
+                tf=tf, 
+                base_url=nornir_data["files_base_path"], 
+                index=nornir_data["stats"]["proxy_minion_id"],
+                max_files=nornir_data["files_max_count"],
+            )
+        )
+        
+    return nornir_data["nr"].with_processors(processors)
+        
+        
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -869,52 +906,28 @@ def run(task, loader, *args, **kwargs):
     :param kwargs: arguments to pass to ``nornir_object.run`` method
     """
     # extract attributes
-    processors = []
     add_details = kwargs.pop("add_details", False)  # ResultSerializer
     to_dict = kwargs.pop("to_dict", True)  # ResultSerializer
     table = kwargs.pop("table", {})  # tabulate
     headers = kwargs.pop("headers", "keys")  # tabulate
-    tf = kwargs.pop("tf", None)  # to file
-    tf_format = kwargs.pop("tf_format", "raw")  # to file
-    tests = kwargs.pop("tests", None)  # tests
-    remove_tasks = kwargs.pop("remove_tasks", True)  # tests
-    failed_only = kwargs.pop("failed_only", False)  # tests
-    event_failed = kwargs.pop("event_failed", False)  # events
-    diff = kwargs.pop("diff", "")  # diff processor
-    last = kwargs.pop("last", 1)  # diff processor
+    headers_exclude = kwargs.pop("headers_exclude", [])  # tabulate
+    sortby = kwargs.pop("sortby", "host")  # tabulate
+    reverse = kwargs.pop("reverse", False)  # tabulate
+    dump = kwargs.pop("dump", None) # dump results to file
     render = kwargs.pop(
         "render", ["config", "data", "filter", "filter_", "filters", "filename"]
     )  # render data
-
+    event_failed = kwargs.pop("event_failed", False)  # events
+        
     # set dry_run argument
     nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
 
     # reset failed hosts if any
     nornir_data["nr"].data.reset_failed_hosts()
 
-    # add processors if any
-    if tests:
-        processors.append(
-            TestsProcessor(tests, remove_tasks=remove_tasks, failed_only=failed_only)
-        )
-    if diff:
-        processors.append(
-            DiffProcessor(
-                diff=diff,
-                diff_per_task=True if add_details else False,
-                last=int(last),
-                base_url=nornir_data["files_base_path"],
-            )
-        )
-    # append ToFileProcessor as the last one in the sequence
-    if tf and isinstance(tf, str):
-        processors.append(
-            ToFileProcessor(
-                tf=tf, tf_format=tf_format, base_url=nornir_data["files_base_path"]
-            )
-        )
-    nr_with_processors = nornir_data["nr"].with_processors(processors)
-
+    # add processors
+    nr_with_processors = _add_processors(kwargs)
+    
     # Filter hosts to run tasks for
     hosts, has_filter = FFun(
         nr_with_processors, kwargs=kwargs, check_if_has_filter=True
@@ -940,7 +953,7 @@ def run(task, loader, *args, **kwargs):
         **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
 
-    # post clean-up rendered data from hosts inventory
+    # post clean-up - remove rendered data from hosts inventory
     if render:
         for host_name, host_object in hosts.inventory.hosts.items():
             _ = host_object.data.pop("__task__", None)
@@ -952,12 +965,30 @@ def run(task, loader, *args, **kwargs):
     elif event_failed:
         _fire_events(result)
 
-    # run post processing
+    # form return results
     if table:
-        ret = TabulateFormatter(result, tabulate=table, headers=headers)
+        ret = TabulateFormatter(
+            result, 
+            tabulate=table, 
+            headers=headers, 
+            headers_exclude=headers_exclude, 
+            sortby=sortby, 
+            reverse=reverse
+        )
     else:
         ret = ResultSerializer(result, to_dict=to_dict, add_details=add_details)
-
+        
+    # save all results to file
+    if dump:
+        DumpResults(
+            results=ret, 
+            filegroup=dump,                 
+            base_url=nornir_data["files_base_path"], 
+            index=nornir_data["stats"]["proxy_minion_id"],
+            max_files=nornir_data["files_max_count"],
+            proxy_id=nornir_data["stats"]["proxy_minion_id"],
+        )
+                
     return ret
 
 

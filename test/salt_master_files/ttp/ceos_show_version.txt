@@ -1,0 +1,4 @@
+cEOS tools version: {{ tools_version }}
+Kernel version: {{ kernel_version }}
+Total memory: {{ total_memory}} kB
+Free memory: {{ total_memory}} kB

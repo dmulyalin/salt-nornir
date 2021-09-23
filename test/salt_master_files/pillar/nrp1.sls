@@ -36,6 +36,9 @@ groups:
         extras:
           ssh_config_file: True
           auth_strict_key: False
+          transport: paramiko
+          transport_options: 
+            netconf_force_pty: False
       napalm:
         platform: eos
         optional_args:
@@ -46,9 +49,12 @@ groups:
         extras:
           allow_agent: False
           hostkey_verify: False
+      http:
+        port: 80
+        transport: http
           
 nornir:
-  aliases:
+  actions:
     awr: 
       function: nr.cli
       args: ["wr"]
@@ -64,7 +70,26 @@ nornir:
       - function: nr.cli
         args: ["show run | inc ntp"]
         kwargs: {"FB": "*"}
-  defaults:
-    nr_cli_plugin: netmiko or scrapli
-    nr_cfg_plugin: netmiko or napalm or scrapli
-    nr_nc_plugin: ncclient or scrapli 
+    configure_logging:
+      function: nr.cfg
+      args: ["logging host 7.7.7.7"]
+      kwargs: {"plugin": "netmiko"}
+    # nr.learn aliases
+    arp:
+      function: nr.cli
+      args: ["show ip arp"]
+      description: "Learn ARP cache"  
+    uptime:
+      function: nr.cli
+      args: ["show uptime"]
+      description: "Learn uptime info"      
+    facts:
+      function: nr.cli
+      args: ["show version"]
+      kwargs: {"run_ttp": "salt://ttp/ceos_show_version.txt"}
+      description: "Learn device facts"  
+    interfaces:
+      function: nr.cli
+      args: ["show run"]
+      kwargs: {"run_ttp": "salt://ttp/ceos_interface.txt", "enable": True}
+      description: "Learn device interfaces"  
