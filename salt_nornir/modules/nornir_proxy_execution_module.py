@@ -625,9 +625,8 @@ except:
 
 __virtualname__ = "nr"
 __proxyenabled__ = ["nornir"]
-__func_alias__ = {
-    "nornir_fun": "nornir"
-}
+__func_alias__ = {"nornir_fun": "nornir"}
+
 
 def __virtual__():
     if HAS_NORNIR:
@@ -648,7 +647,7 @@ def task(plugin, *args, **kwargs):
 
     :param plugin: (str) ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
     :param kwargs: (dict) any additional argument to use with specified task plugin
-    
+
     ``plugin`` attribute can reference file on SALT Master with ``task`` function content,
     that file downloaded from master, compiled and executed. File must contain function
     named ``task`` accepting Nornir task object as a first positional argument, for
@@ -664,7 +663,7 @@ def task(plugin, *args, **kwargs):
     .. note:: ``CONNECTION_NAME`` must be defined within custom task function file if
         RetryRunner in use, otherwise connection retry logic skipped and connections
         to all hosts initiated simultaneously up to the number of num_workers.
-    
+
     Sample usage::
 
         salt nrp1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
@@ -673,18 +672,18 @@ def task(plugin, *args, **kwargs):
         salt nrp1 nr.task nr_test a=b c=d add_details=False
         salt nrp1 nr.task "salt://path/to/task.txt"
         salt nrp1 nr.task plugin="salt://path/to/task.py"
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.task",
             arg=["nornir_napalm.plugins.tasks.napalm_cli"],
             kwarg={"commands": ["show ip arp"]},
-        )        
+        )
     """
     return __proxy__["nornir.execute_job"](
         task_fun=plugin, args=args, kwargs=kwargs, cpid=os.getpid()
@@ -704,29 +703,29 @@ def cli(*commands, **kwargs):
     Sample Usage::
 
          salt nrp1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
-         salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" 
+         salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]"
          salt nrp1 nr.cli "show clock" FO='{"platform__any": ["ios", "nxos_ssh", "cisco_xr"]}'
-         
+
     Commands can be templates and rendered using Jinja2 Templating Engine::
-    
+
          salt nrp1 nr.cli "ping 1.1.1.1 source {{ host.lo0 }}"
-         
-    Commands to run on devices can be sourced from text file on Salt Master, that text file can also be a 
+
+    Commands to run on devices can be sourced from text file on Salt Master, that text file can also be a
     template and rendered using SaltStack rendering system::
-    
-         salt nrp1 nr.cli filename="salt://device_show_commands.txt"    
-         
+
+         salt nrp1 nr.cli filename="salt://device_show_commands.txt"
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.cli",
             arg=["show clock"],
             kwarg={"plugin": "netmiko"},
-        )      
+        )
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")
@@ -797,18 +796,18 @@ def cfg(*commands, **kwargs):
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
     That behavior supported only for filenames that start with ``salt://``. This feature allows to
     specify per-host configuration files for applying to devices.
-    
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.cfg",
             arg=["logging host 1.1.1.1", "ntp server 1.1.1.2"],
             kwarg={"plugin": "netmiko"},
-        )   
+        )
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
@@ -876,17 +875,17 @@ def cfg_gen(*commands, **kwargs):
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
     That behaviour supported only for filenames that start with ``salt://``. This feature allows to
     specify per-host configuration files for applying to devices.
-    
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.cfg_gen",
             kwarg={"filename": "salt://template/{{ host.name }}_cfg.txt"},
-        ) 
+        )
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
@@ -922,17 +921,17 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
     Returns result object with the following attributes set:
 
     * result (``dict``): Contains port numbers as keys with True/False as values
-    
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.tping",
             kwarg={"FB": "LAB-RT[123]"},
-        ) 
+        )
     """
     kwargs["ports"] = ports
     kwargs["timeout"] = timeout
@@ -1028,16 +1027,16 @@ def test(*args, **kwargs):
           name: "Is NTP in sync"
 
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.test",
             kwarg={"suite": "salt://tests/suite_1.txt"},
-        ) 
-        
+        )
+
     Returns a list of dictionaries with check results, each dictionary contains::
 
         {
@@ -1246,18 +1245,18 @@ def nc(*args, **kwargs):
         salt nrp1 nr.nc server_capabilities FB="*" plugin=scrapli
         salt nrp1 nr.nc rpc filter_=salt://rpc/get_config_rpc_ietf_interfaces.xml plugin=scrapli
         salt nrp1 nr.nc locked target="candidate" config="salt://rpc/edit_config_ietf_interfaces.xml" plugin=scrapli
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.nc",
             arg=["get_config"],
             kwarg={"source": "running", "plugin": "ncclient"},
-        ) 
+        )
     """
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")
@@ -1303,19 +1302,19 @@ def do(*args, **kwargs):
 
     Any other keywords defined inside the step are ignored.
 
-    :param stop_on_error: (bool) if True (default) stops execution on error in step, 
+    :param stop_on_error: (bool) if True (default) stops execution on error in step,
         continue execution in error if False
     :param filepath: (str) path to file with actions steps
-    :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`, 
+    :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`,
         default ``jinja|yaml``
     :param describe: (bool) if True, returns action content without executing it, default is False
     :param kwargs: (any) additional ``kwargs`` to use with actions steps, ``kwargs`` override
         ``kwargs`` dictionary defined within each step, for example, in command
         ``salt nrp1 nr.do configure_ntp FB="*core*"``, ``FB`` argument will override ``FB`` arguments
         defined within steps.
-    :param tf: (bool) if True, ``ToFileProcessor`` saves each step results in file 
+    :param tf: (bool) if True, ``ToFileProcessor`` saves each step results in file
         named after step name if no ``tf`` argument provided within step, default is False
-    :param diff: (bool) if True, ``DiffProcessor`` runs diff for each step result using files 
+    :param diff: (bool) if True, ``DiffProcessor`` runs diff for each step result using files
         named after step name if no ``diff`` argument provided within step, default is False
     :returns: dictionary with keys: ``failed`` bool, ``result`` list; ``result`` key contains
         a list of results for steps; If ``stop_on_error`` set to ``True`` and error happens, ``failed``
@@ -1379,18 +1378,18 @@ def do(*args, **kwargs):
         salt nrp1 nr.do configure_ntp awr stop_on_error=False
         salt nrp1 nr.do configure_ntp FB="*core*" add_details=True
         salt nrp1 nr.do awr filepath="salt://actions/actions_file.txt"
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.do",
             arg=["configure_ntp", "awr"],
             kwarg={"FB": "R[12]"},
-        ) 
+        )
     """
     ret = {"failed": False, "result": []}
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
@@ -1400,7 +1399,7 @@ def do(*args, **kwargs):
     describe = kwargs.pop("describe", False)
     tf = kwargs.pop("tf", False)
     diff = kwargs.pop("diff", False)
-    
+
     # load file if filepath provided
     if filepath:
         file_content_dict = __salt__["slsutil.renderer"](
@@ -1434,7 +1433,7 @@ def do(*args, **kwargs):
                 action_config = [action_config]
 
             # run steps
-            for step in action_config:    
+            for step in action_config:
                 # form step kwargs
                 merged_kwargs = step.get("kwargs", {})
                 merged_kwargs.update(kwargs)
@@ -1447,12 +1446,12 @@ def do(*args, **kwargs):
                 # get fun name
                 fun_name = step["function"].split(".")[1].strip()
                 # run step
-                log.debug("salt_nornir:nr.do running step {}, args {}, kwargs {}".format(
-                    fun_name, step.get("args", []), merged_kwargs
-                ))
-                result = globals()[fun_name](
-                    *step.get("args", []), **merged_kwargs
+                log.debug(
+                    "salt_nornir:nr.do running step {}, args {}, kwargs {}".format(
+                        fun_name, step.get("args", []), merged_kwargs
+                    )
                 )
+                result = globals()[fun_name](*step.get("args", []), **merged_kwargs)
                 ret["result"].append({action_name: result})
         except:
             tb = traceback.format_exc()
@@ -1470,29 +1469,29 @@ def do(*args, **kwargs):
 def http(*args, **kwargs):
     """
     HTTP requests related functions
-    
+
     :param method: (str) HTTP method to use
     :param url: (str) full or partial URL to send request to
     :param kwargs: (dict) any other kwargs to use with requests.<method> call
-    
+
     This function uses nornir_salt http_call task plugin, reference that task
     plugin diocumentation for additional details.
-    
+
     Sample usage::
-    
+
         salt nrp1 nr.http get "http://1.2.3.4/api/data/"
         salt nrp1 nr.http get "https://sandbox-iosxe-latest-1.cisco.com/restconf/data/" verify=False auth='["developer", "C1sco12345"]'
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.http",
             arg=["get", "http://1.2.3.4/api/data/"],
-        ) 
+        )
     """
     args = list(args)
     if len(args) == 1:
@@ -1511,64 +1510,77 @@ def http(*args, **kwargs):
 def file(*args, **kwargs):
     """
     Function to manage Nornir-salt files.
-    
+
     :param call: (str) files task to call - ls, rm, read, diff
     :param kwargs: (dict) any additional kwargs such ``Fx`` filters or call
         function arguments
-    
+
     File tasks description:
-    
+
     * ``ls`` - list files of this Proxy Minions, returns list of dictionaries
     * ``rm`` - removes file with given name and index number
     * ``read`` - displays content of file with given name and index number
     * ``diff`` - reads two files and returns diff
-    
+
     ``ls`` arguments
-    
-    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of
         the files to list, lists all files by default
     :return: files list
-    
+
     ``rm`` arguments
-    
-    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of
         the files to remove, if set to True will remove all files for all filegroups
     :return: list of files removed
-    
+
     ``read`` arguments
-    
-    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of 
+
+    :param filegroup: (str or list) ``tf`` or list of ``tf`` filegroup names of
         the files to read
     :param last: (int) version of content to read
-    :return: results reconstructed out of files content  
-    
+    :return: results reconstructed out of files content
+
     ``diff`` arguments
-    
+
     :param filegroup: (str or list) ``tf`` filegroup name to diff
-    :param last: (int or list or str) files to diff, default is ``[1, 2]`` - 
+    :param last: (int or list or str) files to diff, default is ``[1, 2]`` -
         last 1 and last 2 files
-    :return: files unified difference 
-    
+    :return: files unified difference
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.file",
             arg=["ls"],
             kwarg={"filegroup": "interfaces"},
-        ) 
+        )
     """
     # form kwargs content
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     kwargs["call"] = kwargs.pop("call", args[0])
-    kwargs["filegroup"] = kwargs.pop("filegroup", list(args[1:]) if len(args) >= 2 else None)   
+    kwargs["filegroup"] = kwargs.pop(
+        "filegroup", list(args[1:]) if len(args) >= 2 else None
+    )
     if kwargs["call"] in ["ls", "rm"]:
         kwargs.setdefault("table", "extend")
-        kwargs.setdefault("headers", ["host", "filegroup", "last", "timestamp", "tasks", "filename", "exception"])
-        
+        kwargs.setdefault(
+            "headers",
+            [
+                "host",
+                "filegroup",
+                "last",
+                "timestamp",
+                "tasks",
+                "filename",
+                "exception",
+            ],
+        )
+
     return task(
         plugin="nornir_salt.plugins.tasks.files",
         base_url=__proxy__["nornir.nr_data"]("files_base_path"),
@@ -1581,46 +1593,46 @@ def file(*args, **kwargs):
 def learn(*args, **kwargs):
     """
     Store task execution results to local filesystem on the minion using
-    ``tf`` (to filename) attribute to form filenames. 
+    ``tf`` (to filename) attribute to form filenames.
 
     :param fun: (str) name of execution module function to call
     :param tf: (str) ``ToFileProcessor`` filegroup name
     :param args: (list) execution module function arguments
     :param kwargs: (dict) execution module function key-word arguments
-    
-    This task uses ``ToFileProcessor`` to store results and is a shortcut 
+
+    This task uses ``ToFileProcessor`` to store results and is a shortcut
     to calling individual exection module functions with ``tf`` argument.
-    
+
     Supported exection module functions are ``cli, nc, do, http``. By default
     calls ``nr.do`` function.
-    
-    ``tf`` attribute mandatory except for cases when using ``nr.do``function 
-    e.g. ``salt nrp1 nr.learn mac interface``, in that case ``tf`` set equal 
-    to file group name - ``mac`` and ``interface`` for each action call using 
-    ``nr.do`` function ``tf=True`` attribute.   
-    
+
+    ``tf`` attribute mandatory except for cases when using ``nr.do``function
+    e.g. ``salt nrp1 nr.learn mac interface``, in that case ``tf`` set equal
+    to file group name - ``mac`` and ``interface`` for each action call using
+    ``nr.do`` function ``tf=True`` attribute.
+
     Sample usage::
-    
+
         salt nrp1 nr.learn mac
         salt nrp1 nr.learn mac ip interface FB="CORE-*"
         salt nrp1 nr.learn "show version" "show int brief" tf="cli_facts" fun="cli"
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.learn",
             arg=["mac", "ip"],
             kwarg={"FB": "CORE-*"},
-        ) 
-    """       
+        )
+    """
     supported_functions = ["cli", "do", "http", "nc"]
     fun = kwargs.pop("fun", "do")
-    kwargs["tf"] = True if fun == "do" else kwargs.get("tf")     
-        
+    kwargs["tf"] = True if fun == "do" else kwargs.get("tf")
+
     # run sanity checks
     if fun not in supported_functions:
         raise RuntimeError(
@@ -1630,18 +1642,18 @@ def learn(*args, **kwargs):
         )
     if not kwargs.get("tf"):
         raise RuntimeError("salt-nornir:learn no tf attribute provided")
-        
+
     # run command with added ToFileProcessor argument
     return globals()[fun](*args, **kwargs)
-        
-    
+
+
 def find(*args, **kwargs):
     """
     Search for information stored in Proxy Minion files.
 
-    This function does not query devices but only uses information 
+    This function does not query devices but only uses information
     stored locally by ``ToFileProcessor``.
-    
+
     :param headers: (str or list) table headers, default is ``keys``
     :param table: (str) TabulateFormatter table directive, default is ``extend``
     :param headers_exclude: (str or list) table headers to exclude, default is
@@ -1652,30 +1664,30 @@ def find(*args, **kwargs):
     :param kwargs: (dict) key-value pairs where keys are keys to search for, values
         are criterie to check
     :returns: list of dictionaries with matched results
-    
+
     Find uses ``DataProcessor`` ``find`` function to do search and supports
     searching in a list of dictionaries, dictionary and text.
-    
+
     If no ``args`` provided ``nr.find`` fails.
-    
+
     Sample usage::
-    
+
         salt nrp1 nr.find ip ip="1.1.*"
         salt nrp1 nr.find mac arp mac="1b:cd:34:5f:6c"
         salt nrp1 nr.find ip ip="1.1.*" last=5 FB="*CORE*"
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.find",
             arg=["ip"],
             kwarg={"ip": "1.1.*"},
-        ) 
-    """    
+        )
+    """
     # do sanity check
     if not args:
         raise CommandExecutionError(
@@ -1683,11 +1695,15 @@ def find(*args, **kwargs):
                 args, kwargs
             )
         )
-    
+
     # form kwargs content
-    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}    
-    Fx = {k: kwargs.pop(k) for k in list(kwargs.keys()) if k.startswith("F") and len(k) == 2}
-    
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
+    Fx = {
+        k: kwargs.pop(k)
+        for k in list(kwargs.keys())
+        if k.startswith("F") and len(k) == 2
+    }
+
     # read files content running file_read task and filter it using find function
     return task(
         plugin="nornir_salt.plugins.tasks.files",
@@ -1695,15 +1711,26 @@ def find(*args, **kwargs):
         filegroup=list(set(args)),
         base_url=__proxy__["nornir.nr_data"]("files_base_path"),
         index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
-        render=[], # do not render anything
+        render=[],  # do not render anything
         last=kwargs.pop("last", 1),
         table=kwargs.pop("table", "extend"),
         headers=kwargs.pop("headers", "keys"),
-        headers_exclude=kwargs.pop("headers_exclude", ["changed", "diff", "failed", "name", "connection_retry", "task_retry", "exception"]),
+        headers_exclude=kwargs.pop(
+            "headers_exclude",
+            [
+                "changed",
+                "diff",
+                "failed",
+                "name",
+                "connection_retry",
+                "task_retry",
+                "exception",
+            ],
+        ),
         dp=[{"fun": "find", **kwargs}],
         **Fx,
     )
-    
+
 
 def diff(*args, **kwargs):
     """
@@ -1714,37 +1741,37 @@ def diff(*args, **kwargs):
     :param last: (int or list or str) filegroup file indexes to diff, default is 1
     :param kwargs: (dict) any additional kwargs to use with ``nr.file diff``
         call or ``DiffProcessor``
-    
-    ``diff`` attribute mandatory. 
-    
-    If last is a single digit e.g. 1, diff uses ``nr.do`` function to execute 
-    action named same as ``filegroup`` attribute and uses results to produce diff 
+
+    ``diff`` attribute mandatory.
+
+    If last is a single digit e.g. 1, diff uses ``nr.do`` function to execute
+    action named same as ``filegroup`` attribute and uses results to produce diff
     with previously saved ``filegroup`` files using ``DiffProcessor``.
-    
-    If ``last`` is a list e.g. ``[2, 5]`` or string ``1, 2``- will use ``nr.file diff`` 
+
+    If ``last`` is a list e.g. ``[2, 5]`` or string ``1, 2``- will use ``nr.file diff``
     call to produce diff for previously saved results without retrieving data from devices.
-    
+
     Sample usage::
 
         salt nrp1 nr.diff interface
         salt nrp1 nr.diff interface last=1
         salt nrp1 nr.diff interface last='[1, 5]'
         salt nrp1 nr.diff interface last="1,5"
-        
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.diff",
             arg=["interface"],
             kwarg={"last": 1},
-        ) 
-    """       
+        )
+    """
     # form kwargs content
-    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}  
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     last = kwargs.pop("last", 1)
 
     # use nr.file diff function to diff files
@@ -1756,43 +1783,44 @@ def diff(*args, **kwargs):
         kwargs["diff"] = True
         return do(last=last, *args, **kwargs)
 
+
 def nornir_fun(fun, *args, **kwargs):
     """
     Function to call various Nornir utility functions.
-    
+
     :param fun: (str) utility function name to call
     :param kwargs: (dict) function arguments
-    
+
     Available utility functions:
-    
+
     * ``test`` - this method tests proxy minion module worker thread without invoking any Nornir code
     * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
-    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return 
+    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return
         inventory for a subset of hosts
-    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat 
+    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat
         name to return
     * ``version`` - returns a report of Nornir related packages installed versions
     * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
-    
+
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
         salt nrp1 nr.nornir stats stat="proxy_minion_id"
-        salt nrp1 nr.nornir version 
-        salt nrp1 nr.nornir shutdown 
-        
+        salt nrp1 nr.nornir version
+        salt nrp1 nr.nornir shutdown
+
     Sample Python API usage from Salt-Master::
-    
+
         import salt.client
         client = salt.client.LocalClient()
-        
+
         task_result = client.cmd(
             tgt="nrp1",
             fun="nr.nornir",
             arg=["stats"],
-        ) 
+        )
     """
     if fun == "inventory":
         return __proxy__["nornir.inventory_data"](**kwargs)

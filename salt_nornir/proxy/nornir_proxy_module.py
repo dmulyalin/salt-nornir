@@ -178,10 +178,10 @@ import psutil
 
 try:
     import resource
-    
+
     HAS_RESOURCE_LIB = True
 except ImportError:
-    HAS_RESOURCE_LIB = False    
+    HAS_RESOURCE_LIB = False
 
 log = logging.getLogger(__name__)
 
@@ -212,7 +212,7 @@ try:
         ResultSerializer,
         HostsKeepalive,
         TabulateFormatter,
-        DumpResults
+        DumpResults,
     )
     from nornir_salt.plugins.tasks import nr_test
     from nornir_salt.plugins.processors import (
@@ -352,9 +352,7 @@ def init(opts):
     nornir_data["files_base_path"] = opts["proxy"].get(
         "files_base_path", "/var/salt-nornir/{}/files/".format(opts["id"])
     )
-    nornir_data["files_max_count"] = int(opts["proxy"].get(
-        "files_max_count", 5
-    ))
+    nornir_data["files_max_count"] = int(opts["proxy"].get("files_max_count", 5))
     nornir_data["nr_cli"] = opts["proxy"].get("nr_cli", {})
     nornir_data["nr_cfg"] = opts["proxy"].get("nr_cfg", {})
     nornir_data["nr_nc"] = opts["proxy"].get("nr_nc", {})
@@ -468,11 +466,13 @@ def refresh_nornir(*args, **kwargs):
 def kill_nornir(*args, **kwargs):
     """
     This function kills Nornir process and its child process as fast as possible.
-    
+
     .. warning:: this function kills main Nornir peocess and does not recover it
     """
     log.warning(
-        "Killing Nornir-proxy MAIN PID {}".format(nornir_data["stats"]["main_process_pid"])
+        "Killing Nornir-proxy MAIN PID {}".format(
+            nornir_data["stats"]["main_process_pid"]
+        )
     )
     # kill child processes
     for p in multiprocessing.active_children():
@@ -483,8 +483,8 @@ def kill_nornir(*args, **kwargs):
     os.kill(nornir_data["stats"]["main_process_pid"], signal.SIGKILL)
     # kill itself if still can
     os.kill(os.getpid(), signal.SIGKILL)
-    
-    
+
+
 # -----------------------------------------------------------------------------
 # proxy module private functions
 # -----------------------------------------------------------------------------
@@ -819,41 +819,55 @@ def _load_and_render_files(hosts, render, kwargs):
 
 def _add_processors(kwargs):
     """
-    Helper function to exctrat processors arguments and add processors 
+    Helper function to exctrat processors arguments and add processors
     to Nornir.
-    
+
     :param kwargs: (dict) dictionary with kwargs
     :return: (obj) Nornir object
     """
     processors = []
-    
+
     # get parameters
-    tf = kwargs.pop("tf", None) # to file
+    tf = kwargs.pop("tf", None)  # to file
     tests = kwargs.pop("tests", None)  # tests
     remove_tasks = kwargs.pop("remove_tasks", True)  # tests
     failed_only = kwargs.pop("failed_only", False)  # tests
     diff = kwargs.pop("diff", "")  # diff processor
-    last = kwargs.pop("last", 1) if diff else None # diff processor
-    dp = kwargs.pop("dp", []) # data processor
-    xml_flake = kwargs.pop("xml_flake", "") # data processor xml_flake function
-    match = kwargs.pop("match", "") # data processor match function
-    before = kwargs.pop("before", 0) # data processor match function
-    run_ttp = kwargs.pop("run_ttp", None) # data processor run_ttp function
-    ttp_structure = kwargs.pop("ttp_structure", "flat_list") # data processor run_ttp function
-        
+    last = kwargs.pop("last", 1) if diff else None  # diff processor
+    dp = kwargs.pop("dp", [])  # data processor
+    xml_flake = kwargs.pop("xml_flake", "")  # data processor xml_flake function
+    match = kwargs.pop("match", "")  # data processor match function
+    before = kwargs.pop("before", 0)  # data processor match function
+    run_ttp = kwargs.pop("run_ttp", None)  # data processor run_ttp function
+    ttp_structure = kwargs.pop(
+        "ttp_structure", "flat_list"
+    )  # data processor run_ttp function
+
     # add processors if any
     if dp:
-        processors.append(DataProcessor(dp))  
+        processors.append(DataProcessor(dp))
     if xml_flake:
         processors.append(DataProcessor([{"fun": "xml_flake", "pattern": xml_flake}]))
     if match:
-        processors.append(DataProcessor([{"fun": "match", "pattern": match, "before": before}]))
+        processors.append(
+            DataProcessor([{"fun": "match", "pattern": match, "before": before}])
+        )
     if run_ttp:
-        processors.append(DataProcessor([{
-            "fun": "run_ttp", 
-            "template": __salt__["cp.get_file_str"](run_ttp, saltenv=kwargs.get("saltenv", "base")) if run_ttp.startswith("salt://") else run_ttp,
-            "res_kwargs": {"structure": ttp_structure}
-        }]))
+        processors.append(
+            DataProcessor(
+                [
+                    {
+                        "fun": "run_ttp",
+                        "template": __salt__["cp.get_file_str"](
+                            run_ttp, saltenv=kwargs.get("saltenv", "base")
+                        )
+                        if run_ttp.startswith("salt://")
+                        else run_ttp,
+                        "res_kwargs": {"structure": ttp_structure},
+                    }
+                ]
+            )
+        )
     if tests:
         processors.append(
             TestsProcessor(tests, remove_tasks=remove_tasks, failed_only=failed_only)
@@ -864,23 +878,23 @@ def _add_processors(kwargs):
                 diff=diff,
                 last=int(last),
                 base_url=nornir_data["files_base_path"],
-                index=nornir_data["stats"]["proxy_minion_id"]
+                index=nornir_data["stats"]["proxy_minion_id"],
             )
         )
     # append ToFileProcessor as the last one in the sequence
     if tf and isinstance(tf, str):
         processors.append(
             ToFileProcessor(
-                tf=tf, 
-                base_url=nornir_data["files_base_path"], 
+                tf=tf,
+                base_url=nornir_data["files_base_path"],
                 index=nornir_data["stats"]["proxy_minion_id"],
                 max_files=nornir_data["files_max_count"],
             )
         )
-        
+
     return nornir_data["nr"].with_processors(processors)
-        
-        
+
+
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -913,12 +927,12 @@ def run(task, loader, *args, **kwargs):
     headers_exclude = kwargs.pop("headers_exclude", [])  # tabulate
     sortby = kwargs.pop("sortby", "host")  # tabulate
     reverse = kwargs.pop("reverse", False)  # tabulate
-    dump = kwargs.pop("dump", None) # dump results to file
+    dump = kwargs.pop("dump", None)  # dump results to file
     render = kwargs.pop(
         "render", ["config", "data", "filter", "filter_", "filters", "filename"]
     )  # render data
     event_failed = kwargs.pop("event_failed", False)  # events
-        
+
     # set dry_run argument
     nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
 
@@ -927,7 +941,7 @@ def run(task, loader, *args, **kwargs):
 
     # add processors
     nr_with_processors = _add_processors(kwargs)
-    
+
     # Filter hosts to run tasks for
     hosts, has_filter = FFun(
         nr_with_processors, kwargs=kwargs, check_if_has_filter=True
@@ -968,27 +982,27 @@ def run(task, loader, *args, **kwargs):
     # form return results
     if table:
         ret = TabulateFormatter(
-            result, 
-            tabulate=table, 
-            headers=headers, 
-            headers_exclude=headers_exclude, 
-            sortby=sortby, 
-            reverse=reverse
+            result,
+            tabulate=table,
+            headers=headers,
+            headers_exclude=headers_exclude,
+            sortby=sortby,
+            reverse=reverse,
         )
     else:
         ret = ResultSerializer(result, to_dict=to_dict, add_details=add_details)
-        
+
     # save all results to file
     if dump:
         DumpResults(
-            results=ret, 
-            filegroup=dump,                 
-            base_url=nornir_data["files_base_path"], 
+            results=ret,
+            filegroup=dump,
+            base_url=nornir_data["files_base_path"],
             index=nornir_data["stats"]["proxy_minion_id"],
             max_files=nornir_data["files_max_count"],
             proxy_id=nornir_data["stats"]["proxy_minion_id"],
         )
-                
+
     return ret
 
 

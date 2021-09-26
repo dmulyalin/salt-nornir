@@ -17,6 +17,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     data_files=[("", ["LICENSE"])],
+    keywords=["salt-extension"],
     classifiers=[
         "Topic :: Utilities",
         "Programming Language :: Python :: 3.6",

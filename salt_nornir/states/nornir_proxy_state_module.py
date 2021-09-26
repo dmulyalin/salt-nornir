@@ -153,7 +153,7 @@ def task(*args, **kwargs):
     """
     Interact with devices using ``nr.task`` Execution Module function.
 
-    :param plugin: ``path.to.plugin.task_fun`` to use, should form valid 
+    :param plugin: ``path.to.plugin.task_fun`` to use, should form valid
       python import statement - ``from path.to.plugin import task_fun``
     :param Fx: filters to filter hosts
     :param add_details: boolean, to include details in result or not
@@ -232,7 +232,7 @@ def _run_workflow_step(
             "nr.tping",
             "nr.test",
             "nr.nc",
-            "nr.http"
+            "nr.http",
         ]:
             step["kwargs"]["add_details"] = True
 
@@ -261,7 +261,7 @@ def _run_workflow_step(
                     )
                 # add all hosts that passed this step
                 hosts_passed_any_required_step.update(steps_passed[required_step])
-            FL = hosts_passed_any_required_step.intersection(FL)   
+            FL = hosts_passed_any_required_step.intersection(FL)
         if step.get("run_if_fail_all"):
             for required_step in step["run_if_fail_all"]:
                 if not required_step in steps_failed:
@@ -315,7 +315,7 @@ def _run_workflow_step(
             "nr.cfg",
             "nr.test",
             "nr.nc",
-            "nr.http"
+            "nr.http",
         ]:
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
@@ -456,7 +456,7 @@ def _decide_state_execution_status(options, ret):
 
 def workflow(*args, **kwargs):
     """
-    State function to execute work flow steps using SALT Execution modules functions. 
+    State function to execute work flow steps using SALT Execution modules functions.
 
     **State Global Options**
 
@@ -486,27 +486,27 @@ def workflow(*args, **kwargs):
     :param run_if_pass_any: (list) this step will run if ``any`` of the previous steps in a list passed
     :param run_if_fail_all: (list) this step will run if ``all`` of the previous steps in a list failed
     :param run_if_pass_all: (list) this step will run if ``all`` of the previous steps in a list passed
-    
-    While workflow steps can call any execution module function, ``run_if_x`` 
-    properly supported only for Nornir Execution Module functions: ``nr.task``, 
-    ``nr.cli``, ``nr.cfg_gen``, ``nr.cfg``, ``nr.test``, ``nr.nc``, ``nr.http``, 
-    ``nr.do`` - for all other functions step considered as ``PASS`` unconditionally.    
-    
-    If function reference ``nr.test`` with test suite, each test suite test 
-    item added to summary report, in addition, step's arguments ``run_if_x`` 
+
+    While workflow steps can call any execution module function, ``run_if_x``
+    properly supported only for Nornir Execution Module functions: ``nr.task``,
+    ``nr.cli``, ``nr.cfg_gen``, ``nr.cfg``, ``nr.test``, ``nr.nc``, ``nr.http``,
+    ``nr.do`` - for all other functions step considered as ``PASS`` unconditionally.
+
+    If function reference ``nr.test`` with test suite, each test suite test
+    item added to summary report, in addition, step's arguments ``run_if_x``
     conditions **must** reference test suite individual tests' names attribute.
 
     .. warning:: if you use per host filename feature, e.g. ``filename="salt://path/to/{{ host.name }}.cfg"``
-       make sure to either disable state file jinja2 rendering using ``#!yaml`` 
-       shebang at the beginning of the state file or escape double curly braces 
+       make sure to either disable state file jinja2 rendering using ``#!yaml``
+       shebang at the beginning of the state file or escape double curly braces
        in filename argument.
 
     Execution of steps done on a per host basis, or, say better, each step
-    determines a set of hosts it needs to run for using ``Fx`` filters and 
+    determines a set of hosts it needs to run for using ``Fx`` filters and
     ``run_if_x`` conditions. If multiple ``run_if_x`` conditions specified,
     host must satisfy all of them - AND logic - for step to be executed
     for that host.
-    
+
     If no ``run_if_x`` conditions provided, step executed for all hosts matched
     by ``filters`` provided in state global options and/or step ``**kwargs``.
 
@@ -562,31 +562,31 @@ def workflow(*args, **kwargs):
     Sample usage::
 
         salt nrp1 state.sls configure_ntp
-        
+
     Executing workflow returns detailed and summary reports. Detailed
     report contains run details for each step being executed. Summary
     report contains per-host brief report of all steps statuses, where
     status can be:
-    
-    * ``PASS`` - step passed, Nornir Execution Module task result ``failed`` 
+
+    * ``PASS`` - step passed, Nornir Execution Module task result ``failed``
         attribute is False or ``success`` attribute is True
-    * ``FAIL`` - step failed, Nornir Execution Module task result ``failed`` 
+    * ``FAIL`` - step failed, Nornir Execution Module task result ``failed``
         attribute is True or ``success`` attribute is False
-    * ``SKIP`` - step skipped and not executed, usually due to ``run_if_x`` 
+    * ``SKIP`` - step skipped and not executed, usually due to ``run_if_x``
         conditions not met for the host
     * ``ERROR`` - State Module encountered exception while running this step
-    
+
     Sample report::
-    
+
         nrp1:
         ----------
                   ID: change_step_1
             Function: nr.workflow
               Result: True
-             Comment: 
+             Comment:
              Started: 12:01:58.578925
             Duration: 5457.171 ms
-             Changes:   
+             Changes:
                       ----------
                       details:
                           |_
@@ -644,7 +644,7 @@ def workflow(*args, **kwargs):
                               |_
                                 ----------
                                 apply_logging_config:
-                                    PASS        
+                                    PASS
     """
     steps_failed, steps_passed = {}, {}
     options = kwargs.pop("options", {})
