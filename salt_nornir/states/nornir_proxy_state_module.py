@@ -62,7 +62,6 @@ Nornir state module functions
 """
 # Import python libs
 import logging
-import json
 import traceback
 
 log = logging.getLogger(__name__)
@@ -173,6 +172,7 @@ def task(*args, **kwargs):
 
         salt nr_minion_id state.apply  nr_state_ntp_cfg
     """
+    state_name = kwargs.pop("name")
     if __opts__["test"]:
         ret = {
             "name": state_name,
@@ -183,7 +183,6 @@ def task(*args, **kwargs):
             ),
         }
     else:
-        state_name = kwargs.pop("name")
         result = __salt__["nr.task"](*args, **kwargs)
         ret = {
             "name": state_name,
@@ -241,7 +240,7 @@ def _run_workflow_step(
         if step.get("run_if_fail_any"):
             hosts_failed_any_required_step = set()
             for required_step in step["run_if_fail_any"]:
-                if not required_step in steps_failed:
+                if required_step not in steps_failed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_fail_any requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
@@ -253,7 +252,7 @@ def _run_workflow_step(
         if step.get("run_if_pass_any"):
             hosts_passed_any_required_step = set()
             for required_step in step["run_if_pass_any"]:
-                if not required_step in steps_passed:
+                if required_step not in steps_passed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_pass_any requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
@@ -264,7 +263,7 @@ def _run_workflow_step(
             FL = hosts_passed_any_required_step.intersection(FL)
         if step.get("run_if_fail_all"):
             for required_step in step["run_if_fail_all"]:
-                if not required_step in steps_failed:
+                if required_step not in steps_failed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_fail_all requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
@@ -274,7 +273,7 @@ def _run_workflow_step(
                 FL = steps_failed[required_step].intersection(FL)
         if step.get("run_if_pass_all"):
             for required_step in step["run_if_pass_all"]:
-                if not required_step in steps_passed:
+                if required_step not in steps_passed:
                     raise CommandExecutionError(
                         "Step '{a}' run_if_pass_all requires '{b}', but '{b}' not executed".format(
                             a=step["name"], b=required_step
@@ -296,7 +295,7 @@ def _run_workflow_step(
         # handle when have no hosts to run step against
         if not matched_hosts and report_all:
             log.info("state:nr.workflow: no hosts matched for step: '{}'".format(step))
-            if step.get("report") != False:
+            if step.get("report") is not False:
                 report["details"].append({step["name"]: {}})
             for host_name, host_steps in report["summary"].items():
                 host_steps.append({step["name"]: "SKIP"})
@@ -320,7 +319,7 @@ def _run_workflow_step(
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
                     for task_result in host_results.values():
-                        if task_result["failed"] or task_result.get("success") == False:
+                        if task_result["failed"] or task_result.get("success") is False:
                             report["summary"][host_name].append({step["name"]: "FAIL"})
                             steps_failed[step["name"]].add(host_name)
                             break
@@ -331,7 +330,7 @@ def _run_workflow_step(
                 for task_result in result:
                     steps_passed.setdefault(task_result["name"], set())
                     steps_failed.setdefault(task_result["name"], set())
-                    if task_result["failed"] or task_result.get("success") == False:
+                    if task_result["failed"] or task_result.get("success") is False:
                         steps_failed[task_result["name"]].add(task_result["host"])
                         report["summary"][task_result["host"]].append(
                             {task_result["name"]: "FAIL"}
@@ -343,7 +342,7 @@ def _run_workflow_step(
                         )
         elif step["function"] == "nr.do":
             # decide on test execution result - fail or pass
-            if result["failed"] == True:
+            if result["failed"] is True:
                 steps_failed[step["name"]] = set(matched_hosts)
             else:
                 steps_passed[step["name"]] = set(matched_hosts)
@@ -356,7 +355,7 @@ def _run_workflow_step(
             steps_passed[step["name"]] = set(matched_hosts)
 
         # check if need to add step run results to detailed report
-        if step.get("report") != False:
+        if step.get("report") is not False:
             report["details"].append({step["name"]: result})
         # check if need to add this step info to skipped hosts
         for host_name, host_steps in report["summary"].items():
@@ -372,13 +371,15 @@ def _run_workflow_step(
             host_steps.append({step["name"]: "ERROR"})
 
 
-def _decide_state_execution_status(options, ret):
+def _decide_state_execution_status(options, ret, steps_failed, steps_passed):
     """
     Helper function to decide state execution status based on options
     fail_if... criteria.
 
     :param options: (dict) state options dictionary
     :param ret: (dict) state execution return structure
+    :param steps_failed: (dict) dictionary of failed steps
+    :param steps_passed: (dict) dictionary of passed steps
     """
     try:
         if options.get("fail_if_any_host_fail_any_step"):
@@ -680,6 +681,6 @@ def workflow(*args, **kwargs):
             )
 
     # decide if this state failed
-    ret = _decide_state_execution_status(options, ret)
+    ret = _decide_state_execution_status(options, ret, steps_failed, steps_passed)
 
     return ret

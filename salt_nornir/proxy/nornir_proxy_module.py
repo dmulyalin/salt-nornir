@@ -206,7 +206,6 @@ minion_process = psutil.Process(os.getpid())
 # Import third party libs
 try:
     from nornir import InitNornir
-    from nornir.core.task import Result, Task
     from nornir_salt.plugins.functions import (
         FFun,
         ResultSerializer,
@@ -214,7 +213,6 @@ try:
         TabulateFormatter,
         DumpResults,
     )
-    from nornir_salt.plugins.tasks import nr_test
     from nornir_salt.plugins.processors import (
         TestsProcessor,
         ToFileProcessor,
@@ -531,7 +529,7 @@ def _get_or_import_task_fun(plugin, loader=None):
     # check if plugin referring to file on master, load and compile it if so
     elif plugin.startswith("salt://"):
         function_text = None
-        if HAS_LOADER_CONTEXT and loader != None:
+        if HAS_LOADER_CONTEXT and loader is not None:
             with loader_context(loader):
                 function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
         else:
@@ -714,7 +712,7 @@ def _worker(loader=None):
         nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
         del job, output
         # close connections to devices if proxy_always_alive is False
-        if nornir_data["proxy_always_alive"] == False:
+        if nornir_data["proxy_always_alive"] is False:
             try:
                 nornir_data["nr"].close_connections(on_good=True, on_failed=True)
             except:
@@ -734,7 +732,7 @@ def _fire_events(result):
     """
     results_list = ResultSerializer(result, to_dict=False, add_details=True)
     for res in results_list:
-        if res.get("failed") == True or res.get("success") == False:
+        if res.get("failed") is True or res.get("success") is False:
             __salt__["event.send"](
                 tag="nornir-proxy/{proxy_id}/{host}/task/failed/{name}".format(
                     proxy_id=nornir_data["stats"]["proxy_minion_id"],
@@ -948,7 +946,7 @@ def run(task, loader, *args, **kwargs):
     )
 
     # check if nornir_filter_required is True but no filter
-    if nornir_data["nornir_filter_required"] == True and has_filter == False:
+    if nornir_data["nornir_filter_required"] is True and has_filter is False:
         raise CommandExecutionError(
             "Nornir-proxy 'nornir_filter_required' setting is True but no filter provided"
         )

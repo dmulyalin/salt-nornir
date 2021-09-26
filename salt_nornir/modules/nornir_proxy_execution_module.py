@@ -391,7 +391,7 @@ Sample usage::
     salt nrp1 nr.cli "show clock" table=True
     salt nrp1 nr.cli "show clock" table=True headers="host, results"
     salt nrp1 nr.cli "show clock" table=True headers="host, results" sortby="host" reverse=True
-	
+    
 tests
 +++++
 
@@ -591,7 +591,6 @@ nr.tping
 # Import python libs
 import logging
 import os
-import time
 import traceback
 import fnmatch
 
@@ -606,8 +605,6 @@ except:
 
 # import nornir libs
 try:
-    from nornir import InitNornir
-    from nornir_salt import tcp_ping
     from nornir_salt.plugins.functions import (
         TabulateFormatter,
     )
@@ -616,12 +613,6 @@ try:
 except ImportError:
     log.error("Nornir Execution Module - failed importing libraries")
     HAS_NORNIR = False
-
-# import salt libs, wrapping it in try/except for docs to generate
-try:
-    from salt.exceptions import CommandExecutionError
-except:
-    log.error("Nornir Proxy Module - failed importing SALT libraries")
 
 __virtualname__ = "nr"
 __proxyenabled__ = ["nornir"]
@@ -1122,7 +1113,7 @@ def test(*args, **kwargs):
             continue
 
         # check it item contains task to do
-        if not "task" in item:
+        if "task" not in item:
             log.warning(
                 "nr.test skipping test item as it has no 'task' defined: {}".format(
                     item
@@ -1438,7 +1429,7 @@ def do(*args, **kwargs):
                 merged_kwargs = step.get("kwargs", {})
                 merged_kwargs.update(kwargs)
                 # add tf ToFileProcessor name if tf_each is True
-                if tf == True:
+                if tf is True:
                     merged_kwargs.setdefault("tf", action_name)
                 # add diff for DiffProcessor
                 if diff:
