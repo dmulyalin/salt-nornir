@@ -11,3 +11,4 @@ docs/build/*
 docs/make.bat
 docs/Makefile
 *Old/*
+salt_nornir.egg-info/*
