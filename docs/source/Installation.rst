@@ -1,33 +1,53 @@
 Installation
 ############
 
-From PyPi::
+SaltStack Nornir Proxy Minion tested only for Linux, it is never tested with and 
+unlikely will work on Windows. It is recommended to use Red Hat/CentOS or Ubuntu 
+Linux distributions.
 
-    pip install salt_nornir
+Python 2 is not supported, recommended version is Python 3.6 and higher.
+
+Install from PyPi::
+
+    pip install salt-nornir
     
-    or
+Or explicitly specifying Python version::
     
-    python3 -m pip install salt_nornir
+    python3 -m pip install salt-nornir
     
-From GitHub master brunch::
+Or install GIT and run installation of latest source code from GitHub master brunch::
 
     python3 -m pip install git+https://github.com/dmulyalin/salt-nornir
   
-Above need to be installed on minion machine. If planning to use runner
-module, ``salt_nornir`` should be installed on Salt Master machine as well.
+Salt Nornir need to be installed on proxy minion machine. If planning to use runner
+module, ``salt-nornir`` should be installed on Salt Master machine as well.
 
-For installation of SaltStack master and minion/proxy-minion modules please
-reference `official documentation <https://repo.saltproject.io/>`_.
+For installation of SaltStack master and minion/proxy-minion modules 
+refer to `official documentation <https://repo.saltproject.io/>`_.
 
 SaltStack versions tested
 =========================
 
-Nornir Proxy minion was tested and confirmed working with these versions of SaltStack:
+Nornir Proxy minion was well tested and confirmed working with these versions of SaltStack:
 
 * salt 3002.6
 * salt 3003.1
 
-Other SaltStack versions should work as well, but not yet tested.
+Other SaltStack versions should work too, but not yet tested.
+
+Nornir Salt Dependency
+======================
+
+Main dependency is `nornir-salt package <https://pypi.org/project/nornir-salt/>`_, it is
+must be of the same major and minor versions as ``salt-nornir`` package. 
+
+Compatible versions
+
++---------------+-------+-------+-------+
+| salt-nornir   | 0.5.* | 0.4.* | 0.3.* |
++---------------+-------+-------+-------+
+| nornir-salt   | 0.5.* | 0.4.* | 0.3.* |
++---------------+-------+-------+-------+
 
 Common installation issues
 ==========================
@@ -35,7 +55,7 @@ Common installation issues
 Issues mainly arise around installing all required dependencies. General rule of thumb - try Googling 
 errors you getting or search StackOverflow.
 
-**1** ``PyYAML`` dependency - if getting error while doing ``pip install salt_nornir``::
+**1** ``PyYAML`` dependency - if getting error while doing ``pip install salt-nornir``::
 
     ERROR: Cannot uninstall 'PyYAML'. It is a distutils installed project and thus we cannot accurately 
     determine which files belong to it which would lead to only a partial uninstall.
@@ -44,7 +64,7 @@ try::
 
     python3 -m pip install salt-nornir --ignore-installed
     
-**2** ``setuptools`` dependency - if getting error while doing ``pip install salt_nornir``::
+**2** ``setuptools`` dependency - if getting error while doing ``pip install salt-nornir``::
 
     ModuleNotFoundError: No module named 'setuptools_rust'
 

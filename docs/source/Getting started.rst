@@ -18,22 +18,13 @@ From PyPi::
     
 Installing ``salt_nornir`` should automatically install these dependencies::
 
-    netmiko>=3.3.2
-    nornir>=3.0.0
-    nornir_netmiko>=0.1.1
-    nornir_napalm>=0.1.1
-    nornir_salt>=0.3.1
-    napalm>=3.0.0
+    netmiko
+    nornir
+    nornir_netmiko
+    nornir_napalm
+    nornir_salt
+    napalm
     psutil
-
-Make sure to update above libraries if required:
-
-* netmiko - ``pip install netmiko --upgrade``
-* nornir - ``pip install nornir --upgrade``
-* napalm - ``pip install napalm --upgrade``
-* nornir_netmiko - ``pip install nornir_netmiko --upgrade``
-* nornir_napalm - ``pip install nornir_napalm --upgrade``
-* nornir_salt - ``pip install nornir_salt --upgrade``
 
 Configure SALT Master
 =====================
@@ -219,37 +210,62 @@ Start interacting with devices::
     
 Check documentation for Nornir execution module ``nr.cfg`` function::
 
-    [root@localhost /]# salt nrp1 sys.doc nr.cfg
+    [root@salt-master /]# salt nrp1 sys.doc nr.cfg
     nr.cfg:
     
         Function to push configuration to devices using ``napalm_configure`` or
         ``netmiko_send_config`` or Scrapli ``send_config`` task plugin.
     
-        :param commands: list of commands to send to device
-        :param filename: path to file with configuration
-        :param template_engine: template engine to render configuration, default is jinja
-        :param saltenv: name of SALT environment
+        :param commands: (list) list of commands or multiline string to send to device
+        :param filename: (str) path to file with configuration
+        :param template_engine: (str) template engine to render configuration, default is jinja
+        :param saltenv: (str) name of SALT environment
         :param context: Overrides default context variables passed to the template.
         :param defaults: Default context passed to the template.
-        :param plugin: name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` or ``scrapli``
-        :param dry_run: boolean, default False, controls whether to apply changes to device or simulate them
-        :param Fx: filters to filter hosts
-        :param add_details: boolean, to include details in result or not
-    
-        :param add_cpid_to_task_name: boolean, include Child Process ID (cpid) for debugging
+        :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` or ``scrapli``
+        :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
+        :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
+            dictionary ``commit`` argument supplied to commit call using ``**commit``
     
         Warning: ``dry_run`` not supported by ``netmiko`` plugin
     
-        In addition to normal `context variables <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
+        Warning: ``commit`` not supported by ``scrapli`` plugin. To commit need to send commit
+            command as part of configuration, moreover, scrapli will not exit configuration mode,
+            need to send exit command as part of configuration mode as well.
+    
+        For configuration rendering purposes, in addition to normal `context variables
+        <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
         template engine loaded with additional context variable `host`, to access Nornir host
         inventory data.
     
         Sample usage::
     
-            salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
-            salt nornir-proxy-1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
-            salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
-            salt nornir-proxy-1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
+            salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
+            salt nrp1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
+            salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
+            salt nrp1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
+            salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True}'
+    
+        Filename argument can be a template string, for instance::
+    
+            salt nrp1 nr.cfg filename=salt://templates/{{ host.name }}_cfg.txt
+    
+        In that case filename rendered to form path string, after that, path string used to download file
+        from master, downloaded file further rendered using specified template engine (Jinja2 by default).
+        That behavior supported only for filenames that start with ``salt://``. This feature allows to
+        specify per-host configuration files for applying to devices.
+    
+        Sample Python API usage from Salt-Master::
+    
+            import salt.client
+            client = salt.client.LocalClient()
+    
+            task_result = client.cmd(
+                tgt="nrp1",
+                fun="nr.cfg",
+                arg=["logging host 1.1.1.1", "ntp server 1.1.1.2"],
+                kwarg={"plugin": "netmiko"},
+            )
             
 As example, configure syslog server using Netmiko::
 

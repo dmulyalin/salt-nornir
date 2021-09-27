@@ -44,12 +44,14 @@ Nornir proxy pillar parameters
 - ``nornir_filter_required`` - boolean, to indicate if Nornir filter is mandatory
   for tasks executed by this proxy-minion. Nornir has access to
   multiple devices, by default, if no filter provided, task will run for all
-  devices, ``nornir_filter_required`` allows to change behaviour to opposite,
+  devices, ``nornir_filter_required`` allows to change behavior to opposite,
   if no filter provided, task will not run at all. It is a safety measure against
   running task for all devices accidentally, instead, filter ``FB="*"`` can be
   used to run task for all devices.
-- ``runner`` - dictionary, Nornir Runner plugin parameters, default is ``RetryRunner``
-- ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is ``DictInventory``
+- ``runner`` - dictionary, Nornir Runner plugin parameters, default is 
+  `RetryRunner <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
+- ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is 
+  `DictInventory  <https://nornir-salt.readthedocs.io/en/latest/Inventory%20Plugins.html#dictinventory-plugin>`_
   populated with data from proxy-minion pillar, pillar data ignored by any other inventory plugins
 - ``child_process_max_age`` - int, seconds to wait before forcefully kill child process, default 660s
 - ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
@@ -61,7 +63,9 @@ Nornir proxy pillar parameters
   possible actions: ``log``- send syslog message, ``restart`` - shutsdown proxy minion process.
 - ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
   per-host basis, default is ``/var/salt-nornir/{proxy_id}/files/``
-- ``files_max_count`` - int, maximum number of files for ``ToFileProcessor`` ``tf`` argument
+- ``files_max_count`` - int, maximum number of files for 
+  `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_ 
+  ``tf`` argument
 - ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function
 - ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function
 - ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function
@@ -128,9 +132,9 @@ Nornir runners
 --------------
 
 Runners in Nornir define how to run tasks against hosts. If no ``runner``
-dictionary provided in proxy-minion pillar, Nornir initialized using
-`RetryRunner <https://nornir-salt.readthedocs.io/en/latest/Runner%20Plugins.html#retryrunner-plugin>`_
-plugin with these default settings::
+dictionary provided in proxy-minion pillar, Nornir initialized using Nornir Salt
+`RetryRunner plugin <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
+with these default settings::
 
     runner = {
         "plugin": "RetryRunner",
@@ -147,9 +151,6 @@ plugin with these default settings::
             "task_timeout": 600
         },
     }
-
-``RetryRunner`` runner included in `nornir_salt <https://github.com/dmulyalin/nornir-salt>`_
-library.
 
 Nornir Proxy Module functions
 -----------------------------
@@ -1015,10 +1016,6 @@ def execute_job(task_fun, args, kwargs, cpid):
     :param cpid: int, Process ID (PID) of child process submitting job request
 
     Additional ``execute_job`` arguments read from ``kwargs``:
-
-    :param tf: `ToFile <https://nornir-salt.readthedocs.io/en/latest/Functions.html#tofile>`_
-        function's OS path to file where to save results, if present, ToFile function called
-        together with provided ``**kwargs``
     """
     # add new job in jobs queue
     nornir_data["jobs_queue"].put(
@@ -1073,8 +1070,7 @@ def stats(*args, **kwargs):
     * ``jobs_completed`` - int, overall number of jobs completed
     * ``jobs_failed``  - int, overall number of jobs failed
     * ``jobs_job_queue_size`` - int, size of jobs queue, indicating number of jobs waiting to start
-    * ``jobs_res_queue_size`` - int, size of results queue, indicating number of
-        results waiting to be collected by child process
+    * ``jobs_res_queue_size`` - int, size of results queue, indicating number of results waiting to be collected by child process
     * ``hosts_count`` - int, number of hosts/devices managed by this proxy minion
     * ``hosts_connections_active`` - int, overall number of connection active to devices
     * ``hosts_tasks_failed`` - int, overall number of tasks failed for hosts
