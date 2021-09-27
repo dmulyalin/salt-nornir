@@ -7,7 +7,7 @@ Nornir State module reference.
 Introduction
 ------------
 
-This state module uses Nornir proxy execution module to apply configuration
+This state module uses Nornir proxy execution module to apply configuration 
 to devices.
 
 .. warning:: This module does not implement idempotent behavior, it is up to Nornir task
@@ -53,11 +53,32 @@ Apply state running command on master::
 
     salt nr_minion_id state.apply nr_state_test
 
-Nornir state module functions
+Nornir State Module Functions
 -----------------------------
 
+.. list-table:: State Functions Summary
+   :widths: 15 85
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - `cfg`_ 
+     - Configure devices using Nornir execution module ``nr.cfg`` function
+   * - `task`_ 
+     - Interact with devices using ``nr.task`` Execution Module function.
+   * - `workflow`_ 
+     - Executes work flow steps using any SaltStack Execution modules functions
+     
+cfg
++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.cfg
+
+task
+++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.task
+
+workflow
+++++++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.workflow
 """
 # Import python libs
@@ -570,11 +591,11 @@ def workflow(*args, **kwargs):
     status can be:
 
     * ``PASS`` - step passed, Nornir Execution Module task result ``failed``
-        attribute is False or ``success`` attribute is True
+      attribute is False or ``success`` attribute is True
     * ``FAIL`` - step failed, Nornir Execution Module task result ``failed``
-        attribute is True or ``success`` attribute is False
+      attribute is True or ``success`` attribute is False
     * ``SKIP`` - step skipped and not executed, usually due to ``run_if_x``
-        conditions not met for the host
+      conditions not met for the host
     * ``ERROR`` - State Module encountered exception while running this step
 
     Sample report::
