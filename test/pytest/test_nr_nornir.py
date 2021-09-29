@@ -93,3 +93,135 @@ def test_single_stat_call():
     )
     assert "nrp1" in ret
     assert len(ret["nrp1"].keys()) == 1
+
+    
+def test_connections_list():
+    # close connections
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # run some cli commands
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # list active connections
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 1
+    assert ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    assert len(ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 1
+    assert ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    
+# test_connections_list()
+
+
+def test_disconnect():
+    # run some cli commands
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # close connections
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        tgt_type="glob",
+        timeout=60,
+    )   
+    # list active connections
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 0
+    assert len(ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 0
+    
+# test_disconnect()
+
+
+def test_disconnect_by_name():
+    # close connections
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    # run some cli commands
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # list active connections
+    ret_before = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    conn_count_before_ceos1 = len(ret_before["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"])
+    conn_count_before_ceos2 = len(ret_before["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"])
+    # close connections
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        kwarg={"conn_name": "scrapli", "FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    # list active connections
+    ret_after = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    conn_count_after_ceos1 = len(ret_after["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"])
+    conn_count_after_ceos2 = len(ret_after["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"])
+    
+    assert conn_count_before_ceos1 == 2 and conn_count_after_ceos1 == 1
+    assert conn_count_before_ceos2 == 2 and conn_count_after_ceos2 ==2
+    assert ret_after["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    
+# test_disconnect_by_name()

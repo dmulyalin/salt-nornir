@@ -443,8 +443,8 @@ commands = ["show run"]
 </input>
 
 <group name="facts" input="version">
+Architecture: {{ arch }}
 cEOS tools version: {{ tools_version }}
-Kernel version: {{ kernel_version }}
 </group>
   
 <group name="interf" input="interfaces">
@@ -462,7 +462,7 @@ interface {{ interface }}
         timeout=60,
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
                                 {'interf': [{'description': 'Configured by '
                                                             'NETCONF',
@@ -482,7 +482,7 @@ interface {{ interface }}
                                              'interface': 'Loopback3',
                                              'ip': '1.2.3.4',
                                              'mask': '24'}]}]},
-          'ceos2': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+          'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
                                 {'interf': [{'description': 'Configured by '
                                                             'NETCONF',
@@ -517,7 +517,7 @@ def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
         timeout=60,
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
                                 {'interf': [{'description': 'Configured by '
                                                             'NETCONF',
@@ -537,7 +537,7 @@ def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
                                              'interface': 'Loopback3',
                                              'ip': '1.2.3.4',
                                              'mask': '24'}]}]},
-          'ceos2': {'run_ttp': [{'facts': {'kernel_version': '3.10.0-1160.21.1.el7.x86_64',
+          'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
                                 {'interf': [{'description': 'Configured by '
                                                             'NETCONF',
@@ -560,3 +560,69 @@ def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
                                              'mask': '24'}]}]}}}
     
 # test_nr_cli_netmiko_run_ttp_download_from_salt_master()
+
+
+def test_nr_cli_netmiko_empty_commands():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "\n", " ", "", "show version"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    assert len(ret["nrp1"]["ceos1"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show version" in ret["nrp1"]["ceos1"]
+    assert len(ret["nrp1"]["ceos2"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show version" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_netmiko_empty_commands()
+
+
+def test_nr_cli_netmiko_empty_commands_use_ps():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "\n", " ", "", "show version"],
+        kwarg={"use_ps": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    assert len(ret["nrp1"]["ceos1"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show version" in ret["nrp1"]["ceos1"]
+    assert len(ret["nrp1"]["ceos2"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show version" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_netmiko_empty_commands_use_ps()
+
+
+def test_nr_cli_scrapli_empty_commands():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "\n", " ", "", "show version"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    assert len(ret["nrp1"]["ceos1"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show version" in ret["nrp1"]["ceos1"]
+    assert len(ret["nrp1"]["ceos2"]) == 2
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show version" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_scrapli_empty_commands()

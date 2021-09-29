@@ -133,5 +133,30 @@ def test_results_dump_directive():
         "Hostname: ceos" in file_content and
         "FQDN" in file_content 
     )
-
 # test_results_dump_directive()
+
+
+def test_nornir_hosts():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert res["nrp1"] == ["ceos1", "ceos2"]
+# test_nornir_hosts()
+
+
+def test_nornir_hosts_with_filter():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={"FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert res["nrp1"] == ["ceos1"]
+# test_nornir_hosts()

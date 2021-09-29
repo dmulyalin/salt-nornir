@@ -7,8 +7,8 @@ commands = ["show run"]
 </input>
 
 <group name="facts" input="version">
+Architecture: {{ arch }}
 cEOS tools version: {{ tools_version }}
-Kernel version: {{ kernel_version }}
 </group>
   
 <group name="interf" input="interfaces">

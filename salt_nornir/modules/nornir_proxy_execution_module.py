@@ -1792,11 +1792,18 @@ def nornir_fun(fun, *args, **kwargs):
     * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
-    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return inventory for a subset of hosts
-    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat name to return
+    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return 
+      inventory for a subset of hosts
+    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat 
+      name to return
     * ``version`` - returns a report of Nornir related packages installed versions
     * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
-
+    * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx`` 
+      arguments to return only hosts matched by filter
+    * ``connections`` - list hosts' active connections, accepts ``Fx`` arguments to filter hosts to list
+    * ``disconnect`` - close host connections, accept ``Fx`` arguments to filter hosts and ``conn_name`` 
+      of connection to close, by default closes all connections
+      
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
@@ -1831,3 +1838,9 @@ def nornir_fun(fun, *args, **kwargs):
         return __proxy__["nornir.refresh_nornir"]()
     elif fun == "test":
         return task(plugin="test")
+    elif fun == "hosts":
+        return __proxy__["nornir.hosts_list"](**kwargs)
+    elif fun == "connections":
+        return task(plugin="nornir_salt.plugins.tasks.connections", call="ls", **kwargs)
+    elif fun == "disconnect":
+        return task(plugin="nornir_salt.plugins.tasks.connections", call="close", **kwargs)

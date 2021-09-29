@@ -910,6 +910,17 @@ def inventory_data(**kwargs):
     return hosts.dict()["inventory"]
 
 
+def hosts_list(**kwargs):
+    """
+    Return list of hosts managed by this Nornir instance
+
+    :param Fx: filters to filter hosts
+    """
+    # filter hosts to return a list of hosts for
+    hosts = FFun(nornir_data["nr"], kwargs=kwargs)
+    return list(hosts.inventory.hosts.keys())
+
+
 def run(task, loader, *args, **kwargs):
     """
     Function for worker Thread to run Nornir tasks.
