@@ -124,7 +124,9 @@ All supported processors executed in this order::
    * - `dump`_ 
      - Saves complete task results to local file system using Nornir-Salt DumpResults function       
    * - `event_failed`_ 
-     - Emit events on Salt Events Bus for failed tasks     
+     - Emit events on Salt Events Bus for failed tasks  
+   * - `jmespath`_
+     - uses JMESPath library to run query against structured results data
    * - `match`_ 
      - Filters text output using Nornir-Salt DataProcessor match function 
    * - `render`_ 
@@ -140,8 +142,10 @@ All supported processors executed in this order::
    * - `to_dict`_ 
      - Transforms results to structured data using Nornir-Salt ResultSerializer
    * - `xml_flake`_ 
-     - Uses Nornir-Salt DataProcessor xml_flake function to filter XML output
-
+     - Uses Nornir-Salt DataProcessor ``xml_flake`` function to filter XML output
+   * - `xpath`_ 
+     - Uses Nornir-Salt DataProcessor ``xpath`` function to filter XML output
+     
 Fx
 ++
 
@@ -280,6 +284,23 @@ Sample usage::
 
     salt nrp1 nr.test suite="salt://tests/suite.txt" event_failed=True
 
+jmespath
+++++++++
+
+Uses Nornir-Salt ``DataProcessor`` 
+`jmespath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#jmespath>`_ 
+to run JMESPath query against structured data results or JSON string.
+
+Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli``
+
+CLI Arguments:
+
+* ``jmespath`` - `JMESPath <https://jmespath.org/>`_ query expression string
+
+Sample usage::
+
+    salt nrp1 nr.task nornir_napalm.plugins.tasks.napalm_get getters='["get_interfaces"]' jmespath='interfaces'
+    
 match
 +++++
 
@@ -476,6 +497,34 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.nc get_config xml_flake="*bgp:config*"
+
+xpath
++++++
+
+Uses Nornir-Salt ``DataProcessor`` 
+`xpath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xpath>`_ 
+to run xpath query against XML results.
+
+Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli``
+
+CLI Arguments:
+
+* ``xpath`` - `LXML library <https://lxml.de/xpathxslt.html#xpath>`_ supported xpath expression
+
+Sample usage::
+
+    salt nrp1 nr.nc get_config xpath='//config/address[text()="1.1.1.11"]'
+    
+Beware that XML namespaces removed from XML results before running xpath
+on them. If this behavior is not desirable, need to use ``dp`` keyword instead
+with required arguments for ``xpath`` function including namespaces map dictionary.
+
+``xpath`` function processes results received from device and executed locally on the minion
+machine, if you need to filter results returned from device, for ``nr.nc`` function consider
+using filter arguments. The complication is that if, for example, you running 
+``get_config`` NETCONF operation, full device config retrieved from device and passed via ``xpath``
+function on proxy minion, this could be processing intensive especially for big confiurations
+combined with significant number of devices simelteniously returning results.
 
 Execution Module Functions
 --------------------------

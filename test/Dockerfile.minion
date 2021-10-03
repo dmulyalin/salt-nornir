@@ -15,6 +15,7 @@ RUN python3 -m pip install -U pip setuptools
 RUN python3 -m pip install ttp
 RUN python3 -m pip install xmltodict
 RUN python3 -m pip install tabulate
+RUN python3 -m pip install pygnmi
 
 # install SALT nornir libs from local volume
 RUN python3 -m pip install /tmp/salt_nornir/ --ignore-installed PyYAML

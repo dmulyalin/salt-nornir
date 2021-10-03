@@ -841,12 +841,18 @@ def _add_processors(kwargs):
     ttp_structure = kwargs.pop(
         "ttp_structure", "flat_list"
     )  # data processor run_ttp function
-
+    xpath = kwargs.pop("xpath", "")  # xpath DataProcessor
+    jmespath = kwargs.pop("jmespath", "")  # jmespath DataProcessor
+    
     # add processors if any
     if dp:
         processors.append(DataProcessor(dp))
     if xml_flake:
         processors.append(DataProcessor([{"fun": "xml_flake", "pattern": xml_flake}]))
+    if xpath:
+        processors.append(DataProcessor([{"fun": "xpath", "expr": xpath, "recover": True, "rm_ns": True}]))
+    if jmespath:
+        processors.append(DataProcessor([{"fun": "jmespath", "expr": jmespath}]))
     if match:
         processors.append(
             DataProcessor([{"fun": "match", "pattern": match, "before": before}])
@@ -1175,6 +1181,7 @@ def nr_version():
         "tabulate": "",
         "xmltodict": "",
         "pyyaml": "",
+        "jmespath": "",
         "jinja2": "",
         "ttp": "",
         "salt-nornir": "",
