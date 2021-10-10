@@ -574,3 +574,51 @@ def test_scrapli_netconf_rpc_call():
         assert isinstance(data["rpc"], str)
         assert len(data["rpc"]) > 0
         assert "Traceback (most recent " not in data["rpc"], "RPC call returned error"
+
+
+def test_nr_nc_get_config_with_xpath():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nc",
+        arg=["get_config"],
+        kwarg={
+            "source": "running",
+            "filter": ["subtree", "salt://rpc/get_config_filter_ietf_interfaces.xml"],
+            "xpath": "//interfaces/interface/name",
+        },
+        tgt_type="glob",
+        timeout=120,
+    )   
+    pprint.pprint(ret)
+    # should print
+    # {'nrp1': {'ceos1': {'get_config': '<name>Ethernet1</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback2</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback3</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback1</name>\n'
+    #                                   '        \n'},
+    #           'ceos2': {'get_config': '<name>Ethernet1</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback102</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback101</name>\n'
+    #                                   '        \n'
+    #                                   '\n'
+    #                                   '<name>Loopback100</name>\n'
+    #                                   '        \n'}}}
+    assert "<name>" in ret["nrp1"]["ceos1"]["get_config"]
+    assert "Ethernet" in ret["nrp1"]["ceos1"]["get_config"]
+    assert "Loopback" in ret["nrp1"]["ceos1"]["get_config"]
+    assert "<name>" in ret["nrp1"]["ceos2"]["get_config"]
+    assert "Ethernet" in ret["nrp1"]["ceos2"]["get_config"]
+    assert "Loopback" in ret["nrp1"]["ceos2"]["get_config"]
+    
+# test_nr_nc_get_config_with_xpath()
+  

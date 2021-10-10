@@ -1,0 +1,13 @@
+replace:
+  - - "openconfig-interfaces:interfaces/interface[name=Loopback35]/config"
+    - {"name": "Loopback35", "description": "RID Loopback"}
+  - - "openconfig-interfaces:interfaces/interface[name=Loopback36]/config"
+    - {"name": "Loopback36", "description": "MGMT Loopback"}
+update:
+  - - "openconfig-interfaces:interfaces/interface[name=Loopback35]/config"
+    - {"name": "Loopback35", "description": "RID Loopback"}
+  - - "openconfig-interfaces:interfaces/interface[name=Loopback36]/config"
+    - {"name": "Loopback36", "description": "MGMT Loopback"}
+delete:
+  - "openconfig-interfaces:interfaces/interface[name=Loopback35]"
+  - "openconfig-interfaces:interfaces/interface[name=Loopback36]"

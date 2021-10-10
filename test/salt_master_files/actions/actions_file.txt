@@ -8,6 +8,9 @@ configure_snmp:
   - function: nr.cfg
     args: ["snmp host 1.2.3.4 test", "snmp host 1.2.3.5 test"]
     kwargs: {"FB": "*", "plugin": "netmiko"}
+    description: "1. Configure SNMP hosts"
   - function: nr.cfg
     args: ["snmp-server local-interface Ethernet 1"]
     kwargs: {"FB": "*", "plugin": "netmiko"}
+    description: "2. Configure SNMP source interface"
+    

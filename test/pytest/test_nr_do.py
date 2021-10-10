@@ -170,3 +170,70 @@ def test_nr_do_call_kwargs_combined():
     assert ret["nrp1"]["failed"] == False
     assert len(ret["nrp1"]["result"][0]["awr"]) == 1
     assert "ceos1" in ret["nrp1"]["result"][0]["awr"]
+
+def test_nr_do_dir():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.do",
+        arg=["dir"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["result"], str)
+    assert "action name" in ret["nrp1"]["result"]
+    assert "description" in ret["nrp1"]["result"]
+    
+# test_nr_do_dir()
+
+
+def test_nr_do_dir_list():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.do",
+        arg=["dir_list"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["result"], list)
+    assert "action name" in ret["nrp1"]["result"][0]
+    assert "description" in ret["nrp1"]["result"][0]
+    
+# test_nr_do_dir_list()
+
+
+def test_nr_do_dir_list_filepath():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.do",
+        arg=["dir_list"],
+        kwarg={"filepath": "salt://actions/actions_file.txt"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["result"], list)
+    assert "action name" in ret["nrp1"]["result"][0]
+    assert "description" in ret["nrp1"]["result"][0]
+    
+# test_nr_do_dir_list_filepath()
+
+
+def test_nr_do_dir_filepath():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.do",
+        arg=["dir"],
+        kwarg={"filepath": "salt://actions/actions_file.txt"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["result"], str)
+    assert "action name" in ret["nrp1"]["result"]
+    assert "description" in ret["nrp1"]["result"]
+    
+# test_nr_do_dir_filepath()

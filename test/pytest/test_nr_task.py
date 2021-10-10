@@ -93,3 +93,46 @@ def test_custom_task_call_fail():
         "salt.exceptions.CommandExecutionError" in ret["nrp1"]
         and "failed download task function file" in ret["nrp1"]
     )
+
+    
+def test_napalm_get_interfaces_with_jmespath():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "nornir_napalm.plugins.tasks.napalm_get",
+            "getters": ["get_interfaces"],
+            "jmespath": "get_interfaces.Ethernet1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # should print:
+    # {'nrp1': {'ceos1': {'nornir_napalm.plugins.tasks.napalm_get': {'description': 'Configured '
+    #                                                                               'by '
+    #                                                                               'NETCONF',
+    #                                                                'is_enabled': True,
+    #                                                                'is_up': True,
+    #                                                                'last_flapped': 1633301427.8778741,
+    #                                                                'mac_address': '02:42:0A:00:01:04',
+    #                                                                'mtu': 1500,
+    #                                                                'speed': 1000}},
+    #           'ceos2': {'nornir_napalm.plugins.tasks.napalm_get': {'description': 'Configured '
+    #                                                                               'by '
+    #                                                                               'NETCONF',
+    #                                                                'is_enabled': True,
+    #                                                                'is_up': True,
+    #                                                                'last_flapped': 1633277295.0623968,
+    #                                                                'mac_address': '02:42:0A:00:01:05',
+    #                                                                'mtu': 1500,
+    #                                                                'speed': 1000}}}}
+    assert "description" in ret["nrp1"]["ceos1"]["nornir_napalm.plugins.tasks.napalm_get"]
+    assert "mac_address" in ret["nrp1"]["ceos1"]["nornir_napalm.plugins.tasks.napalm_get"]
+    assert "mtu" in ret["nrp1"]["ceos1"]["nornir_napalm.plugins.tasks.napalm_get"]
+    assert "description" in ret["nrp1"]["ceos2"]["nornir_napalm.plugins.tasks.napalm_get"]
+    assert "mac_address" in ret["nrp1"]["ceos2"]["nornir_napalm.plugins.tasks.napalm_get"]
+    assert "mtu" in ret["nrp1"]["ceos2"]["nornir_napalm.plugins.tasks.napalm_get"]
+    
+# test_napalm_get_interfaces_with_jmespath()

@@ -2,12 +2,13 @@
 Nornir Execution Module
 =======================
 
-Nornir Execution module reference. 
+SaltStack execution modules serve the purpose of exposing functionally to 
+interact with devices and systems.
 
 Introduction
 ------------
 
-This execution module complements Nornir Proxy Minion Module to interact 
+Nornir Execution Module complements Nornir Proxy Minion Module to interact 
 with devices over SSH, Telnet, NETCONF or any other methods supported by 
 Nornir connection plugins.
 
@@ -109,7 +110,7 @@ All supported processors executed in this order::
 
     DataProcessor -> TestsProcessor -> DiffProcessor -> ToFileProcessor
     
-.. list-table:: CLI Arguments Summary
+.. list-table:: Common CLI Arguments Summary
    :widths: 15 85
    :header-rows: 1
 
@@ -557,6 +558,8 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 | `nr.find`_      | To search for various information in files saved  |                    |
 |                 | by ``ToFileProcessor``                            |                    |
 +-----------------+---------------------------------------------------+--------------------+
+| `nr.gnmi`_      | Interact with devices using gNMI protocol         | pygnmi             |
++-----------------+---------------------------------------------------+--------------------+
 | `nr.http`_      | To run HTTP requests against API endpoints        | requests           |
 |                 |                                                   |                    |
 +-----------------+---------------------------------------------------+--------------------+
@@ -610,6 +613,11 @@ nr.find
 +++++++
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.find
+
+nr.gnmi
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.gnmi
 
 nr.http
 +++++++
@@ -1343,6 +1351,7 @@ def do(*args, **kwargs):
     * ``function`` - mandatory, name of any execution module function to run
     * ``args`` - optional, any arguments to use with function
     * ``kwargs`` - optional, any keyword arguments to use with function
+    * ``description`` - optional, used by ``dir`` to list action description
 
     Any other keywords defined inside the step are ignored.
 
@@ -1363,6 +1372,9 @@ def do(*args, **kwargs):
     :returns: dictionary with keys: ``failed`` bool, ``result`` list; ``result`` key contains
         a list of results for steps; If ``stop_on_error`` set to ``True`` and error happens, ``failed``
         key set to ``True``
+
+    Special action names ``dir`` and ``dir_list`` used to list all actions available for
+    proxy minion where ``dir`` returns table and ``dir_list`` produces a list of actions.
 
     .. note:: if ``filepath`` argument provided, actions defined in other places are ignored; file
         loaded using Saltstack ``slsutil.renderer`` execution module function, as a result
@@ -1401,12 +1413,15 @@ def do(*args, **kwargs):
           - function: nr.cfg
             args: ["ntp server 1.1.1.1"]
             kwargs: {"FB": "*"}
+            description: "1. Configure NTP server 1.1.1.1"
           - function: nr.cfg
             args: ["ntp server 1.1.1.2"]
             kwargs: {"FB": "*"}
+            description: "2. Configure NTP server 1.1.1.2"
           - function: nr.cli
             args: ["show run | inc ntp"]
             kwargs: {"FB": "*"}
+            description: "3. Cllect ntp configuration"
 
     Action name ``awr`` has single step defined, while ``configure_ntp`` action has multiple
     steps defined, each executed in order.
@@ -1418,6 +1433,8 @@ def do(*args, **kwargs):
 
     Sample usage::
 
+        salt nrp1 nr.do dir
+        salt nrp1 nr.do dir_list
         salt nrp1 nr.do awr
         salt nrp1 nr.do configure_ntp awr stop_on_error=False
         salt nrp1 nr.do configure_ntp FB="*core*" add_details=True
@@ -1454,6 +1471,31 @@ def do(*args, **kwargs):
             ret["failed"] = True
             ret["result"].append({filepath: "Failed loading filepath content."})
             return ret
+
+    # check if need to list all actions
+    if "dir" in args or "dir_list" in args:
+        actions_config = (
+            __salt__["config.get"](key="nornir:actions", merge="recurse")
+            if not filepath
+            else file_content_dict
+        )
+        # iterate over actions and form brief list of them
+        for action_name, data in actions_config.items():
+            ret["result"].append(
+                {
+                    "action name": action_name,
+                    "description": data.get("description", "")
+                    if isinstance(data, dict)
+                    else "\n".join([i.get("description", "") for i in data]).strip(),
+                }
+            )
+        if "dir" in args:
+            ret["result"] = TabulateFormatter(
+                ret["result"],
+                tabulate={"tablefmt": "grid"},
+                headers=["action name", "description"],
+            )
+        return ret
 
     # run actions
     for action_name in args:
@@ -1702,6 +1744,8 @@ def find(*args, **kwargs):
     :param table: (str) TabulateFormatter table directive, default is ``extend``
     :param headers_exclude: (str or list) table headers to exclude, default is
         ``["changed", "diff", "failed", "name", "connection_retry", "task_retry"]``
+    :param reverse: (bool) default is False, reverses table order if True
+    :param sortby: (str) column header name to sort table by
     :param last: (int) file group version of files to search in
     :param Fx: (str) Nornir host filters
     :param args: (list) list of ``ToFileProcessor`` filegroup names to search in
@@ -1759,6 +1803,8 @@ def find(*args, **kwargs):
         last=kwargs.pop("last", 1),
         table=kwargs.pop("table", "extend"),
         headers=kwargs.pop("headers", "keys"),
+        reverse=kwargs.pop("reverse", False),
+        sortby=kwargs.pop("sortby", "host"),
         headers_exclude=kwargs.pop(
             "headers_exclude",
             [
@@ -1841,18 +1887,18 @@ def nornir_fun(fun, *args, **kwargs):
     * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
-    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return 
+    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return
       inventory for a subset of hosts
-    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat 
+    * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat
       name to return
     * ``version`` - returns a report of Nornir related packages installed versions
     * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
-    * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx`` 
+    * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx``
       arguments to return only hosts matched by filter
     * ``connections`` - list hosts' active connections, accepts ``Fx`` arguments to filter hosts to list
-    * ``disconnect`` - close host connections, accept ``Fx`` arguments to filter hosts and ``conn_name`` 
+    * ``disconnect`` - close host connections, accept ``Fx`` arguments to filter hosts and ``conn_name``
       of connection to close, by default closes all connections
-      
+
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
@@ -1892,4 +1938,146 @@ def nornir_fun(fun, *args, **kwargs):
     elif fun == "connections":
         return task(plugin="nornir_salt.plugins.tasks.connections", call="ls", **kwargs)
     elif fun == "disconnect":
-        return task(plugin="nornir_salt.plugins.tasks.connections", call="close", **kwargs)
+        return task(
+            plugin="nornir_salt.plugins.tasks.connections", call="close", **kwargs
+        )
+
+
+def gnmi(call, *args, **kwargs):
+    """
+    Function to interact with devices using gNMI protocol utilising one of supported plugins.
+
+    :param call: (str) (str) ``gNMIclient`` connection object method to call or name of one of extra methods
+    :param plugin: (str) Name of gNMI plugin to use - pygnmi (default)
+    :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
+    :param path: (list or str) gNMI path string for ``update``, ``delete``, ``replace`` extra methods calls
+    :param filename: (str) path to file with call method arguments content
+    :param kwargs: (dict) any additional keyword arguments to use with call method
+    :return: method call results
+
+    Available gNMI plugin names:
+
+    * ``pygnmi`` - ``nornir-salt`` built-in plugin that uses `PyGNMI library <https://pypi.org/project/pygnmi/>`_
+      to interact with devices. PyGNMI order of operation for ``set`` is ``delete -> replace -> update``
+
+    gNMI specification defines several methods to work with devices - ``subscribe``, ``get`` and ``set``.
+    ``set`` further support ``delete``, ``update`` and ``replace`` operations.
+
+    .. info:: ``subscribe`` is not supported by ``nr.gnmi`` function.
+
+    Sample usage of ``pygnmi`` plugin::
+
+        salt nrp1 nr.gnmi capabilities FB="*"
+        salt nrp1 nr.gnmi get "openconfig-interfaces:interfaces/interface[name=Loopback100]"
+        salt nrp1 nr.gnmi get path='["openconfig-interfaces:interfaces/interface[name=Loopback100]"]'
+        salt nrp1 nr.gnmi get path="openconfig-interfaces:interfaces, openconfig-network-instance:network-instances"
+        salt nrp1 nr.gnmi set update='[["openconfig-interfaces:interfaces/interface[name=Loopback100]/config", {"description": "Done by gNMI"}]]'
+        salt nrp1 nr.gnmi set replace='[["openconfig-interfaces:interfaces/interface[name=Loopback1234]/config", {"name": "Loopback1234", "description": "New"}]]'
+        salt nrp1 nr.gnmi set delete="openconfig-interfaces:interfaces/interface[name=Loopback1234]"
+
+    **Extra Call Methods**
+
+    * ``dir`` - returns methods supported by ``gNMIclient`` connection object, including
+      extra methods defined by nornir-salt ``pygnmi_call`` task plugin::
+
+        salt nrp1 nr.gnmi dir
+
+    * ``help`` - returns ``method_name`` docstring::
+
+        salt nrp1 nr.gnmi help method_name=set
+
+    * ``replace`` - shortcut method to ``set`` call with ``replace`` argument,
+      first argument must be path string, other keyword arguments are configuration items::
+
+        salt nrp1 nr.gnmi replace "openconfig-interfaces:interfaces/interface[name=Loopback100]/config" name=Loopback100 description=New
+
+    * ``update`` - shortcut method to ``set`` call with ``update`` argument,
+      first argument must be path string, other keyword arguments are configuration items::
+
+        salt nrp1 nr.gnmi update "openconfig-interfaces:interfaces/interface[name=Loopback100]/config" description="RID Loop"
+
+    * ``delete`` - shortcut method to ``set`` call with ``delete`` argument,
+      accepts a list of path items or ``path`` argument referring to list::
+
+        salt nrp1 nr.gnmi delete "openconfig-interfaces:interfaces/interface[name=Loopback100]" "openconfig-interfaces:interfaces/interface[name=Loopback123]"
+        salt nrp1 nr.gnmi delete path='["openconfig-interfaces:interfaces/interface[name=Loopback100]", "openconfig-interfaces:interfaces/interface[name=Loopback123]"]'
+
+    Sample Python API usage from Salt-Master::
+
+        import salt.client
+        client = salt.client.LocalClient()
+
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.gnmi",
+            arg=["get"],
+            kwarg={"path": '["openconfig-interfaces:interfaces"]'},
+        )
+
+    If ``filename`` argument provided it is rendered using ``slsutil.renderer`` function and
+    must produce a dictionary with keys being valid arguments supported by call method.
+    For example, ``pygnmi`` plugin ``set`` call can look like this::
+
+        salt nrp1 nr.gnmi set filename="salt://path/to/set_args.txt"
+
+    Where ``salt://path/to/set_args.txt`` content is::
+
+        replace:
+          - - "openconfig-interfaces:interfaces/interface[name=Loopback35]/config"
+            - {"name": "Loopback35", "description": "RID Loopback"}
+          - - "openconfig-interfaces:interfaces/interface[name=Loopback36]/config"
+            - {"name": "Loopback36", "description": "MGMT Loopback"}
+        update:
+          - - "openconfig-interfaces:interfaces/interface[name=Loopback35]/config"
+            - {"name": "Loopback35", "description": "RID Loopback"}
+          - - "openconfig-interfaces:interfaces/interface[name=Loopback36]/config"
+            - {"name": "Loopback36", "description": "MGMT Loopback"}
+        delete:
+          - "openconfig-interfaces:interfaces/interface[name=Loopback35]"
+          - "openconfig-interfaces:interfaces/interface[name=Loopback36]"
+
+    ``salt://path/to/set_args.txt`` content will render to a dictionary supplied to
+    ``set`` call as a ``**kwargs``
+    """
+    plugin = kwargs.pop("plugin", "pygnmi")
+    kwargs["call"] = call
+    kwargs["render"] = []
+
+    # special case, check if "name" argument provided, need to rename it
+    # to not collide with nr.run method "name" agrument
+    if "name" in kwargs:
+        kwargs["name_arg"] = kwargs.pop("name")
+
+    # extract args
+    if call in ["update", "replace", "delete"] and not args and "path" not in kwargs:
+        return "No path argument provided"
+    elif call in ["update", "replace", "delete", "get"] and args:
+        kwargs["path"] = list(args) if call in ["delete", "get"] else args[0]
+    elif call == "subscribe":
+        return "Unsupported method 'subscribe'"
+
+    # render filename argument
+    if "filename" in kwargs:
+        filename = kwargs.pop("filename")
+        content = __salt__["slsutil.renderer"](filename)
+        if not content:
+            raise CommandExecutionError(
+                "Filename '{}' not on master; path correct?".format(filename)
+            )
+        if not isinstance(content, dict):
+            raise CommandExecutionError(
+                "Filename '{}' must render to dictionary".format(filename)
+            )
+        kwargs.update(content)
+
+    # decide on task plugin to use
+    if plugin.lower() == "pygnmi":
+        task_fun = "nornir_salt.plugins.tasks.pygnmi_call"
+        kwargs["connection_name"] = "pygnmi"
+    else:
+        return "Unsupported plugin name: {}".format(plugin)
+
+    # run task
+    return __proxy__["nornir.execute_job"](
+        task_fun=task_fun, args=[], kwargs=kwargs, cpid=os.getpid()
+    )

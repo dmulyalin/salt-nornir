@@ -16,13 +16,13 @@ RUN python3 -m pip install ttp
 RUN python3 -m pip install xmltodict
 RUN python3 -m pip install tabulate
 RUN python3 -m pip install pygnmi
+RUN python3 -m pip install jmespath
 
-# install SALT nornir libs from local volume
-RUN python3 -m pip install /tmp/salt_nornir/ --ignore-installed PyYAML
-
-# must run nornir_salt installation from local files one more time
-# as salt_nornir pulls older version of nornir_salt from PyPi during installation
+# run nornir_salt installation from local files 
 RUN python3 -m pip install /tmp/salt_nornir/nornir_salt
+
+# install salt_nornir libs from local volume
+RUN python3 -m pip install /tmp/salt_nornir/ --ignore-installed PyYAML
 
 # Install scrapli and dependencies. It needs ntc-template<2.0.0,>=1.1.0,
 # below is to make sure this is the case

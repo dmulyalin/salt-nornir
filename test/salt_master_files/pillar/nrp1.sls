@@ -41,18 +41,29 @@ groups:
             netconf_force_pty: False
       napalm:
         platform: eos
-        optional_args:
-          transport: http
-          port: 80  
+        extras:
+          optional_args:
+            transport: http
+            port: 80  
       ncclient:
         port: 830
         extras:
           allow_agent: False
           hostkey_verify: False
       http:
-        port: 80
-        transport: http
-          
+        port: 6020
+        extras:
+          transport: https
+          verify: False
+          base_url: "restconf/data"
+          headers:
+            Content-Type: "application/yang-data+json"
+            Accept: "application/yang-data+json"
+      pygnmi:
+        port: 6030
+        extras:
+          insecure: True
+                
 nornir:
   actions:
     awr: 

@@ -46,7 +46,11 @@ services:
       - type: bind
         source: ./nornir_salt/nornir_salt/
         target: /usr/local/lib/python3.6/site-packages/nornir_salt/
-
+      # bind local folder to salt-minion in case need to pip install nornir-salt
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+        
   ceos1:
     container_name: ceos1
     hostname: 'ceos1'

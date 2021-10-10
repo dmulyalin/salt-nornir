@@ -843,14 +843,18 @@ def _add_processors(kwargs):
     )  # data processor run_ttp function
     xpath = kwargs.pop("xpath", "")  # xpath DataProcessor
     jmespath = kwargs.pop("jmespath", "")  # jmespath DataProcessor
-    
+
     # add processors if any
     if dp:
         processors.append(DataProcessor(dp))
     if xml_flake:
         processors.append(DataProcessor([{"fun": "xml_flake", "pattern": xml_flake}]))
     if xpath:
-        processors.append(DataProcessor([{"fun": "xpath", "expr": xpath, "recover": True, "rm_ns": True}]))
+        processors.append(
+            DataProcessor(
+                [{"fun": "xpath", "expr": xpath, "recover": True, "rm_ns": True}]
+            )
+        )
     if jmespath:
         processors.append(DataProcessor([{"fun": "jmespath", "expr": jmespath}]))
     if match:
@@ -978,9 +982,7 @@ def run(task, loader, *args, **kwargs):
 
     # run tasks
     result = hosts.run(
-        task,
-        *[i for i in args if not i.startswith("_")],
-        **{k: v for k, v in kwargs.items() if not k.startswith("_")}
+        task, **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
 
     # post clean-up - remove rendered data from hosts inventory
@@ -1189,6 +1191,7 @@ def nr_version():
         "lxml": "",
         "psutil": "",
         "salt": "",
+        "pygnmi": "",
     }
 
     # get version of packages installed
