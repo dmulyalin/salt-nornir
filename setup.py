@@ -7,7 +7,7 @@ __author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
 
 setup(
     name="salt_nornir",
-    version="0.5.1",
+    version="0.6.0",
     author="Denis Mulyalin",
     author_email="d.mulyalin@gmail.com",
     description="SALTSTACK Nornir Modules",
@@ -21,6 +21,7 @@ setup(
     classifiers=[
         "Topic :: Utilities",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],

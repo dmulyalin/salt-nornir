@@ -1763,7 +1763,9 @@ def find(*args, **kwargs):
         salt nrp1 nr.find ip ip="1.1.*"
         salt nrp1 nr.find mac arp mac="1b:cd:34:5f:6c"
         salt nrp1 nr.find ip ip="1.1.*" last=5 FB="*CORE*"
-
+        salt nrp1 nr.find ip mask__ge=23 mask__lt=30 FC="CORE"
+        salt nrp1 nr.find interfaces description__contains="ID #123321"
+        
     Sample Python API usage from Salt-Master::
 
         import salt.client
@@ -1947,7 +1949,7 @@ def gnmi(call, *args, **kwargs):
     """
     Function to interact with devices using gNMI protocol utilising one of supported plugins.
 
-    :param call: (str) (str) ``gNMIclient`` connection object method to call or name of one of extra methods
+    :param call: (str) (str) connection object method to call or name of one of extra methods
     :param plugin: (str) Name of gNMI plugin to use - pygnmi (default)
     :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
     :param path: (list or str) gNMI path string for ``update``, ``delete``, ``replace`` extra methods calls
@@ -1958,12 +1960,12 @@ def gnmi(call, *args, **kwargs):
     Available gNMI plugin names:
 
     * ``pygnmi`` - ``nornir-salt`` built-in plugin that uses `PyGNMI library <https://pypi.org/project/pygnmi/>`_
-      to interact with devices. PyGNMI order of operation for ``set`` is ``delete -> replace -> update``
+      to interact with devices.
 
     gNMI specification defines several methods to work with devices - ``subscribe``, ``get`` and ``set``.
-    ``set`` further support ``delete``, ``update`` and ``replace`` operations.
+    ``set`` further supports ``delete``, ``update`` and ``replace`` operations.
 
-    .. info:: ``subscribe`` is not supported by ``nr.gnmi`` function.
+    .. warning:: ``subscribe`` is not supported by ``nr.gnmi`` function.
 
     Sample usage of ``pygnmi`` plugin::
 
@@ -2011,7 +2013,7 @@ def gnmi(call, *args, **kwargs):
             tgt="nrp1",
             fun="nr.gnmi",
             arg=["get"],
-            kwarg={"path": '["openconfig-interfaces:interfaces"]'},
+            kwarg={"path": ["openconfig-interfaces:interfaces"]},
         )
 
     If ``filename`` argument provided it is rendered using ``slsutil.renderer`` function and
@@ -2037,7 +2039,9 @@ def gnmi(call, *args, **kwargs):
           - "openconfig-interfaces:interfaces/interface[name=Loopback36]"
 
     ``salt://path/to/set_args.txt`` content will render to a dictionary supplied to
-    ``set`` call as a ``**kwargs``
+    ``set`` call as a ``**kwargs``. 
+    
+    ``pygnmi`` plugin order of operation for above case is ``delete -> replace -> update``
     """
     plugin = kwargs.pop("plugin", "pygnmi")
     kwargs["call"] = call
