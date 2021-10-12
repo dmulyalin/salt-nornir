@@ -4,17 +4,17 @@
 
 <img src="images/ProxyMinionPic.png">  
 
-# SALTSTACK Nornir
+# Salt Nornir
 
-Repository to store Nornir based SALTSTACK modules:
+Repository to store Nornir based SaltStack modules:
 
 - salt-nornir proxy minion module 
 - salt-nornir execution module
 - salt-nornir state module
 - salt-nornir runner module
 
-Nornir proxy minion helps to interact with network (and not so) devices at scale, 
-reference [documentation](https://salt-nornir.readthedocs.io/en/latest/index.html) 
+Nornir Proxy Minion helps to manage network devices at scale, reference 
+[documentation](https://salt-nornir.readthedocs.io/en/latest/index.html) 
 for details.
 
 # Contributing
