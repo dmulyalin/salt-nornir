@@ -28,4 +28,4 @@ Python and Plugins
 Issues, bug reports and feature requests are welcomed.
 
 [logo]: docs/source/_images/SaltNornirLogo.png "salt nornir logo"
-[architecture]: docs/source/_images/Nornir_proxy_minion_architecture_v2.svg "salt nornir architecture"
+[architecture]: docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
