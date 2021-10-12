@@ -1,3 +1,9 @@
+[![Downloads](https://pepy.tech/badge/salt-nornir)](https://pepy.tech/project/salt-nornir)
+[![PyPI versions](https://img.shields.io/pypi/pyversions/salt-nornir.svg)](https://pypi.python.org/pypi/salt-nornir/)
+[![Documentation status](https://readthedocs.org/projects/salt-nornir/badge/?version=latest)](http://salt-nornir.readthedocs.io/?badge=latest)
+
+<img src="images/ProxyMinionPic.png">  
+
 # SALTSTACK Nornir
 
 Repository to store Nornir based SALTSTACK modules:
@@ -14,5 +20,3 @@ for details.
 # Contributing
 
 Issues, bug reports and feature requests are welcomed.
-
-[buy](https://paypal.me/dmulyalin) Author a coffee
