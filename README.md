@@ -2,7 +2,7 @@
 [![PyPI versions](https://img.shields.io/pypi/pyversions/salt-nornir.svg)](https://pypi.python.org/pypi/salt-nornir/)
 [![Documentation status](https://readthedocs.org/projects/salt-nornir/badge/?version=latest)](http://salt-nornir.readthedocs.io/?badge=latest)
 
-<img src="images/ProxyMinionPic.png">  
+![logo][logo]
 
 # Salt Nornir
 
@@ -20,3 +20,5 @@ for details.
 # Contributing
 
 Issues, bug reports and feature requests are welcomed.
+
+[logo]: docs/source/_images/SaltNornirLogo.png "salt nornir logo"
