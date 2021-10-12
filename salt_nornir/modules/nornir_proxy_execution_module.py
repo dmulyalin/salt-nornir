@@ -300,7 +300,7 @@ Supported functions: ``nr.cli``
 CLI Arguments:
 
 * ``iplkp`` - value can be ``dns`` to indicate that need to use DNS or reference to 
-a CSV file on Salt Master in a format ``salt://path/to/file.txt``
+  a CSV file on Salt Master in a format ``salt://path/to/file.txt``
 
 First column in CSV file must be IPv4 or IPv6 address, second column should 
 contain replacement value.
@@ -312,7 +312,8 @@ result value.
 Sample usage::
 
     salt nrp1 nr.cli "show ip int brief" iplkp="salt://lookup/ip.txt"
-    
+    salt nrp1 nr.cli "show ip int brief" iplkp="dns"
+
 Where ``salt://lookup/ip.txt`` content is::
 
     ip,hostname
