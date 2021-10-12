@@ -843,10 +843,27 @@ def _add_processors(kwargs):
     )  # data processor run_ttp function
     xpath = kwargs.pop("xpath", "")  # xpath DataProcessor
     jmespath = kwargs.pop("jmespath", "")  # jmespath DataProcessor
-
+    iplkp = kwargs.pop("iplkp", "") # iplkp - ip lookup - DataProcessor
+    
     # add processors if any
     if dp:
         processors.append(DataProcessor(dp))
+    if iplkp:
+        processors.append(
+            DataProcessor(
+                [
+                    {
+                        "fun": "iplkp",
+                        "use_dns": True if iplkp == "dns" else False,
+                        "use_csv": __salt__["cp.get_file_str"](
+                            iplkp, saltenv=kwargs.get("saltenv", "base")
+                        )
+                        if iplkp.startswith("salt://")
+                        else False
+                    }
+                ]
+            )
+        )        
     if xml_flake:
         processors.append(DataProcessor([{"fun": "xml_flake", "pattern": xml_flake}]))
     if xpath:

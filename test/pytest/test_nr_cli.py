@@ -626,3 +626,19 @@ def test_nr_cli_scrapli_empty_commands():
     assert "show version" in ret["nrp1"]["ceos2"]
     
 # test_nr_cli_scrapli_empty_commands()
+
+
+def test_cli_with_iplkp():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show ip int brief"],
+        kwarg={"iplkp": "salt://lookup/ip.txt"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "ceos1:Eth1" in ret["nrp1"]["ceos1"]["show ip int brief"]
+    assert "ceos2:Eth1" in ret["nrp1"]["ceos2"]["show ip int brief"]
+    
+# test_cli_with_iplkp()

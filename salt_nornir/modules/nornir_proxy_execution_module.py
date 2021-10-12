@@ -125,7 +125,9 @@ All supported processors executed in this order::
    * - `dump`_ 
      - Saves complete task results to local file system using Nornir-Salt DumpResults function       
    * - `event_failed`_ 
-     - Emit events on Salt Events Bus for failed tasks  
+     - Emit events on Salt Events Bus for failed tasks 
+   * - `iplkp`_
+     - Performs in CSV file or DNS lookup of IPv4 and IPv6 addresses to replace them in output
    * - `jmespath`_
      - uses JMESPath library to run query against structured results data
    * - `match`_ 
@@ -284,6 +286,53 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.test suite="salt://tests/suite.txt" event_failed=True
+
+iplkp
++++++
+
+Uses Nornir-Salt ``DataProcessor`` 
+`iplkp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#iplkp>`_ 
+function to lookup IPv4 and IPv6 addresses using DNS or CSV file and replace
+them in device output with lookup results.
+
+Supported functions: ``nr.cli``
+
+CLI Arguments:
+
+* ``iplkp`` - value can be ``dns`` to indicate that need to use DNS or reference to 
+a CSV file on Salt Master in a format ``salt://path/to/file.txt``
+
+First column in CSV file must be IPv4 or IPv6 address, second column should 
+contain replacement value.
+
+``iplkp`` uses this formatter to replace IP addresses in results: ``{ip}({lookup})`` -
+where ``ip`` is the original IP address string and ``lookup`` is the lookup
+result value.
+
+Sample usage::
+
+    salt nrp1 nr.cli "show ip int brief" iplkp="salt://lookup/ip.txt"
+    
+Where ``salt://lookup/ip.txt`` content is::
+
+    ip,hostname
+    10.0.1.4,ceos1:Eth1
+    10.0.1.5,ceos2:Eth1
+    
+And this would be the results produced::
+
+    nrp1:
+        ----------
+        ceos1:
+            ----------
+            show ip int brief:
+                                                                                          Address 
+                Interface       IP Address        Status       Protocol            MTU    Owner   
+                --------------- ----------------- ------------ -------------- ----------- ------- 
+                Ethernet1       10.0.1.4(ceos1:Eth1)/24       up           up                 1500            
+                Loopback1       1.1.1.1/24        up           up                65535                      
+    
+``iplkp`` replaced ``10.0.1.4`` with lookup results ``10.0.1.4(ceos1:Eth1)`` in device output.
 
 jmespath
 ++++++++
@@ -1819,7 +1868,7 @@ def find(*args, **kwargs):
                 "exception",
             ],
         ),
-        dp=[{"fun": "find", **kwargs}],
+        dp=[{"fun": "find", "checks_required": False, **kwargs}],
         **Fx,
     )
 
