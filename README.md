@@ -17,8 +17,15 @@ Nornir Proxy Minion helps to manage network devices at scale, reference
 [documentation](https://salt-nornir.readthedocs.io/en/latest/index.html) 
 for details.
 
+# Architecture
+
+Python and Plugins
+
+![architecture][architecture]
+
 # Contributing
 
 Issues, bug reports and feature requests are welcomed.
 
 [logo]: docs/source/_images/SaltNornirLogo.png "salt nornir logo"
+[architecture]: docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
