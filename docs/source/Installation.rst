@@ -43,12 +43,26 @@ must be of the same major and minor versions as ``salt-nornir`` package.
 
 Compatible versions
 
-+---------------+-------+-------+-------+
-| salt-nornir   | 0.5.* | 0.4.* | 0.3.* |
-+---------------+-------+-------+-------+
-| nornir-salt   | 0.5.* | 0.4.* | 0.3.* |
-+---------------+-------+-------+-------+
++---------------+-------+-------+-------+-------+
+| salt-nornir   | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
++---------------+-------+-------+-------+-------+
+| nornir-salt   | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
++---------------+-------+-------+-------+-------+
 
+Upgrade Procedure
+=================
+
+Install updated packages::
+
+    python3 -m pip install nornir-salt --upgrade
+    python3 -m pip install salt-nornir --upgrade
+    
+Restart your proxy minions to pick up updated version.
+
+Optionally run to verify software versions after Proxy Minions Started::
+
+    salt nrp1 nr.nornir version
+    
 Common installation issues
 ==========================
 

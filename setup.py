@@ -7,7 +7,7 @@ __author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
 
 setup(
     name="salt_nornir",
-    version="0.6.0",
+    version="0.6.1",
     author="Denis Mulyalin",
     author_email="d.mulyalin@gmail.com",
     description="SALTSTACK Nornir Modules",
@@ -23,7 +23,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Operating System :: POSIX :: Linux",
     ],
     python_requires=">=3.6",
     install_requires=[
@@ -32,7 +32,7 @@ setup(
         "napalm==3.*",
         "nornir_netmiko==0.*",
         "nornir_napalm==0.*",
-        "nornir_salt==0.5.*",
+        "nornir_salt==0.6.*",
         "psutil==5.8.*",
     ],
     entry_points="""
