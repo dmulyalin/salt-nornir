@@ -118,10 +118,16 @@ All supported processors executed in this order::
      - Description
    * - `Fx`_ 
      - Filters to target subset of devices using FFun Nornir-Salt function
+   * - `context`
+     - Overrides context variables passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
+   * - `defaults`
+     - Default template context passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
    * - `diff`_ 
      - Calls Nornir-Salt DiffProcessor to produce results difference
    * - `dp`_ 
-     - Allows to call any function supported by Nornir-Salt DataProcessor     
+     - Allows to call any function supported by Nornir-Salt DataProcessor 
+   * - `download`_
+     - Renders arguments content using Salt cp module
    * - `dump`_ 
      - Saves complete task results to local file system using Nornir-Salt DumpResults function       
    * - `event_failed`_ 
@@ -136,8 +142,12 @@ All supported processors executed in this order::
      - Renders arguments content using Salt renderer system
    * - `run_ttp`_ 
      - Calls Nornir-Salt DataProcessor run_ttp function to parse results using TTP
+   * - `saltenv`
+     - Salt Environment name to use with `render`_ and `download`_ to download and render files, default is ``base``
    * - `table`_ 
-     - Formats results to text table using Nornir-Salt TabulateFormatter     
+     - Formats results to text table using Nornir-Salt TabulateFormatter 
+   * - `template_engine`
+     - Template Engine name to use with `render`_ to render files, default is ``jinja``
    * - `tests`_ 
      - Run tests for task results using Nornir-Salt TestsProcessor
    * - `tf`_ 
@@ -208,6 +218,31 @@ Sample usage::
     
 Last example will call ``xml_flatten`` function first following with ``key_filter`` with
 ``{"pattern": "*bgp*, *BGP*"}`` dictionary arguments.
+
+download
+++++++++
+
+SaltStack has `cp module <https://docs.saltproject.io/en/latest/ref/renderers/index.html#renderers>`_,
+allowing to download files from Salt Master, ``donwload`` keyword can be used to indicate
+arguments that should download content for.
+    
+Keys listed in ``download`` argument ignored by `render`_ argument even if same key contained
+with ``render`` argument. Arguemnts names listed in ``donwload`` are not rendered, only loaded 
+from Salt Master.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+
+CLI Arguments:
+
+* ``download`` - list of arguments to download content for, default is ``["run_ttp", "iplkp"]``
+
+For example, to render content for filename argument::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" download='["filename"]'
+    
+Primary use cases for this keyword is revolving around enabling or disabling dowloading
+and rendering for certain arguments. Execution Module Functions adjust ``download`` keyword 
+list content by themselves and usually do not require manual modifications.
 
 dump
 ++++
@@ -382,7 +417,7 @@ Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.d
 
 CLI Arguments:
 
-* ``render`` - list of argument to render content for
+* ``render`` - list of argument to render content for, default is ``["config", "data", "filter", "filter_", "filters", "filename"]``
 
 For example, to render content for filename argument::
 

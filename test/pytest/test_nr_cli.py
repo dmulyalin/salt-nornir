@@ -628,7 +628,7 @@ def test_nr_cli_scrapli_empty_commands():
 # test_nr_cli_scrapli_empty_commands()
 
 
-def test_cli_with_iplkp():
+def test_nr_cli_with_iplkp():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cli",

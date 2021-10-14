@@ -744,7 +744,7 @@ def _fire_events(result):
             )
 
 
-def _load_and_render_files(hosts, render, kwargs):
+def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     """
     Helper function to iterate over hosts and render content for each of them.
 
@@ -755,13 +755,15 @@ def _load_and_render_files(hosts, render, kwargs):
     :param render: (list or str) list of keys or comma separated string
         of key names from kwargs to run rendering for
     :param kwargs: (dict) dictionary with data to render
+    :param ignore_keys: (list or str) key names to ignore rendering for
     """
     context = kwargs.pop("context", {})
     saltenv = kwargs.pop("saltenv", "base")
     defaults = kwargs.pop("defaults", {})
     template_engine = kwargs.pop("template_engine", "jinja")
     render = render.split(",") if isinstance(render, str) else render
-
+    ignore_keys = ignore_keys.split(",") if isinstance(ignore_keys, str) else ignore_keys
+    
     def __render(data):
         # do initial data rendering
         ret = __salt__["file.apply_template_on_contents"](
@@ -792,6 +794,8 @@ def _load_and_render_files(hosts, render, kwargs):
         context.update({"host": host_object})
         host_object.data["__task__"] = {}
         for key in render:
+            if key in ignore_keys:
+                continue
             if isinstance(kwargs.get(key), str):
                 rendered = __render(kwargs[key])
             elif isinstance(
@@ -814,6 +818,39 @@ def _load_and_render_files(hosts, render, kwargs):
     # clean up kwargs from render keys to force tasks to use hosts's __task__ attribute
     for key in render:
         _ = kwargs.pop(key) if key in kwargs else None
+
+
+def _download_files(download, kwargs):
+    """
+    Helper function to download content from Salt Master.
+
+    :param download: (list or str) list of keys or comma separated string
+        of key names from kwargs to download
+    :param kwargs: (dict) dictionary with data to download    
+    """
+    saltenv = kwargs.get("saltenv", "base")
+    download = download.split(",") if isinstance(download, str) else download
+    
+    # iterate over download keys and download data from master
+    for key in download:
+        if key not in kwargs:
+            continue
+        if not kwargs[key].startswith("salt://"):
+            continue
+            
+        # download data
+        content = __salt__["cp.get_file_str"](kwargs[key], saltenv=saltenv)
+        if not content:
+            raise CommandExecutionError(
+                "Failed to get '{}' file content".format(key)
+            )
+        kwargs[key] = content
+        
+        log.debug(
+            "Nornir-proxy MAIN PID {} worker thread, donwloaded '{}' data from Master".format(
+                os.getpid(), key
+            )
+        )
 
 
 def _add_processors(kwargs):
@@ -855,11 +892,7 @@ def _add_processors(kwargs):
                     {
                         "fun": "iplkp",
                         "use_dns": True if iplkp == "dns" else False,
-                        "use_csv": __salt__["cp.get_file_str"](
-                            iplkp, saltenv=kwargs.get("saltenv", "base")
-                        )
-                        if iplkp.startswith("salt://")
-                        else False
+                        "use_csv": iplkp if iplkp else False,
                     }
                 ]
             )
@@ -884,11 +917,7 @@ def _add_processors(kwargs):
                 [
                     {
                         "fun": "run_ttp",
-                        "template": __salt__["cp.get_file_str"](
-                            run_ttp, saltenv=kwargs.get("saltenv", "base")
-                        )
-                        if run_ttp.startswith("salt://")
-                        else run_ttp,
+                        "template": run_ttp,
                         "res_kwargs": {"structure": ttp_structure},
                     }
                 ]
@@ -965,6 +994,7 @@ def run(task, loader, *args, **kwargs):
     sortby = kwargs.pop("sortby", "host")  # tabulate
     reverse = kwargs.pop("reverse", False)  # tabulate
     dump = kwargs.pop("dump", None)  # dump results to file
+    download = kwargs.pop("download", ["run_ttp", "iplkp"]) # download data
     render = kwargs.pop(
         "render", ["config", "data", "filter", "filter_", "filters", "filename"]
     )  # render data
@@ -976,6 +1006,13 @@ def run(task, loader, *args, **kwargs):
     # reset failed hosts if any
     nornir_data["nr"].data.reset_failed_hosts()
 
+    # download files
+    if download and HAS_LOADER_CONTEXT:
+        with loader_context(loader):
+            _download_files(download, kwargs)
+    elif download:
+        _download_files(download, kwargs)
+        
     # add processors
     nr_with_processors = _add_processors(kwargs)
 
@@ -990,12 +1027,12 @@ def run(task, loader, *args, **kwargs):
             "Nornir-proxy 'nornir_filter_required' setting is True but no filter provided"
         )
 
-    # load and render files
+    # download and render files
     if render and HAS_LOADER_CONTEXT:
         with loader_context(loader):
-            _load_and_render_files(hosts, render, kwargs)
+            _download_and_render_files(hosts, render, kwargs, ignore_keys=download)
     elif render:
-        _load_and_render_files(hosts, render, kwargs)
+        _download_and_render_files(hosts, render, kwargs, ignore_keys=download)
 
     # run tasks
     result = hosts.run(

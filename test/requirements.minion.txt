@@ -16,7 +16,6 @@ psutil==5.8.0
 tabulate==0.8.9
 ttp==0.8.0
 xmltodict==0.12.0
-pygnmi==0.6.1
+pygnmi==0.5.3
 jmespath==0.10.0
-nornir-salt==0.5.1
-salt-nornir==0.5.1
+ipdb
