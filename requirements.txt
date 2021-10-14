@@ -3,5 +3,5 @@ nornir==3.*
 napalm==3.*
 nornir_netmiko==0.*
 nornir_napalm==0.*
-nornir_salt==0.5.*
+nornir_salt==0.6.*
 psutil==5.8.*
