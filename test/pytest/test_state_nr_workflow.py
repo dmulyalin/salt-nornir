@@ -526,6 +526,115 @@ def test_state_nr_workflow_with_nr_do_multi_step():
         
 # test_state_nr_workflow_with_nr_do_multi_step()
 
+
+def test_state_nr_workflow_hcache_usage():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_hcache_usage"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)    
+    for v in ret["nrp1"].values():
+        assert v["changes"]["summary"]["ceos1"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][1]["apply_mtu_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][1]["apply_mtu_config"] == "PASS"
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos1"]["netmiko_send_config"]["result"]
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos2"]["netmiko_send_config"]["result"]
+        
+    # verify inventory does not have ceched data
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory_data)
+    assert "get_interfaces" not in inventory_data["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "get_interfaces" not in inventory_data["nrp1"]["hosts"]["ceos2"]["data"]
+    assert "apply_mtu_config" not in inventory_data["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "apply_mtu_config" not in inventory_data["nrp1"]["hosts"]["ceos2"]["data"]
+    
+# test_state_nr_workflow_hcache_usage()
+
+
+def test_state_nr_workflow_hcache_key_usage():
+    # clean up hcache
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # run workflow
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_hcache_key_usage"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)    
+    for v in ret["nrp1"].values():
+        assert v["changes"]["summary"]["ceos1"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][1]["apply_mtu_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][1]["apply_mtu_config"] == "PASS"
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos1"]["netmiko_send_config"]["result"]
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos2"]["netmiko_send_config"]["result"]
+        
+    # verify inventory contains ceched data after workflow completed
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory_data)
+    assert "cache1234" in inventory_data["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "cache1234" in inventory_data["nrp1"]["hosts"]["ceos2"]["data"]
+    assert "apply_mtu_config" not in inventory_data["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "apply_mtu_config" not in inventory_data["nrp1"]["hosts"]["ceos2"]["data"]
+    
+# test_state_nr_workflow_hcache_key_usage()
+
+
+def test_state_nr_workflow_dcache_usage():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_dcache_usage"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)    
+    for v in ret["nrp1"].values():
+        assert v["changes"]["summary"]["ceos1"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["get_interfaces"] == "PASS"
+        assert v["changes"]["summary"]["ceos1"][1]["apply_mtu_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][1]["apply_mtu_config"] == "PASS"
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos1"]["netmiko_send_config"]["result"]
+        assert "mtu 9200" in v["changes"]["details"][1]["apply_mtu_config"]["ceos2"]["netmiko_send_config"]["result"]
+        
+    # verify inventory does not have ceched data
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory_data)
+    assert "get_interfaces" not in inventory_data["nrp1"]["defaults"]["data"]
+    assert "apply_mtu_config" not in inventory_data["nrp1"]["defaults"]["data"]
+    
+# test_state_nr_workflow_dcache_usage()
+
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
 #     pass

@@ -159,7 +159,7 @@ Nornir Proxy Module functions
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.refresh_nornir
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module._refresh_nornir
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.kill_nornir
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_version
@@ -290,11 +290,11 @@ def __virtual__():
 
 
 # -----------------------------------------------------------------------------
-# proxy functions
+# salt proxy functions
 # -----------------------------------------------------------------------------
 
 
-def init(opts):
+def init(opts, loader=None):
     """
     Initiate nornir by calling InitNornir()
     """
@@ -363,11 +363,27 @@ def init(opts):
     # Initiate multiprocessing related queus, locks and threads
     nornir_data["jobs_queue"] = multiprocessing.Queue()
     nornir_data["res_queue"] = multiprocessing.Queue()
-    nornir_data["worker_thread"] = threading.Thread(
-        target=_worker,
-        name="{}_worker".format(opts["id"]),
-        args=(__salt__.loader() if HAS_LOADER_CONTEXT else None,),
-    )
+    # if loader not None, meaning init() called by _refresh_nornir function
+    if loader:
+        nornir_data["worker_thread"] = threading.Thread(
+            target=_worker,
+            name="{}_worker".format(opts["id"]),
+            args=(loader,),
+        )
+    # salt >3003 requires loader context to call __salt__ within threads
+    elif HAS_LOADER_CONTEXT:
+        nornir_data["worker_thread"] = threading.Thread(
+            target=_worker,
+            name="{}_worker".format(opts["id"]),
+            args=(__salt__.loader(),),
+        )
+    # salt <3003 does not use loader context
+    else:
+        nornir_data["worker_thread"] = threading.Thread(
+            target=_worker,
+            name="{}_worker".format(opts["id"]),
+            args=(None,),
+        )
     nornir_data["worker_thread"].start()
     nornir_data["watchdog_thread"] = threading.Thread(
         target=_watchdog, name="{}_watchdog".format(opts["id"])
@@ -400,6 +416,8 @@ def shutdown():
     3. Close jobs and results queues
     4. Kill all child processes
     5. Delete Nornir object
+    
+    Proxy Minion process keeps running afterwards, but cannot do anything.
     """
     log.info("Nornir-proxy MAIN PID {}, shutting down Nornir".format(os.getpid()))
     try:
@@ -431,9 +449,11 @@ def shutdown():
 
 def grains():
     """
-    Does nothing, returns empty dictionary
+    Populate grains
     """
-    return {}
+    return {
+        "hosts": hosts_list(FB="*")
+    }
 
 
 def grains_refresh():
@@ -443,50 +463,31 @@ def grains_refresh():
     return grains()
 
 
-def refresh_nornir(*args, **kwargs):
-    """
-    Function to re-initialise Nornir proxy with latest pillar data.
-
-    This function calls ``shutdown`` function, gets latest pillar
-    from master and re-instantiates Nornir object.
-    """
-    log.info("Nornir-proxy MAIN PID {}, refreshing!".format(os.getpid()))
-    time.sleep(10)
-    if shutdown():
-        # get latest pillar data
-        __opts__["pillar"] = __salt__["pillar.items"]()
-        # re-init proxy module
-        init(__opts__)
-        log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
-        return True
-    return False
-
-
-def kill_nornir(*args, **kwargs):
-    """
-    This function kills Nornir process and its child process as fast as possible.
-
-    .. warning:: this function kills main Nornir peocess and does not recover it
-    """
-    log.warning(
-        "Killing Nornir-proxy MAIN PID {}".format(
-            nornir_data["stats"]["main_process_pid"]
-        )
-    )
-    # kill child processes
-    for p in multiprocessing.active_children():
-        if p.pid == os.getpid():
-            continue
-        os.kill(p.pid, signal.SIGKILL)
-    # kill main process
-    os.kill(nornir_data["stats"]["main_process_pid"], signal.SIGKILL)
-    # kill itself if still can
-    os.kill(os.getpid(), signal.SIGKILL)
-
-
 # -----------------------------------------------------------------------------
 # proxy module private functions
 # -----------------------------------------------------------------------------
+
+def _use_loader_context(func):
+    """
+    Decorator utility function to check if need to use loader context and wrap 
+    function into it if so. Need it cause after salt >3003 calling __salt__
+    from within the threads requires to use loader context.
+    
+    Any function that called by worker thread that uses ``__salt__`` dunder must 
+    be wrapped by this decorator.
+    
+    :param loader: (obj) ``__salt__.loader`` object instance
+    """
+    def wrapper(*args, **kwargs):
+        loader = kwargs.pop("loader", None)
+        
+        if HAS_LOADER_CONTEXT and loader is not None:
+            with loader_context(loader):
+                return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)       
+        
+    return wrapper
 
 
 def _load_custom_task_fun_from_text(function_text, function_name):
@@ -517,8 +518,8 @@ def _load_custom_task_fun_from_text(function_text, function_name):
 
     return data[function_name]
 
-
-def _get_or_import_task_fun(plugin, loader=None):
+@_use_loader_context
+def _get_or_import_task_fun(plugin):
     """
     Tries to get task function from globals() dictionary,
     if its not there tries to import task and inject it
@@ -527,14 +528,10 @@ def _get_or_import_task_fun(plugin, loader=None):
     task_fun = plugin.split(".")[-1]
     if task_fun in globals():
         task_function = globals()[task_fun]
-    # check if plugin referring to file on master, load and compile it if so
+    # check if plugin referring to file on master, download and compile it if so
     elif plugin.startswith("salt://"):
         function_text = None
-        if HAS_LOADER_CONTEXT and loader is not None:
-            with loader_context(loader):
-                function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
-        else:
-            function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
+        function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
         if not function_text:
             raise CommandExecutionError(
                 "Nornir-proxy PID {}, failed download task function file: {}".format(
@@ -547,6 +544,7 @@ def _get_or_import_task_fun(plugin, loader=None):
         # from nornir.plugins.tasks import task_fun as task_function
         module = __import__(plugin, fromlist=[""])
         task_function = getattr(module, task_fun)
+        # save loaded task function to globals
         globals()[task_fun] = task_function
     return task_function
 
@@ -681,13 +679,31 @@ def _worker(loader=None):
             job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
             # run job
             nornir_data["stats"]["jobs_started"] += 1
-            # check if its a call for special task
+            # check if its a call for a special task
             if job["task_fun"] == "test":
                 nornir_data["stats"]["jobs_completed"] += 1
                 nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
                 continue
+            if job["task_fun"] == "clear_dcache":
+                output = _clear_dcache(**job["kwargs"])
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put({"output": output, "pid": job["pid"]})
+                continue
+            if job["task_fun"] == "refresh":
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
+                # loader used by decorator, loader_ used by _refresh_nornir itself
+                _refresh_nornir(loader=loader, loader_=loader)
+                # stop this worker thread as another one will be started
+                break       
+            if job["task_fun"] == "shutdown":
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put({"output": True, "pid": job["pid"]})
+                # stop this worker thread as another one will be started
+                shutdown()
+                break  
             # execute nornir task
-            task_fun = _get_or_import_task_fun(job["task_fun"], loader)
+            task_fun = _get_or_import_task_fun(job["task_fun"], loader=loader)
             log.info(
                 "Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"])
             )
@@ -724,6 +740,7 @@ def _worker(loader=None):
                 )
 
 
+@_use_loader_context
 def _fire_events(result):
     """
     Helper function to iterate over results and fire event for
@@ -744,6 +761,7 @@ def _fire_events(result):
             )
 
 
+@_use_loader_context
 def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     """
     Helper function to iterate over hosts and render content for each of them.
@@ -820,9 +838,10 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
         _ = kwargs.pop(key) if key in kwargs else None
 
 
+@_use_loader_context
 def _download_files(download, kwargs):
     """
-    Helper function to download content from Salt Master.
+    Helper function to download files content from Salt Master.
 
     :param download: (list or str) list of keys or comma separated string
         of key names from kwargs to download
@@ -875,9 +894,7 @@ def _add_processors(kwargs):
     match = kwargs.pop("match", "")  # data processor match function
     before = kwargs.pop("before", 0)  # data processor match function
     run_ttp = kwargs.pop("run_ttp", None)  # data processor run_ttp function
-    ttp_structure = kwargs.pop(
-        "ttp_structure", "flat_list"
-    )  # data processor run_ttp function
+    ttp_structure = kwargs.pop("ttp_structure", "flat_list") # data processor run_ttp function
     xpath = kwargs.pop("xpath", "")  # xpath DataProcessor
     jmespath = kwargs.pop("jmespath", "")  # jmespath DataProcessor
     iplkp = kwargs.pop("iplkp", "") # iplkp - ip lookup - DataProcessor
@@ -950,6 +967,130 @@ def _add_processors(kwargs):
     return nornir_data["nr"].with_processors(processors)
 
 
+def _cache_task_results_to_host_data(hosts, results, cache_key):
+    """
+    Function to save task results to host data under cache key.
+    
+    :param hosts: (obj) Nornir object
+    :param results: (dict, str, list) Results to save
+    :param cache_key: (str or bool) key to save results under, if True
+        ``cache_key`` set equal to ``hcache``
+    """          
+    cache_key = cache_key if isinstance(cache_key, str) else "hcache"
+    log.debug("salt-nornir:hcache saving results in hosts data under '{}' key".format(cache_key))
+    
+    # iterate over hosts and save results to data cache
+    for host_name, host_object in hosts.inventory.hosts.items():
+        # add metadata on cache keys so that can clean them up
+        host_object.data.setdefault("_hcache_keys_", [])
+        if cache_key not in host_object.data["_hcache_keys_"]:
+            host_object.data["_hcache_keys_"].append(cache_key)        
+        # cache results
+        host_object.data.setdefault(cache_key, {})     
+        # dictionary results should be keyed by host name
+        if isinstance(results, dict):
+            host_object.data[cache_key].update(results.get(host_name, {}))
+        # save string results as is
+        elif isinstance(results, str):
+            host_object.data[cache_key] = results     
+        # convert list results back to dictionary keyd by task name
+        elif isinstance(results, list):
+            host_object.data[cache_key].update(
+                {
+                    i["name"]: i["result"] for i in results
+                    if i["host"] == host_name             
+                }
+            ) 
+        else:
+            log.error("salt-nornir:hcache unsupported results type '{}'".format(type(results)))
+            
+    log.debug("salt-nornir:hcache saved results in hosts data under '{}' key".format(cache_key))
+    
+
+def _cache_all_task_results_to_defaults_data(results, cache_key):
+    """
+    Function to save full task results to default data under cache key.
+    
+    :param results: (any) Results to save
+    :param cache_key: (str or bool) key to save results under, if True
+        ``cache_key`` set equal to ``dcache``
+    """          
+    cache_key = cache_key if isinstance(cache_key, str) else "dcache"
+    log.debug("salt-nornir:dcache saving results in defaults data under '{}' key".format(cache_key))
+    
+    # add metadata about cache keys so that can clean them up later on
+    nornir_data["nr"].inventory.defaults.data.setdefault("_dcache_keys_", [])
+    if cache_key not in nornir_data["nr"].inventory.defaults.data["_dcache_keys_"]:
+        nornir_data["nr"].inventory.defaults.data["_dcache_keys_"].append(cache_key) 
+        
+    # cache results
+    nornir_data["nr"].inventory.defaults.data[cache_key] = results   
+    log.debug("salt-nornir:dcache saved results in defaults data under '{}' key".format(cache_key))
+    
+
+def _clear_dcache(**kwargs):
+    """
+    Function to clear task results cache from defaults data.
+    
+    :param cache_keys: (str) list of key names to remove
+    """
+    result = {}
+    
+    # get keys to clear
+    cache_keys = kwargs.get("cache_keys", None)
+    if cache_keys is None:
+        # need to itearete over a copy of the keys - list() makes a copy
+        cache_keys = list(nornir_data["nr"].inventory.defaults.data.get("_dcache_keys_", []))
+
+    # iterate over given cache keys and clean them up from data
+    for key in cache_keys:
+        if (
+            key in nornir_data["nr"].inventory.defaults.data and 
+            key in nornir_data["nr"].inventory.defaults.data.get("_dcache_keys_", [])
+        ):
+            nornir_data["nr"].inventory.defaults.data.pop(key)
+            nornir_data["nr"].inventory.defaults.data["_dcache_keys_"].remove(key)
+            result[key] = True
+        else:
+            result[key] = False
+    
+    return result
+
+
+@_use_loader_context
+def _refresh_nornir(loader_):
+    """
+    Function to re-initialise Nornir proxy with latest pillar data.
+
+    This function calls ``shutdown`` function, gets latest pillar
+    from master and call ``init`` function to reinstantiate Nornir
+    object, worker&watchod threads and queus.
+    
+    It takes about a minute to finish refresh process.
+    
+    :param loader_: (obj) ``__salt__.loader`` object instance for ``init``
+    """
+    log.info("Nornir-proxy refreshing!")
+    if shutdown():
+        # get latest pillar data
+        __opts__["pillar"] = __salt__["pillar.items"]()           
+        # re-init proxy module
+        init(__opts__, loader_)
+        log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
+        return True
+    return False
+
+
+def _rm_tasks_data_from_hosts(hosts):
+    """
+    Helper function to remove __task__ data from hosts inventory produced by rendering.
+    
+    :param hosts: (obj) Nornir object
+    """
+    for host_name, host_object in hosts.inventory.hosts.items():
+        _ = host_object.data.pop("__task__", None)
+        
+        
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -981,9 +1122,9 @@ def run(task, loader, *args, **kwargs):
     """
     Function for worker Thread to run Nornir tasks.
 
-    :param task: callable task function
-    :param Fx: filters to filter hosts
-    :param kwargs: arguments to pass to ``nornir_object.run`` method
+    :param task: (obj) callable task function
+    :param loader: (obj) ``__salt__.loader`` object instance
+    :param kwargs: (dict) passed to ``task.run`` after extracting CLI arguments
     """
     # extract attributes
     add_details = kwargs.pop("add_details", False)  # ResultSerializer
@@ -999,7 +1140,9 @@ def run(task, loader, *args, **kwargs):
         "render", ["config", "data", "filter", "filter_", "filters", "filename"]
     )  # render data
     event_failed = kwargs.pop("event_failed", False)  # events
-
+    hcache = kwargs.pop("hcache", False) # cache task results
+    dcache = kwargs.pop("dcache", False) # cache task results
+    
     # set dry_run argument
     nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
 
@@ -1007,11 +1150,8 @@ def run(task, loader, *args, **kwargs):
     nornir_data["nr"].data.reset_failed_hosts()
 
     # download files
-    if download and HAS_LOADER_CONTEXT:
-        with loader_context(loader):
-            _download_files(download, kwargs)
-    elif download:
-        _download_files(download, kwargs)
+    if download:
+        _download_files(download, kwargs, loader=loader)
         
     # add processors
     nr_with_processors = _add_processors(kwargs)
@@ -1028,28 +1168,21 @@ def run(task, loader, *args, **kwargs):
         )
 
     # download and render files
-    if render and HAS_LOADER_CONTEXT:
-        with loader_context(loader):
-            _download_and_render_files(hosts, render, kwargs, ignore_keys=download)
-    elif render:
-        _download_and_render_files(hosts, render, kwargs, ignore_keys=download)
+    if render:
+        _download_and_render_files(hosts, render, kwargs, ignore_keys=download, loader=loader)
 
     # run tasks
     result = hosts.run(
         task, **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
 
-    # post clean-up - remove rendered data from hosts inventory
+    # post clean-up - remove tasks rendered data from hosts inventory
     if render:
-        for host_name, host_object in hosts.inventory.hosts.items():
-            _ = host_object.data.pop("__task__", None)
+        _rm_tasks_data_from_hosts(hosts)
 
     # fire events for failed tasks if requested to do so
-    if event_failed and HAS_LOADER_CONTEXT:
-        with loader_context(loader):
-            _fire_events(result)
-    elif event_failed:
-        _fire_events(result)
+    if event_failed:
+        _fire_events(result, loader=loader)
 
     # form return results
     if table:
@@ -1064,6 +1197,12 @@ def run(task, loader, *args, **kwargs):
     else:
         ret = ResultSerializer(result, to_dict=to_dict, add_details=add_details)
 
+    # check if need to cache task results to inventory data
+    if hcache:
+        _cache_task_results_to_host_data(hosts, ret, hcache)
+    if dcache:
+        _cache_all_task_results_to_defaults_data(ret, dcache)
+        
     # save all results to file
     if dump:
         DumpResults(
@@ -1083,12 +1222,10 @@ def execute_job(task_fun, args, kwargs, cpid):
     Function to submit job request to Nornir Proxy minion jobs queue,
     wait for job to be completed and return results.
 
-    :param task_fun: str, name of nornir task function/plugin to run
-    :param args: list, any arguments to submit to Nornir task ``*args``
-    :param kwargs: dict, any arguments to submit to Nornir task ``**kwargs``
-    :param cpid: int, Process ID (PID) of child process submitting job request
-
-    Additional ``execute_job`` arguments read from ``kwargs``:
+    :param task_fun: (str) name of nornir task function/plugin to run
+    :param args: (list) any arguments to submit to Nornir task ``*args``
+    :param kwargs: (dict) any arguments to submit to Nornir task ``**kwargs``
+    :param cpid: (int) Process ID (PID) of child process submitting job request
     """
     # add new job in jobs queue
     nornir_data["jobs_queue"].put(
@@ -1264,3 +1401,25 @@ def nr_data(key):
     retrieve default kwargs values from respective proxy settings' attributes.
     """
     return nornir_data.get(key, None)
+
+
+def kill_nornir(*args, **kwargs):
+    """
+    This function kills Nornir process and its child process as fast as possible.
+
+    .. warning:: this function kills main Nornir process and does not recover it
+    """
+    log.warning(
+        "Killing Nornir-proxy MAIN PID {}".format(
+            nornir_data["stats"]["main_process_pid"]
+        )
+    )
+    # kill child processes
+    for p in multiprocessing.active_children():
+        if p.pid == os.getpid():
+            continue
+        os.kill(p.pid, signal.SIGKILL)
+    # kill main process
+    os.kill(nornir_data["stats"]["main_process_pid"], signal.SIGKILL)
+    # kill itself if still can
+    os.kill(os.getpid(), signal.SIGKILL)

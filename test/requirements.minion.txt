@@ -6,7 +6,7 @@ napalm==3.3.1
 ncclient==0.6.9
 scrapli==2021.7.30
 scrapli-community==2021.7.30
-scrapli-netconf==2021.1.30
+scrapli-netconf==2022.1.30a1
 nornir==3.1.1
 nornir-napalm==0.1.2
 nornir-netmiko==0.1.1

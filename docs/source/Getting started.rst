@@ -6,35 +6,36 @@ Getting started
 Install SALTSTACK
 =================
 
-For installation of SALTSTACK master and minion/proxy-minion modules please
-reference `official documentation <https://repo.saltproject.io/>`_.
+For installation of SALTSTACK master and minion (proxy-minion is part 
+of minion) modules refer to `official documentation <https://repo.saltproject.io/>`_.
+
+For example, CentOS7 Python3 latest SaltStack installation boils down to these commands:
+
+* Import SaltStack repository key - ``sudo rpm --import https://repo.saltproject.io/py3/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub``
+* Add SaltStack repository - ``curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo``
+* Clear yum cache - ``sudo yum clean expire-cache``
+* Install master and minion - ``sudo yum install salt-master salt-minion``
+* Start salt-master - ``sudo systemctl enable salt-master && sudo systemctl start salt-master``
 
 Install Nornir
 ==============
 
 From PyPi::
 
-    pip install salt_nornir
+    python3 -m pip install salt_nornir
     
-Installing ``salt_nornir`` should automatically install these dependencies::
+If it fails due to PyYAML incompatibility try running this command::
 
-    netmiko
-    nornir
-    nornir_netmiko
-    nornir_napalm
-    nornir_salt
-    napalm
-    psutil
+    python3 -m pip install salt_nornir --ignore-installed PyYAML
 
 Configure SALT Master
 =====================
 
 Master configuration file located on SALT Master machine - machine where you installed 
-``salt-master`` software.
+``salt-master`` package.
 
-Backup original master config file - ``mv /etc/salt/master /etc/salt/master.old``
-    
-File ``/etc/salt/master``::
+Backup original master config file - ``mv /etc/salt/master /etc/salt/master.old`` 
+and edit file ``/etc/salt/master``::
 
     interface: 0.0.0.0 # indicates IP address to listen/use for connections
     master_id: lab_salt_master
@@ -48,12 +49,14 @@ File ``/etc/salt/master``::
       base:
         - /etc/salt/pillar
 
-Define Proxy Minion pillar configuration
-========================================
+Create pillar directory if required - ``mkdir /etc/salt/pillar/``.
 
-Pillar files located on SALT Master machine. Create pillar directory if required - ``mkdir /etc/salt/pillar/``.
+Define Proxy Minion pillar inventory
+====================================
 
-File ``/etc/salt/pillar/nrp1.sls``::
+Pillar files located on Salt Master machine. 
+
+Add Nornir Inventory and proxy settings to file ``/etc/salt/pillar/nrp1.sls``::
 
     proxy:
       proxytype: nornir
@@ -75,7 +78,7 @@ File ``/etc/salt/pillar/nrp1.sls``::
               
     defaults: {}
     
-File ``/etc/salt/pillar/top.sls``::
+Create top file ``/etc/salt/pillar/top.sls`` and add Proxy Minion pillar to base environment::
 
     base:
       nrp1: 
@@ -84,33 +87,29 @@ File ``/etc/salt/pillar/top.sls``::
 Start SALT Master
 =================
 
-Start salt-master process::
+Start or restart salt-master process to pick up updated configurations::
 
-    systemctl start salt-master
-    systemctl enable salt-master
-
-Verify::
-
+    systemctl restart salt-master
     systemctl status salt-master
 
 Configure Proxy Minion
 ======================
 
-Proxy minion configuration files located on SALT Minion machine - machine where you installed 
-``salt-minion`` software.
+Proxy Minion configuration files located on SALT Minion machine - machine where you installed 
+``salt-minion`` software. You only need to configure it once and all proxy-minion processes
+will use it.
 
 Backup original proxy configuration file - ``mv /etc/salt/proxy /etc/salt/proxy.old``.
 
-File ``/etc/salt/proxy``::
+Edit file ``/etc/salt/proxy`` to look like::
 
-    master: 192.168.1.1 # IP address or FQDN of master machine
+    master: 192.168.1.1 # IP address or FQDN of master machine e.g. localhost or master.lab
     multiprocessing: false # default, but overridden in Nornir proxy minion pillar
     mine_enabled: true # not required, but nice to have
     pki_dir: /etc/salt/pki/proxy # not required - this separates the proxy keys into a different directory
+    log_level: debug # default is warning, adjust as required
 
-Create proxy-minion service.
-
-File ``/etc/systemd/system/salt-proxy@.service``::
+Define Proxy Minion service in file ``/etc/systemd/system/salt-proxy@.service``::
 
     [Unit]
     Description=Salt proxy minion
@@ -127,7 +126,10 @@ File ``/etc/systemd/system/salt-proxy@.service``::
     
     [Install]
     WantedBy=default.target
-    
+ 
+.. warning:: beware that log level in above configuration set to ``debug`` that can log and expose 
+  sensitive data like device credentials and can consume significant amount of disk space over time.
+ 
 Start Nornir Proxy Minion process
 =================================
 
@@ -135,23 +137,20 @@ Run command to start Nornir Proxy Minion process::
 
     systemctl start salt-proxy@nrp1.service
     systemctl enable salt-proxy@nrp1.service
-    
-Verify::
-
     systemctl status salt-proxy@nrp1.service
     
-Or, run in debug mode::
+Or run in debug mode::
 
     salt-proxy --proxyid=nrp1 -l debug
     
-Can check proxy logs as well::
+To check proxy logs::
 
-    tail -f /var/log/salt/proxy-1
+    tail -f /var/log/salt/proxy
 
 Accept Proxy Minion key on master
 =================================
 
-Run command on salt master machine::
+Run command on salt master machine to view pending keys::
 
     [root@localhost /]# salt-key
     Accepted Keys:
@@ -193,7 +192,7 @@ Test connectivity to devices::
                 22:
                     True
                     
-Start interacting with devices::
+Get show commands output from devices::
 
     [root@localhost /]# salt nrp1 nr.cli "show clock"
     nrp1:
@@ -201,7 +200,6 @@ Start interacting with devices::
         IOL1:
             ----------
             show clock:
-                
                 *03:03:04.566 EET Sat Feb 13 2021
         IOL2:
             ----------
@@ -266,8 +264,8 @@ Check documentation for Nornir execution module ``nr.cfg`` function::
                 arg=["logging host 1.1.1.1", "ntp server 1.1.1.2"],
                 kwarg={"plugin": "netmiko"},
             )
-            
-As example, configure syslog server using Netmiko::
+
+Configure syslog server using ``nr.cfg`` with Netmiko::
 
     [root@localhost /]# salt nrp1 nr.cfg "logging host 1.1.1.1" "logging host 1.1.1.2" plugin=netmiko
     nrp1:
@@ -309,7 +307,7 @@ As example, configure syslog server using Netmiko::
                     IOL2(config)#end
                     IOL2#
 
-Additional resources
+Additional Resources
 ====================
 
 Reference :ref:`salt_nornir_examples` section for more information on how to use Nornir Proxy Minion.

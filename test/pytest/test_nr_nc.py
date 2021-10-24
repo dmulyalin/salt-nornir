@@ -438,7 +438,7 @@ def test_scrapli_netconf_get_config_call_with_filter_from_file():
         fun="nr.nc",
         arg=["get_config"],
         kwarg={
-            "filters": "salt://rpc/get_config_filter_ietf_interfaces.xml",
+            "filter_": "salt://rpc/get_config_filter_ietf_interfaces.xml",
             "source": "running",
             "plugin": "scrapli",
         },

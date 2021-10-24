@@ -1,0 +1,4 @@
+{% for intf in host["get_interfaces"]["run_ttp"]["result"] %}
+interface {{ intf.interface }}
+ mtu 9200
+{% endfor %}

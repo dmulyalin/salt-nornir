@@ -642,3 +642,57 @@ def test_nr_cli_with_iplkp():
     assert "ceos2:Eth1" in ret["nrp1"]["ceos2"]["show ip int brief"]
     
 # test_cli_with_iplkp()
+
+
+def test_nr_cli_br_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname _br_"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    assert len(ret["nrp1"]["ceos1"]["show hostname"].splitlines()) == 2
+    assert len(ret["nrp1"]["ceos2"]["show hostname"].splitlines()) == 2
+    
+# test_nr_cli_br_netmiko()
+
+
+def test_nr_cli_br_scrapli():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["_br_ show hostname"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    assert len(ret["nrp1"]["ceos1"]["show hostname"].splitlines()) == 2
+    assert len(ret["nrp1"]["ceos2"]["show hostname"].splitlines()) == 2
+    
+# test_nr_cli_br_scrapli()
+
+
+def test_nr_cli_br_netmiko_use_ps():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname _br_"],
+        kwarg={"use_ps": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    assert len(ret["nrp1"]["ceos1"]["show hostname"].splitlines()) == 2
+    assert len(ret["nrp1"]["ceos2"]["show hostname"].splitlines()) == 2
+    
+# test_nr_cli_br_netmiko_use_ps()

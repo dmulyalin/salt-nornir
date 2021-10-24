@@ -11,7 +11,8 @@ This state module uses Nornir proxy execution module to apply configuration
 to devices.
 
 .. warning:: This module does not implement idempotent behavior, it is up to Nornir task
-  plugin to handle idempotency.
+  plugin to handle idempotency or up to user to define work flow steps to achieve desired 
+  level of idempotency.
 
 Example
 -------
@@ -215,7 +216,7 @@ def task(*args, **kwargs):
 
 
 def _run_workflow_step(
-    step, steps_failed, steps_passed, common_filters, report_all, report, all_hosts
+    step, steps_failed, steps_passed, common_filters, report_all, report, all_hosts, hcache, dcache
 ):
     """
     Helper function to run single work flow step.
@@ -227,7 +228,21 @@ def _run_workflow_step(
     :param report_all: (bool) if True, add skipped steps in summary report
     :param report: (dict) structure that contains overall workflow execution results
     :param all_hosts: (list) list with host names matched by this workflow options' filters
+    :param hcache: (bool) if True saves step results in host's data
+    :param dcache: (bool) if True saves step results in defaults data
     """
+    nr_fun = [
+        "nr.cli",
+        "nr.task",
+        "nr.cfg",
+        "nr.cfg_gen",
+        "nr.tping",
+        "nr.test",
+        "nr.nc",
+        "nr.http",
+        "nr.do",
+        "nr.gnmi",
+    ]
     try:
         steps_failed[step["name"]] = set()
         steps_passed[step["name"]] = set()
@@ -244,16 +259,7 @@ def _run_workflow_step(
         if step["function"] == "nr.test":
             step["kwargs"]["failed_only"] = False
             step["kwargs"].setdefault("name", step["name"])
-        if step["function"] in [
-            "nr.cli",
-            "nr.task",
-            "nr.cfg",
-            "nr.cfg_gen",
-            "nr.tping",
-            "nr.test",
-            "nr.nc",
-            "nr.http",
-        ]:
+        if step["function"] in nr_fun:
             step["kwargs"]["add_details"] = True
 
         # form FL filter based on run_if criteria
@@ -321,22 +327,32 @@ def _run_workflow_step(
             for host_name, host_steps in report["summary"].items():
                 host_steps.append({step["name"]: "SKIP"})
             return
-
+        
+        # add cache argument
+        if step["function"] in nr_fun:
+            if hcache:
+                step["kwargs"].setdefault("hcache", step["name"])
+            if dcache:
+                step["kwargs"].setdefault("dcache", step["name"])
+            
         # run step function
         log.debug("state:nr.workflow: executing step: '{}'".format(step))
         result = __salt__[step["function"]](*step.get("args", []), **step["kwargs"])
         log.debug("state:nr.workflow: step '{}'; result:\n {}".format(step, result))
 
         # record a set of hosts that failed/passed this step
-        if step["function"] in [
-            "nr.task",
-            "nr.cli",
-            "nr.cfg_gen",
-            "nr.cfg",
-            "nr.test",
-            "nr.nc",
-            "nr.http",
-        ]:
+        if step["function"] == "nr.do":
+            # decide on test execution result - fail or pass
+            if result["failed"] is True:
+                steps_failed[step["name"]] = set(matched_hosts)
+            else:
+                steps_passed[step["name"]] = set(matched_hosts)
+            # form report content
+            for host_name in set(matched_hosts):
+                report["summary"][host_name].append(
+                    {step["name"]: "FAIL" if result["failed"] else "PASS"}
+                )
+        elif step["function"] in nr_fun:
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
                     for task_result in host_results.values():
@@ -361,20 +377,13 @@ def _run_workflow_step(
                         report["summary"][task_result["host"]].append(
                             {task_result["name"]: "PASS"}
                         )
-        elif step["function"] == "nr.do":
-            # decide on test execution result - fail or pass
-            if result["failed"] is True:
-                steps_failed[step["name"]] = set(matched_hosts)
-            else:
-                steps_passed[step["name"]] = set(matched_hosts)
-            # form report content
-            for host_name in set(matched_hosts):
-                report["summary"][host_name].append(
-                    {step["name"]: "FAIL" if result["failed"] else "PASS"}
-                )
         else:
             steps_passed[step["name"]] = set(matched_hosts)
-
+            for host_name in matched_hosts:
+                report["summary"][host_name].append(
+                    {step["name"]: "PASS"}
+                )
+            
         # check if need to add step run results to detailed report
         if step.get("report") is not False:
             report["details"].append({step["name"]: result})
@@ -494,7 +503,11 @@ def workflow(*args, **kwargs):
         without any filters, depending on proxy ``nornir_filter_required`` setting,
         steps might fail (if ``nornir_filter_required`` is True) or run for all hosts
         (if ``nornir_filter_required`` is False).
-
+    :param hcache: (bool) if True (default) saves step's per-host results in host's data under 
+        step's name key so that other steps can use it
+    :param dcache: (bool) if True (default) saves step's full results in defaults data under 
+        step's name key so that other steps can use it
+    
     **Individual Step Arguments**
 
     Each step in a work flow can have a number of mandatory and optional attributes defined.
@@ -532,6 +545,14 @@ def workflow(*args, **kwargs):
     If no ``run_if_x`` conditions provided, step executed for all hosts matched
     by ``filters`` provided in state global options and/or step ``**kwargs``.
 
+    If ``hcache`` or ``dcache`` set to True in State Global Options in that case for compatible 
+    Nornir Execution Module function each step results saved in Nornir in-memory Inventory 
+    host's and ``defaults`` data under step's name key. That way results become part of inventory 
+    and available for use by Nornir Execution Module function in other steps. Once workflow execution 
+    completed, cached results cleaned. Individual step's ``hcache`` or ``dcache`` kwargs can be 
+    specified to save step's results under certain key name, in such a case after workflow completed 
+    cache not removed for that particular step's results.
+    
     Sample state ``salt://states/configure_ntp.sls``::
 
         main_workflow:
@@ -543,6 +564,8 @@ def workflow(*args, **kwargs):
                 fail_if_all_host_fail_all_step: []
                 report_all: False
                 filters: {"FB": "*"}
+                hcache: True
+                dcache: False
             # define pre-check steps
             - pre_check:
                 - name: pre_check_if_ntp_ip_is_configured_csr1kv
@@ -672,7 +695,9 @@ def workflow(*args, **kwargs):
     options = kwargs.pop("options", {})
     report_all = options.get("report_all", True)
     common_filters = options.get("filters", {})
-
+    hcache = options.get("hcache", True)
+    dcache = options.get("dcache", True)
+    
     # get all hosts names
     all_hosts = __salt__["nr.nornir"]("inventory", **common_filters)
     all_hosts = list(all_hosts["hosts"].keys())
@@ -687,10 +712,12 @@ def workflow(*args, **kwargs):
     }
 
     # run steps
+    steps_names = []
     for group_name, steps in kwargs.items():
         log.info("state:nr.workflow: running '{}' steps".format(group_name))
         for step in steps:
             log.info("state:nr.workflow: running step: '{}'".format(step))
+            steps_names.append(step["name"])
             _run_workflow_step(
                 step,
                 steps_failed,
@@ -699,8 +726,18 @@ def workflow(*args, **kwargs):
                 report_all,
                 report,
                 all_hosts,
+                hcache,
+                dcache,
             )
-
+            
+    # clean up cached data
+    if hcache:
+        _ = __salt__["nr.nornir"]("clear_hcache", cache_keys=steps_names)
+        log.info("state:nr.workflow: cleaned steps' hcache")
+    if dcache:
+        _ = __salt__["nr.nornir"]("clear_dcache", cache_keys=steps_names)
+        log.info("state:nr.workflow: cleaned steps' dcache")
+        
     # decide if this state failed
     ret = _decide_state_execution_status(options, ret, steps_failed, steps_passed)
 

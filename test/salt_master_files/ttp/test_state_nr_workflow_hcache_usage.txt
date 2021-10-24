@@ -1,0 +1,3 @@
+interface {{ interface | contains("Eth") }}
+   description {{ description | re(".*") }}
+   ip address {{ ip }}/{{ mask }}

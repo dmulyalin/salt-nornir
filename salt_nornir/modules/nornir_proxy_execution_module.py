@@ -120,6 +120,8 @@ All supported processors executed in this order::
      - Filters to target subset of devices using FFun Nornir-Salt function
    * - `context`
      - Overrides context variables passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
+   * - `dcache`_
+     - Saves full task execution results to Nornir in-memory (RAM) Inventory ``defaults`` data
    * - `defaults`
      - Default template context passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
    * - `diff`_ 
@@ -132,6 +134,8 @@ All supported processors executed in this order::
      - Saves complete task results to local file system using Nornir-Salt DumpResults function       
    * - `event_failed`_ 
      - Emit events on Salt Events Bus for failed tasks 
+   * - `hcache`_
+     - Saves host's task execution results to host's in-memory (RAM) Inventory data
    * - `iplkp`_
      - Performs in CSV file or DNS lookup of IPv4 and IPv6 addresses to replace them in output
    * - `jmespath`_
@@ -143,7 +147,7 @@ All supported processors executed in this order::
    * - `run_ttp`_ 
      - Calls Nornir-Salt DataProcessor run_ttp function to parse results using TTP
    * - `saltenv`
-     - Salt Environment name to use with `render`_ and `download`_ to download and render files, default is ``base``
+     - `Salt Environment <https://docs.saltproject.io/en/latest/ref/states/top.html#environments>`_ name to use with `render`_ and `download`_ to source files, default is ``base``
    * - `table`_ 
      - Formats results to text table using Nornir-Salt TabulateFormatter 
    * - `template_engine`
@@ -164,8 +168,7 @@ Fx
 
 Uses Nornir-Salt ``FFun`` function to form a subset of hosts to run this task for.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http,``
-``nr.tping, nr.inventory``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.tping, nr.inventory``
 
 CLI Arguments:
 
@@ -174,6 +177,34 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.cli "show clock" FB="R*" FG="lab" FP="192.168.1.0/24" FO='{"role": "core"}'
+
+dcache
++++++++
+
+Saves full task execution results to Nornir ``defaults`` in-memory (RAM) inventory data. Saved 
+information non-persistent across Proxy Minion reboots.
+
+Primary usecase is to share task results between tasks for rendering, targeting or processing.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.tping, nr.gnmi``
+
+CLI Arguments:
+
+* ``dcache`` - nornir inventory ``defaults`` data dictionary key name to save results under 
+  or if set to boolean True, uses ``dcache`` as a key name
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" dcache="show_clock_output"
+    salt nrp1 nr.cli "show clock" dcache=True
+    
+To view in-memory ``defaults`` inventory can use utility function::
+
+    salt npr1 nr.nornir inventory
+    
+To clean up cached data can either restart Proxy Minion or use utility function::
+
+    salt npr1 nr.nornir clear_dcache cache_keys='["key1", "key2"]'
 
 diff
 ++++
@@ -322,6 +353,35 @@ Sample usage::
 
     salt nrp1 nr.test suite="salt://tests/suite.txt" event_failed=True
 
+hcache
+++++++
+
+Saves individual host's task execution results in host's in-memory (RAM) inventory data. Saved 
+information non-persistent across Proxy Minion reboots.
+
+Primary usecase is to share task results data between tasks for rendering, targeting or processing.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.tping, nr.gnmi``
+
+CLI Arguments:
+
+* ``hcache`` - host's data dictionary key name to save results under or if set to boolean True, uses 
+  ``hcache`` as a key name
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" hcache="show_clock_output"
+    salt nrp1 nr.cli "show clock" hcache=True
+    
+To view in-memory inventory can use utility function::
+
+    salt npr1 nr.nornir inventory FB="hosname-1"
+    
+To clean up cached data can either restart Proxy Minion or use utility function::
+
+    salt npr1 nr.nornir clear_hcache FB="hosname-1"
+    salt npr1 nr.nornir clear_hcache cache_keys='["key1", "key2"]'
+
 iplkp
 +++++
 
@@ -405,7 +465,7 @@ Sample usage::
 
     salt nrp1 nr.cli "show version" match="Version.*"
     salt nrp1 nr.cli "show version" match="Version.*" before=1
-
+    
 render
 ++++++
 
@@ -1983,16 +2043,22 @@ def nornir_fun(fun, *args, **kwargs):
     * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx``
       arguments to return only hosts matched by filter
     * ``connections`` - list hosts' active connections, accepts ``Fx`` arguments to filter hosts to list
-    * ``disconnect`` - close host connections, accept ``Fx`` arguments to filter hosts and ``conn_name``
+    * ``disconnect`` - close host connections, accepts ``Fx`` arguments to filter hosts and ``conn_name``
       of connection to close, by default closes all connections
-
+    * ``clear_hcache`` - clear task results cache from hosts' data, accepts ``cache_keys`` list argument
+      of key names to remove, if no ``cache_keys`` argument provided removes all cached data
+    * ``clear_dcache`` - clear task results cache from defaults data, accepts ``cache_keys`` list argument
+      of key names to remove, if no ``cache_keys`` argument provided removes all cached data
+    
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
         salt nrp1 nr.nornir stats stat="proxy_minion_id"
         salt nrp1 nr.nornir version
         salt nrp1 nr.nornir shutdown
-
+        salt nrp1 nr.nornir clear_hcache cache_keys='["key1", "key2]'
+        salt nrp1 nr.nornir clear_dcache cache_keys='["key1", "key2]'
+        
     Sample Python API usage from Salt-Master::
 
         import salt.client
@@ -2011,13 +2077,13 @@ def nornir_fun(fun, *args, **kwargs):
     elif fun == "version":
         return __proxy__["nornir.nr_version"]()
     elif fun == "shutdown":
-        return __proxy__["nornir.shutdown"]()
+        return task(plugin="shutdown")
     elif fun == "initialized":
         return __proxy__["nornir.initialized"]()
     elif fun == "kill":
         return __proxy__["nornir.kill_nornir"]()
     elif fun == "refresh":
-        return __proxy__["nornir.refresh_nornir"]()
+        return task(plugin="refresh")
     elif fun == "test":
         return task(plugin="test")
     elif fun == "hosts":
@@ -2028,6 +2094,14 @@ def nornir_fun(fun, *args, **kwargs):
         return task(
             plugin="nornir_salt.plugins.tasks.connections", call="close", **kwargs
         )
+    elif fun == "clear_hcache":
+        return task(
+            plugin="nornir_salt.plugins.tasks.salt_clear_hcache", **kwargs
+        )  
+    elif fun == "clear_dcache":
+        return task(plugin="clear_dcache", **kwargs)
+    else:
+        return "Uncknown function '{}'.format(fun)"
 
 
 def gnmi(call, *args, **kwargs):

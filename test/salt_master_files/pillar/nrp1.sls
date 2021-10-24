@@ -23,7 +23,7 @@ groups:
     password: nornir
     data:
       ntp_servers: ["3.3.3.3", "3.3.3.4"]
-      syslog_servers: ["1.2.3.4", "4.3.2.1"] 
+      syslog_servers: ["1.2.3.4", "4.3.2.1"]
   eos_params:
     connection_options:
       scrapli:
@@ -38,6 +38,8 @@ groups:
           auth_strict_key: False
           transport: paramiko
           transport_options: 
+            # refer to https://github.com/saltstack/salt/issues/59962 for details
+            # on why need netconf_force_pty False
             netconf_force_pty: False
       napalm:
         platform: eos

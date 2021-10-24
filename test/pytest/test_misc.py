@@ -1,7 +1,7 @@
 import logging
 import pprint
 import json
-
+import time
 log = logging.getLogger(__name__)
 
 try:
@@ -160,3 +160,422 @@ def test_nornir_hosts_with_filter():
     )
     assert res["nrp1"] == ["ceos1"]
 # test_nornir_hosts()
+
+
+def test_host_results_hcache():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"hcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory) 
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"]
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"]
+    
+# test_host_results_hcache()
+
+
+def test_host_results_hcache_key():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"hcache": "cache1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory) 
+    assert "cache1" in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "cache1" in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos1"]["data"]["cache1"]
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos2"]["data"]["cache1"]
+    
+# test_host_results_hcache_key()
+
+
+def test_host_results_hcache_clear_all():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"hcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(clear) 
+    assert clear["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["hcache"] == True
+    assert clear["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["hcache"] == True
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    
+# test_host_results_hcache_clear_all()
+
+
+def test_host_results_hcache_clear_by_key():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"hcache": "cache1234"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        kwarg={"cache_keys": ["cache1234", "cache4321"]},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(clear) 
+    assert clear["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["cache1234"] == True
+    assert clear["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["cache1234"] == True
+    assert clear["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["cache4321"] == False
+    assert clear["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.salt_clear_hcache"]["cache4321"] == False
+    assert "cache1234" not in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "cache1234" not in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    
+# test_host_results_hcache_clear_by_key()
+
+
+def test_host_results_dcache():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"dcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_dcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory) 
+    assert "dcache" in inventory["nrp1"]["defaults"]["data"]
+    assert "dcache" in inventory["nrp1"]["defaults"]["data"]
+    assert "show clock" in inventory["nrp1"]["defaults"]["data"]["dcache"]["ceos1"]
+    assert "show clock" in inventory["nrp1"]["defaults"]["data"]["dcache"]["ceos2"]
+    
+# test_host_results_dcache()
+
+
+def test_host_results_dcache_key():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"dcache": "cache1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_dcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory) 
+    assert "cache1" in inventory["nrp1"]["defaults"]["data"]
+    assert "cache1" in inventory["nrp1"]["defaults"]["data"]
+    assert "show clock" in inventory["nrp1"]["defaults"]["data"]["cache1"]["ceos1"]
+    assert "show clock" in inventory["nrp1"]["defaults"]["data"]["cache1"]["ceos2"]
+    
+# test_host_results_dcache_key()
+
+
+def test_host_results_dcache_clear_all():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"dcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_dcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(clear) 
+    assert clear['nrp1']['dcache'] == True
+    assert "dcache" not in inventory["nrp1"]["defaults"]["data"]
+    assert "dcache" not in inventory["nrp1"]["defaults"]["data"]
+    
+# test_host_results_dcache_clear_all()
+
+
+def test_host_results_dcache_clear_by_key():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"dcache": "cache1234"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_dcache"],
+        kwarg={"cache_keys": ["cache1234", "cache4321"]},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(clear) 
+    assert clear["nrp1"]["cache1234"] == True
+    assert clear["nrp1"]["cache4321"] == False
+    assert "cache1234" not in inventory["nrp1"]["defaults"]["data"]
+    assert "cache1234" not in inventory["nrp1"]["defaults"]["data"]
+    
+# test_host_results_dcache_clear_by_key()
+
+
+def test_host_results_list_hcache():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"hcache": True, "to_dict": False, "add_details": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(inventory) 
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    assert isinstance(inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"], dict)
+    assert isinstance(inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"], dict)
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"]
+    assert "show clock" in inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"]
+    assert "show hostname" in inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"]
+    assert "show hostname" in inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"]
+    assert "ceos1" in inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"]["show hostname"]
+    assert "ceos2" in inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"]["show hostname"]
+    
+# test_host_results_list_hcache()
+
+
+def test_host_results_str_hcache():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"hcache": True, "table": "brief"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(inventory) 
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos1"]["data"]
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos2"]["data"]
+    assert isinstance(inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"], str)
+    assert isinstance(inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"], str)
+    assert inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"].count("show clock") == 2 
+    assert inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"].count("show clock") == 2 
+    assert inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"].count("show hostname") == 2 
+    assert inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"].count("show hostname") == 2 
+    assert inventory["nrp1"]["hosts"]["ceos1"]["data"]["hcache"] == inventory["nrp1"]["hosts"]["ceos2"]["data"]["hcache"]
+
+# test_host_results_str_hcache()
+
+
+def test_host_results_list_dcache():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"dcache": True, "to_dict": False, "add_details": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    clear = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["clear_hcache"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(inventory) 
+    assert "dcache" in inventory["nrp1"]["defaults"]["data"]
+    assert isinstance(inventory["nrp1"]["defaults"]["data"]["dcache"], list)
+    assert len(inventory["nrp1"]["defaults"]["data"]["dcache"]) == 4
+    
+# test_host_results_list_dcache()
+
+
+def test_nornir_refresh():
+    # save some data in hcache and verify it cached
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"hcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos1"]["data"], "No data cached"
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos2"]["data"], "No data cached"
+    # refresh nornir
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["refresh"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # sleep for 30 seconds to make sure nornir refreshed
+    time.sleep(30)
+    # verify cache is gone
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos1"]["data"], "Cached data not gone after refresh"
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos2"]["data"], "Cached data not gone after refresh"
+    
+    # verify nornir is functional
+    res_check = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "show clock" in res_check["nrp1"]["ceos1"], "Nornir not working after refresh"
+    assert "show clock" in res_check["nrp1"]["ceos2"], "Nornir not working after refresh"
+    
+# test_nornir_refresh()
