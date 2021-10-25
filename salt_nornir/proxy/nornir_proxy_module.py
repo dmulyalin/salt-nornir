@@ -193,10 +193,15 @@ except:
     log.error("Nornir Proxy Module - failed importing SALT libraries")
 
 try:
-    # starting from SALT 3003 need to use loader_context to reconstruct
+    # starting with salt 3003 need to use loader_context to reconstruct
     # __salt__ dunder within treads:
     # details: https://github.com/saltstack/salt/issues/59962
-    from salt.loader_context import loader_context
+    try:
+        from salt.loader_context import loader_context
+    
+    except ImportError:
+        # after salt 3004 api was updated - https://github.com/saltstack/salt/pull/60595
+        from salt.loader.context import loader_context
 
     HAS_LOADER_CONTEXT = True
 except ImportError:
