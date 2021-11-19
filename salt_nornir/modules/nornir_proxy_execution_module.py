@@ -499,7 +499,7 @@ ntfsm
 +++++
 
 Uses Nornir-Salt ``DataProcessor`` 
-`match function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#ntfsm>`_  
+`ntfsm function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#ntfsm>`_  
 to parse show commands output using TextFSM ntc-templates.
 
 Supported functions: ``nr.cli``
