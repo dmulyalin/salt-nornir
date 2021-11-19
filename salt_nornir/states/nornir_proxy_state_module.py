@@ -85,6 +85,7 @@ workflow
 # Import python libs
 import logging
 import traceback
+import uuid
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +109,29 @@ __virtualname__ = "nr"
 
 def __virtual__():
     return __virtualname__
+
+
+# -----------------------------------------------------------------------------
+# private functions
+# -----------------------------------------------------------------------------
+
+
+def _form_identity(function_name):
+    """
+    Helper function to form execution module function identity argument, identity
+    used by nornir proxy minion to identify results for tasks submitter to jobs queue,
+    it also used by SaltEventProcessor to add function name details to events.
+
+    :param function_name: (str) Execution Module Function name
+    :return: difctionary with uuid4, jid, function_name keys
+
+    If identity already present in kawargs, use it as is.
+    """
+    return {
+        "uuid4": str(uuid.uuid4()),
+        "jid": "state.nr.{}".format(function_name),
+        "function_name": "state.nr.{}".format(function_name),
+    }
 
 
 # -----------------------------------------------------------------------------
@@ -216,7 +240,16 @@ def task(*args, **kwargs):
 
 
 def _run_workflow_step(
-    step, steps_failed, steps_passed, common_filters, report_all, report, all_hosts, hcache, dcache
+    step,
+    steps_failed,
+    steps_passed,
+    common_filters,
+    report_all,
+    report,
+    all_hosts,
+    hcache,
+    dcache,
+    state_name,
 ):
     """
     Helper function to run single work flow step.
@@ -230,6 +263,7 @@ def _run_workflow_step(
     :param all_hosts: (list) list with host names matched by this workflow options' filters
     :param hcache: (bool) if True saves step results in host's data
     :param dcache: (bool) if True saves step results in defaults data
+    :param state_name: (str) Name of this state
     """
     nr_fun = [
         "nr.cli",
@@ -327,17 +361,21 @@ def _run_workflow_step(
             for host_name, host_steps in report["summary"].items():
                 host_steps.append({step["name"]: "SKIP"})
             return
-        
+
         # add cache argument
         if step["function"] in nr_fun:
             if hcache:
                 step["kwargs"].setdefault("hcache", step["name"])
             if dcache:
                 step["kwargs"].setdefault("dcache", step["name"])
-            
+
         # run step function
         log.debug("state:nr.workflow: executing step: '{}'".format(step))
-        result = __salt__[step["function"]](*step.get("args", []), **step["kwargs"])
+        result = __salt__[step["function"]](
+            identity=_form_identity("workflow.{}.{}".format(state_name, step["name"])),
+            *step.get("args", []),
+            **step["kwargs"]
+        )
         log.debug("state:nr.workflow: step '{}'; result:\n {}".format(step, result))
 
         # record a set of hosts that failed/passed this step
@@ -353,6 +391,7 @@ def _run_workflow_step(
                     {step["name"]: "FAIL" if result["failed"] else "PASS"}
                 )
         elif step["function"] in nr_fun:
+            # result is a dict if to_dict set to True
             if isinstance(result, dict):
                 for host_name, host_results in result.items():
                     for task_result in host_results.values():
@@ -363,6 +402,7 @@ def _run_workflow_step(
                     else:
                         report["summary"][host_name].append({step["name"]: "PASS"})
                         steps_passed[step["name"]].add(host_name)
+            # result is a list if to_dict set to false
             elif isinstance(result, list):
                 for task_result in result:
                     steps_passed.setdefault(task_result["name"], set())
@@ -377,13 +417,21 @@ def _run_workflow_step(
                         report["summary"][task_result["host"]].append(
                             {task_result["name"]: "PASS"}
                         )
+            # result can be a string if table formatter used or received a traceback
+            elif isinstance(result, str):
+                if "Traceback (most recent call last)" in result:
+                    steps_failed[step["name"]] = set(matched_hosts)
+                    for host_name in matched_hosts:
+                        report["summary"][host_name].append({step["name"]: "ERROR"})
+                else:
+                    steps_passed[step["name"]] = set(matched_hosts)
+                    for host_name in matched_hosts:
+                        report["summary"][host_name].append({step["name"]: "PASS"})
         else:
             steps_passed[step["name"]] = set(matched_hosts)
             for host_name in matched_hosts:
-                report["summary"][host_name].append(
-                    {step["name"]: "PASS"}
-                )
-            
+                report["summary"][host_name].append({step["name"]: "PASS"})
+
         # check if need to add step run results to detailed report
         if step.get("report") is not False:
             report["details"].append({step["name"]: result})
@@ -503,11 +551,11 @@ def workflow(*args, **kwargs):
         without any filters, depending on proxy ``nornir_filter_required`` setting,
         steps might fail (if ``nornir_filter_required`` is True) or run for all hosts
         (if ``nornir_filter_required`` is False).
-    :param hcache: (bool) if True (default) saves step's per-host results in host's data under 
+    :param hcache: (bool) if True (default) saves step's per-host results in host's data under
         step's name key so that other steps can use it
-    :param dcache: (bool) if True (default) saves step's full results in defaults data under 
+    :param dcache: (bool) if True (default) saves step's full results in defaults data under
         step's name key so that other steps can use it
-    
+
     **Individual Step Arguments**
 
     Each step in a work flow can have a number of mandatory and optional attributes defined.
@@ -545,14 +593,14 @@ def workflow(*args, **kwargs):
     If no ``run_if_x`` conditions provided, step executed for all hosts matched
     by ``filters`` provided in state global options and/or step ``**kwargs``.
 
-    If ``hcache`` or ``dcache`` set to True in State Global Options in that case for compatible 
-    Nornir Execution Module function each step results saved in Nornir in-memory Inventory 
-    host's and ``defaults`` data under step's name key. That way results become part of inventory 
-    and available for use by Nornir Execution Module function in other steps. Once workflow execution 
-    completed, cached results cleaned. Individual step's ``hcache`` or ``dcache`` kwargs can be 
-    specified to save step's results under certain key name, in such a case after workflow completed 
+    If ``hcache`` or ``dcache`` set to True in State Global Options in that case for compatible
+    Nornir Execution Module function each step results saved in Nornir in-memory Inventory
+    host's and ``defaults`` data under step's name key. That way results become part of inventory
+    and available for use by Nornir Execution Module function in other steps. Once workflow execution
+    completed, cached results cleaned. Individual step's ``hcache`` or ``dcache`` kwargs can be
+    specified to save step's results under certain key name, in such a case after workflow completed
     cache not removed for that particular step's results.
-    
+
     Sample state ``salt://states/configure_ntp.sls``::
 
         main_workflow:
@@ -697,7 +745,8 @@ def workflow(*args, **kwargs):
     common_filters = options.get("filters", {})
     hcache = options.get("hcache", True)
     dcache = options.get("dcache", True)
-    
+    state_name = kwargs.pop("name")
+
     # get all hosts names
     all_hosts = __salt__["nr.nornir"]("inventory", **common_filters)
     all_hosts = list(all_hosts["hosts"].keys())
@@ -705,7 +754,7 @@ def workflow(*args, **kwargs):
     # form report and ret strutures
     report = {"details": [], "summary": {h: [] for h in all_hosts}}
     ret = {
-        "name": kwargs.pop("name"),
+        "name": state_name,
         "changes": report,
         "result": True,
         "comment": "",
@@ -728,8 +777,9 @@ def workflow(*args, **kwargs):
                 all_hosts,
                 hcache,
                 dcache,
+                state_name,
             )
-            
+
     # clean up cached data
     if hcache:
         _ = __salt__["nr.nornir"]("clear_hcache", cache_keys=steps_names)
@@ -737,7 +787,7 @@ def workflow(*args, **kwargs):
     if dcache:
         _ = __salt__["nr.nornir"]("clear_dcache", cache_keys=steps_names)
         log.info("state:nr.workflow: cleaned steps' dcache")
-        
+
     # decide if this state failed
     ret = _decide_state_execution_status(options, ret, steps_failed, steps_passed)
 

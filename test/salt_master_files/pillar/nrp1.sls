@@ -65,6 +65,9 @@ groups:
         port: 6030
         extras:
           insecure: True
+      ConnectionsPool:
+        extras:
+          max: 2
                 
 nornir:
   actions:

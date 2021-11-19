@@ -579,3 +579,81 @@ def test_nornir_refresh():
     assert "show clock" in res_check["nrp1"]["ceos2"], "Nornir not working after refresh"
     
 # test_nornir_refresh()
+
+def test_nr_grains_hosts():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="grains.item",
+        arg=["hosts"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "ceos1" in ret["nrp1"]["hosts"]
+    assert "ceos2" in ret["nrp1"]["hosts"]
+    
+# test_nr_grains_hosts()
+
+
+def test_nr_cli_event_progress():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"event_progress": True, "FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    events = []
+    timeout = 60
+    start_time = time.time()
+    for e in event.iter_events(
+            tag="nornir\-proxy/.*p",
+            match_type="regex"
+        ):
+        if e["data"]["task_type"] == "task" and e["data"]["task_event"] == "completed":
+            events.append(e)
+            break
+        elif time.time() - start_time > timeout:
+            break
+        events.append(e)
+    # pprint.pprint(events)
+    assert len(events) == 6, "Got not 6 events, but ()".format(len(events))
+    assert any(
+        [
+            e["data"]["task_type"] == "task" and e["data"]["task_event"] == "started"
+            for e in events
+        ]
+    ), "Have not found task started event"
+    assert any(
+        [
+            e["data"]["task_type"] == "task" and e["data"]["task_event"] == "completed"
+            for e in events
+        ]
+    ), "Have not found task completed event"
+    assert any(
+        [
+            e["data"]["task_type"] == "task_instance" and e["data"]["task_event"] == "started"
+            for e in events
+        ]
+    ), "Have not found task instance started event"
+    assert any(
+        [
+            e["data"]["task_type"] == "task_instance" and e["data"]["task_event"] == "completed"
+            for e in events
+        ]
+    ), "Have not found task instance completed event"
+    assert any(
+        [
+            e["data"]["task_type"] == "subtask" and e["data"]["task_event"] == "started"
+            for e in events
+        ]
+    ), "Have not found subtask started event"
+    assert any(
+        [
+            e["data"]["task_type"] == "subtask" and e["data"]["task_event"] == "completed"
+            for e in events
+        ]
+    ), "Have not found subtask started completed"
+    
+# test_nr_cli_event_progress()

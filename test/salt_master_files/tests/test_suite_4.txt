@@ -1,0 +1,24 @@
+- task: "show version"
+  test: eval
+  expr: "'123456' in result"
+  name: check ceos version - result is False
+  err_msg: "wrong version"
+- task: "show version"
+  test: eval
+  expr: "assert '123456' in result"
+  name: check ceos version - with assert no err_msg
+- task: "show version"
+  test: eval
+  expr: "assert '123456' in result, 'assert failed'"
+  name: check ceos version - with assert no err_msg but assert msg
+- task: "show version"
+  test: eval
+  expr: "assert '123456' in result"
+  name: check ceos version - with assert and err_msg
+  err_msg: "Wrong version"
+- task: "show version"
+  test: eval
+  expr: "assert '123456' in result, 'assert failed'"
+  name: check ceos version - with assert and err_msg and assert msg
+  err_msg: "Wrong version"
+  

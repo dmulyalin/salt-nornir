@@ -1,7 +1,7 @@
 FROM centos:7
 
 # install misc libs
-RUN yum install -y python3 nano tree
+RUN yum install -y python3 nano tree git
 RUN yum install -y openssh-server openssh-clients
 
 # install SaltStack
@@ -16,6 +16,7 @@ COPY test/requirements.minion.txt /tmp/requirements.txt
 # do python libs installation
 RUN python3 -m pip install pip setuptools --upgrade
 RUN python3 -m pip install -r /tmp/requirements.txt --ignore-installed PyYAML
+RUN python3 -m pip install git+https://github.com/dmulyalin/ttp_templates.git
 
 # run Salt Nornir libs installation from local files 
 RUN python3 -m pip install /tmp/salt_nornir/nornir_salt

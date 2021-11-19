@@ -1,0 +1,7 @@
+- task: run_ttp
+  test: eval
+  expr: "assert isinstance(result, list)"
+  description: "Test to verify that no run_ttp command send to device"
+  cli:
+    run_ttp: "salt://ttp/run_ttp_test_1.txt"
+    FB: ceos1

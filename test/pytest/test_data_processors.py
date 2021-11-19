@@ -68,3 +68,59 @@ def test_ttp_parser_inline_template_nr_cli():
     assert "total_memory" in ret["nrp1"]["ceos2"]["run_ttp"][0]
     
 # test_ttp_parser_inline_template_nr_cli()
+
+
+def test_ttp_parser_from_ttp_templates_using_platform():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname"],
+        kwarg={"dp": "parse_ttp"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"], list)
+    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"], list)
+    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"][0], list)
+    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"][0], list)    
+    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"][0][0], dict)
+    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"][0][0], dict)  
+    
+# test_ttp_parser_from_ttp_templates_using_platform()
+
+    
+def test_ntfsm():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show version"],
+        kwarg={"ntfsm": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["ceos1"]["show version"], list)
+    assert isinstance(ret["nrp1"]["ceos1"]["show version"][0], dict)
+    assert isinstance(ret["nrp1"]["ceos2"]["show version"], list)
+    assert isinstance(ret["nrp1"]["ceos2"]["show version"][0], dict)
+    
+# test_ntfsm()
+
+
+def test_ntfsm_uncknown_command():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clok"],
+        kwarg={"ntfsm": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["ceos1"]["show clok"], list)
+    assert isinstance(ret["nrp1"]["ceos2"]["show clok"], list)
+    assert len(ret["nrp1"]["ceos2"]["show clok"]) == 0
+    assert len(ret["nrp1"]["ceos2"]["show clok"]) == 0
+
+# test_ntfsm_uncknown_command()

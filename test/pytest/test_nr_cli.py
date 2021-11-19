@@ -449,7 +449,6 @@ cEOS tools version: {{ tools_version }}
   
 <group name="interf" input="interfaces">
 interface {{ interface }}
-   description {{ description | re(".*") }}
    ip address {{ ip }}/{{ mask }}
 </group>
     """
@@ -464,43 +463,30 @@ interface {{ interface }}
     pprint.pprint(ret)
     assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
-                                {'interf': [{'description': 'Configured by '
-                                                            'NETCONF',
-                                             'interface': 'Ethernet1',
+                                {'interf': [{'interface': 'Ethernet1',
                                              'ip': '10.0.1.4',
                                              'mask': '24'},
                                             {'interface': 'Loopback1',
                                              'ip': '1.1.1.1',
                                              'mask': '24'},
-                                            {'description': 'Lopback2 for '
-                                                            'Customer 27123',
-                                             'interface': 'Loopback2',
+                                            {'interface': 'Loopback2',
                                              'ip': '2.2.2.2',
                                              'mask': '24'},
-                                            {'description': 'Customer #56924 '
-                                                            'service',
-                                             'interface': 'Loopback3',
+                                            {'interface': 'Loopback3',
                                              'ip': '1.2.3.4',
                                              'mask': '24'}]}]},
           'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
-                                {'interf': [{'description': 'Configured by '
-                                                            'NETCONF',
-                                             'interface': 'Ethernet1',
+                                {'interf': [{'interface': 'Ethernet1',
                                              'ip': '10.0.1.5',
                                              'mask': '24'},
-                                            {'description': 'MGMT Range xYz',
-                                             'interface': 'Loopback100',
+                                            {'interface': 'Loopback100',
                                              'ip': '100.12.3.4',
                                              'mask': '22'},
-                                            {'description': 'NTU workstation '
-                                                            'service',
-                                             'interface': 'Loopback101',
+                                            {'interface': 'Loopback101',
                                              'ip': '1.101.2.2',
                                              'mask': '32'},
-                                            {'description': 'Customer ID '
-                                                            '67123A5',
-                                             'interface': 'Loopback102',
+                                            {'interface': 'Loopback102',
                                              'ip': '5.5.5.5',
                                              'mask': '24'}]}]}}}
     
@@ -519,43 +505,30 @@ def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
     pprint.pprint(ret)
     assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
-                                {'interf': [{'description': 'Configured by '
-                                                            'NETCONF',
-                                             'interface': 'Ethernet1',
+                                {'interf': [{'interface': 'Ethernet1',
                                              'ip': '10.0.1.4',
                                              'mask': '24'},
                                             {'interface': 'Loopback1',
                                              'ip': '1.1.1.1',
                                              'mask': '24'},
-                                            {'description': 'Lopback2 for '
-                                                            'Customer 27123',
-                                             'interface': 'Loopback2',
+                                            {'interface': 'Loopback2',
                                              'ip': '2.2.2.2',
                                              'mask': '24'},
-                                            {'description': 'Customer #56924 '
-                                                            'service',
-                                             'interface': 'Loopback3',
+                                            {'interface': 'Loopback3',
                                              'ip': '1.2.3.4',
                                              'mask': '24'}]}]},
           'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
                                            'tools_version': '1.1'}},
-                                {'interf': [{'description': 'Configured by '
-                                                            'NETCONF',
-                                             'interface': 'Ethernet1',
+                                {'interf': [{'interface': 'Ethernet1',
                                              'ip': '10.0.1.5',
                                              'mask': '24'},
-                                            {'description': 'MGMT Range xYz',
-                                             'interface': 'Loopback100',
+                                            {'interface': 'Loopback100',
                                              'ip': '100.12.3.4',
                                              'mask': '22'},
-                                            {'description': 'NTU workstation '
-                                                            'service',
-                                             'interface': 'Loopback101',
+                                            {'interface': 'Loopback101',
                                              'ip': '1.101.2.2',
                                              'mask': '32'},
-                                            {'description': 'Customer ID '
-                                                            '67123A5',
-                                             'interface': 'Loopback102',
+                                            {'interface': 'Loopback102',
                                              'ip': '5.5.5.5',
                                              'mask': '24'}]}]}}}
     
@@ -696,3 +669,134 @@ def test_nr_cli_br_netmiko_use_ps():
     assert len(ret["nrp1"]["ceos2"]["show hostname"].splitlines()) == 2
     
 # test_nr_cli_br_netmiko_use_ps()
+
+
+def test_nr_cli_napalm_plugin():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname", "show clock"],
+        kwarg={"plugin": "napalm"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_napalm_plugin()
+
+
+def test_nr_cli_napalm_plugin_with_interval():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname", "show clock"],
+        kwarg={"plugin": "napalm", "interval": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_napalm_plugin_with_interval()
+
+
+def test_nr_cli_napalm_plugin_with_new_line_char():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname _br_", "show clock _br_"],
+        kwarg={"plugin": "napalm", "interval": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_napalm_plugin_with_new_line_char()
+
+def test_nr_cli_napalm_plugin_filename():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=[],
+        kwarg={"filename": "salt://cli/show_cmd_2.txt", "plugin": "napalm"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    for host_name, data in ret["nrp1"].items():
+
+        assert "show clock" in data, "No 'show clock' output from '{}'".format(
+            host_name
+        )
+        assert isinstance(data["show clock"], str)
+        assert (
+            "Clock source: local" in data["show clock"]
+        ), "Unexpected 'show clock' output from '{}'".format(host_name)
+
+        assert (
+            "show ip interface brief" in data
+        ), "No 'show ip interface brief output from '{}'".format(host_name)
+        assert isinstance(data["show ip interface brief"], str)
+        assert (
+            "IP Address" in data["show ip interface brief"]
+        ), "Unexpected 'show ip interface brief' output from '{}'".format(host_name)
+        
+# test_nr_cli_napalm_plugin_filename()
+
+
+def test_nr_cli_napalm_plugin_render_command():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["ping {{ host.name }}"],
+        kwarg={"plugin": "napalm"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "PING ceos1" in ret["nrp1"]["ceos1"]["ping ceos1"] 
+    assert "PING ceos2" in ret["nrp1"]["ceos2"]["ping ceos2"]
+    
+# test_nr_cli_napalm_plugin_render_command()
+        
+    
+def test_nr_cli_netmiko_plugin_render_command():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["ping {{ host.name }}"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "PING ceos1" in ret["nrp1"]["ceos1"]["ping ceos1"] 
+    assert "PING ceos2" in ret["nrp1"]["ceos2"]["ping ceos2"]
+    
+# test_nr_cli_netmiko_plugin_render_command()
+
+
+def test_nr_cli_scrapli_plugin_render_command():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["ping {{ host.name }}"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "PING ceos1" in ret["nrp1"]["ceos1"]["ping ceos1"] 
+    assert "PING ceos2" in ret["nrp1"]["ceos2"]["ping ceos2"]
+    
+# test_nr_cli_scrapli_plugin_render_command()

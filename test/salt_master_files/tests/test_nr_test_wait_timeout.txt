@@ -1,0 +1,12 @@
+- task: "show ip route"
+  test: contains
+  pattern: "1.1.1.1/32"
+  name: "Check if has 1.1.1.1/32 route"
+  wait_timeout: 10
+  wait_interval: 1
+- task: "show version"
+  test: contains
+  pattern: "cEOS"
+  name: "Check if has correct version"
+  wait_timeout: 10
+  wait_interval: 1

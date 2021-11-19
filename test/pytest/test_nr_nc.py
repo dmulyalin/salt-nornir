@@ -1,5 +1,5 @@
 """
-Make sure to have netconf apoi enabled on ceos:
+Make sure to have netconf api enabled on ceos:
 
     management api netconf
        transport ssh def

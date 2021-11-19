@@ -1,0 +1,65 @@
+name: Loopback123
+description: Service to configure Loopback123 across Network devices.
+model: |
+  model Loopback123 {
+    list data {
+      leaf host {
+        mandatory true;
+        type string;
+      }
+      leaf ip {
+        mandatory true;
+        type string;
+      }
+      leaf mask {
+        mandatory true;
+        type int32;
+      }
+      leaf template_activate {
+        mandatory true;
+        type string;
+      }
+      leaf template_deactivate {
+        type string;
+      }
+    }
+  }
+templates: 
+  Loopback_eos_activate: |
+    interface loopback123
+      description Lop123 service
+      ip address {{ ip }} {{ mask }}
+    !
+  Loopback_eos_remove: |
+    no interface loopback123
+data:
+  - host: ceos1
+    ip: 1.2.3.4
+    mask: 255.255.255.255
+    template_activate: Loopback_eos_activate
+    template_deactivate: Loopback_eos_remove
+  - host: ceos2
+    ip: 4.3.2.1
+    mask: 255.255.255.255
+    template_activate: Loopback_eos_activate
+    template_deactivate: Loopback_eos_remove
+activate: 
+  - fun: nr.cfg
+    kwarg: 
+      plugin: netmiko
+  - fun: nr.test
+    arg:
+      - "show interface description"
+      - contains
+      - oopack123
+      - Check Lo123 removed    
+deactivate: 
+  - fun: nr.cfg
+    kwarg: 
+      plugin: netmiko
+  - fun: nr.test
+    arg:
+      - "show interface description"
+      - ncontains
+      - oopack123
+      - Check Lo123 removed     

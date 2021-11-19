@@ -13,6 +13,5 @@ cEOS tools version: {{ tools_version }}
   
 <group name="interf" input="interfaces">
 interface {{ interface }}
-   description {{ description | re(".*") }}
    ip address {{ ip }}/{{ mask }}
 </group>

@@ -1,0 +1,2 @@
+show ip interface brief
+show clock

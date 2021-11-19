@@ -32,7 +32,7 @@ setup(
         "napalm==3.*",
         "nornir_netmiko==0.*",
         "nornir_napalm==0.*",
-        "nornir_salt==0.6.*",
+        "nornir_salt==0.7.*",
         "psutil==5.8.*",
     ],
     entry_points="""

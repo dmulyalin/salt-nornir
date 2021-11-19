@@ -1,6 +1,7 @@
 import logging
 import pprint
 import pytest
+import os
 
 log = logging.getLogger(__name__)
 
@@ -467,3 +468,146 @@ def test_nr_test_inline_contains_failure():
     for host_name, res in ret["nrp1"].items():
         assert "nornir-salt:TestsProcessor task_instance_completed error" in res
         assert "Traceback" in res["nornir-salt:TestsProcessor task_instance_completed error"]
+        
+def test_nr_test_dump():
+    import random
+    
+    dump_filename = "test_nr_test_dump_{}".format(random.randint(1,10000))
+    _ = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_1.txt", 
+            "dump": dump_filename
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    salt_nornir_files = client.cmd(
+        tgt="nrp1",
+        fun="cmd.run",
+        arg=["ls -l /var/salt-nornir/nrp1/files/"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(salt_nornir_files)
+    assert dump_filename in salt_nornir_files["nrp1"]
+    
+# test_nr_test_dump()
+
+def test_nr_test_sortby_and_reverse():
+
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_1.txt", "table": "brief",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_sortby_host = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_1.txt", "table": "brief",
+            "sortby": "host"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_sortby_host_reverse = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_1.txt", "table": "brief",
+            "sortby": "host",
+            "reverse": True
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # pprint.pprint(ret_sortby_host)    
+    # pprint.pprint(ret_sortby_host_reverse)
+    
+    assert (
+        "0 | ceos1" in ret["nrp1"] and "1 | ceos2" in ret["nrp1"]
+        or
+        "0 | ceos2" in ret["nrp1"] and "1 | ceos1" in ret["nrp1"]
+    )
+    assert "0 | ceos1" in ret_sortby_host["nrp1"] and "1 | ceos1" in ret_sortby_host["nrp1"]
+    assert "0 | ceos2" in ret_sortby_host_reverse["nrp1"] and "1 | ceos2" in ret_sortby_host_reverse["nrp1"]
+    
+# test_nr_test_sortby_and_reverse()
+
+
+def test_nr_test_eval_tests():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        kwarg={
+            "suite": "salt://tests/test_suite_4.txt",
+            "FB": "ceos1",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert ret["nrp1"][0]["exception"] == "wrong version"
+    assert ret["nrp1"][1]["exception"] == "AssertionError"
+    assert ret["nrp1"][2]["exception"] == "assert failed"
+    assert ret["nrp1"][3]["exception"] == "Wrong version"
+    assert ret["nrp1"][4]["exception"] == "Wrong version"    
+    
+# test_nr_test_eval_tests()
+
+
+def test_nr_test_with_run_ttp():
+    """
+    Verify that when "task: run_ttp", run_ttp string not send as a command to device 
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        kwarg={
+            "suite": "salt://tests/test_with_run_ttp.txt",
+            "remove_tasks": False,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # pprint.pprint(ret)
+    for item in ret["nrp1"]:
+        if item["name"] == "run_ttp":
+            assert not isinstance(item["result"], str), "Having task run_ttp with string result: {}".format(item)
+            
+# test_nr_test_with_run_ttp()
+
+
+def test_nr_test_wait_timeout():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        kwarg={
+            "suite": "salt://tests/test_nr_test_wait_timeout.txt",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # pprint.pprint(ret)
+    for i in ret["nrp1"]:
+        if i["name"] == "Check if has 1.1.1.1/32 route":
+            assert i["success"] == False
+            assert i["failed"] == True
+            assert "wait timeout expired" in i["exception"] and "test run attempts" in i["exception"]
+        elif i["name"] == "Check if has correct version":
+            assert i["success"] == True
+            assert i["failed"] == False
+            assert i["exception"] == None
+            
+# test_nr_test_wait_timeout()

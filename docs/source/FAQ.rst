@@ -13,8 +13,7 @@ updating pillar on salt-master, to propagate updates to proxy-minion process eit
 of these will work:
 
 * restart Nornir proxy-minion process e.g. ``systemctl restart salt-proxy@nrp1.service``
-* run ``salt nrp1 nr.refresh`` command to re-instantiate Nornir instance
-* run ``salt nrp1 nr.restart`` command to restart Nornir proxy minion process
+* run ``salt nrp1 nr.nornir refresh`` command to re-initialize Nornir
 
 where ``nrp1`` - Nornir Proxy minion id/name.
 

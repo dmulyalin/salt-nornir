@@ -219,13 +219,13 @@ def test_nr_file_rm_filegroup_all():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
 
     assert ret["nrp1"].count("interfaces__") == 4, "Not all files removed"
     assert ret["nrp1"].count("clock__") == 0, "Clock files removed"
     assert ret["nrp1"].count("facts__") == 0, "Facts files removed"
     
-# test_nr_file_rm_filegroup_all()
+#test_nr_file_rm_filegroup_all()
 
 
 def test_nr_file_rm_all():
@@ -342,13 +342,13 @@ def test_nr_file_diff_last_1_2_and_last_2_3_ceos1():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret_1_2)
-    # pprint.pprint(ret_2_3)
+    pprint.pprint(ret_1_2)
+    pprint.pprint(ret_2_3)
     
     assert ret_1_2["nrp1"]["ceos1"]["interfaces"] == True
-    assert "/clock__" in ret_1_2["nrp1"]["ceos1"]["clock"]
+    assert "---" in ret_1_2["nrp1"]["ceos1"]["clock"] and "+++" in ret_1_2["nrp1"]["ceos1"]["clock"]
     assert ret_2_3["nrp1"]["ceos1"]["interfaces"] == True
-    assert "/clock__" in ret_2_3["nrp1"]["ceos1"]["clock"]
+    assert "---" in ret_2_3["nrp1"]["ceos1"]["clock"] and "+++" in ret_2_3["nrp1"]["ceos1"]["clock"]
     assert ret_1_2["nrp1"]["ceos1"]["clock"] != ret_2_3["nrp1"]["ceos1"]["clock"]
     
 # test_nr_file_diff_last_1_2_and_last_2_3_ceos1()

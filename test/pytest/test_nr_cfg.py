@@ -505,3 +505,57 @@ def test_nr_cfg_inline_commands_plugin_napalm():
         assert results["napalm_configure"]["failed"] is False
         assert isinstance(results["napalm_configure"]["diff"], str)
         assert len(results["napalm_configure"]["diff"]) > 0
+
+
+def test_nr_cfg_plugin_netmiko_command_batch_1():
+    config = ["logging host 1.2.3.4", "logging host 1.2.3.5", "logging host 1.2.3.6"]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=config,
+        kwarg={"plugin": "netmiko", "batch": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for cmd in config:
+        assert cmd in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
+        
+# test_nr_cfg_plugin_netmiko_command_batch_1()
+
+
+def test_nr_cfg_plugin_netmiko_command_batch_invalid():
+    config = ["logging host 1.2.3.4", "logging host 1.2.3.5", "logging host 1.2.3.6"]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=config,
+        kwarg={"plugin": "netmiko", "batch": -100},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for cmd in config:
+        assert cmd in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
+        
+# test_nr_cfg_plugin_netmiko_command_batch_1()
+
+
+def test_nr_cfg_plugin_netmiko_command_batch_2():
+    config = ["logging host 1.2.3.4", "logging host 1.2.3.5", "logging host 1.2.3.6"]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=config,
+        kwarg={"plugin": "netmiko", "batch": 2},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for cmd in config:
+        assert cmd in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
+        
+# test_nr_cfg_plugin_netmiko_command_batch_1()
