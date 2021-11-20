@@ -1,7 +1,7 @@
 .. _salt_nornir_examples:
 
-Examples
-########
+Use Cases
+#########
 
 .. contents:: :local:
 
@@ -10,9 +10,7 @@ Doing one-liner configuration changes
 
 With NAPALM plugin::
 
-    salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2"
-    
-Make sure that device configured accordingly and NAPALM can interact with it, e.g. SCP server enabled on Cisco IOS.
+    salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=napalm
 
 With Netmiko plugin::
 
@@ -22,8 +20,9 @@ With Scrapli plugin::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=scrapli
     
-Make sure that Scrapli library installed on minion machine and hosts' connection options specified in 
-inventory, e.g.::
+Make sure that device configured accordingly and NAPALM or Scrapli or Netmiko can interact with it, e.g. 
+for NAPALM SCP server enabled on Cisco IOS or Scrapli library installed on minion machine or hosts' connection 
+options specified in inventory, e.g.::
 
     hosts:
       IOL1:
@@ -38,10 +37,10 @@ inventory, e.g.::
               ssh_config_file: True
               auth_strict_key: False
 
-Using JINJA2 templates to generate and apply configuration
+Using Jinja2 templates to generate and apply configuration
 ==========================================================
 
-Going to take data defined in pillar file ``/etc/salt/pillar/nrp1.sls``::
+Data defined in pillar file ``/etc/salt/pillar/nrp1.sls``::
 
     hosts:
       IOL1:
@@ -62,7 +61,7 @@ Going to take data defined in pillar file ``/etc/salt/pillar/nrp1.sls``::
         username: nornir
         password: nornir
 
-And combine it with template file ``/etc/salt/template/nr_syslog_cfg.j2``::
+Combine data with template file ``/etc/salt/template/nr_syslog_cfg.j2``::
 
     hostname {{ host.name }}
     !
@@ -70,9 +69,9 @@ And combine it with template file ``/etc/salt/template/nr_syslog_cfg.j2``::
     logging host {{ server }}
     {%- endfor %}
     
-.. note:: Hosts' data injected in templates under ``host`` variable.
+Hosts' data injected in templates under ``host`` variable.
 
-First, let's only generate configuration using ``nr.cfg_gen`` function without applying it to devices::
+First, optional, generate configuration using ``nr.cfg_gen`` function without applying it to devices::
 
     [root@localhost /]# salt nrp1 nr.cfg_gen filename=salt://templates/nr_syslog_cfg.j2
     nrp1:
@@ -93,7 +92,7 @@ First, let's only generate configuration using ``nr.cfg_gen`` function without a
                 logging host 2.2.2.1
     [root@localhost /]# 
     
-Configuration looks ok, should be fine to apply it to devices::
+If configuration looks ok, can apply it to devices::
 
     [root@localhost /]# salt nrp1 nr.cfg filename=salt://templates/nr_syslog_cfg.j2 plugin=netmiko
     nrp1:
@@ -157,7 +156,7 @@ Verify configuration applied::
 Using Nornir state module to do configuration changes
 =====================================================
 
-Salt master configuration defining base environment pillar and states location,
+Sample Salt Master configuration excerpt defining base environment pillar and states location,
 file ``/etc/salt/master`` snippet::
 
     ...
@@ -170,7 +169,7 @@ file ``/etc/salt/master`` snippet::
       base:
         - /etc/salt/pillar
     ...
-
+	
 Define data in pillar file ``/etc/salt/pillar/nrp1.sls``::
 
     hosts:
@@ -192,9 +191,8 @@ Define data in pillar file ``/etc/salt/pillar/nrp1.sls``::
         username: nornir
         password: nornir
 
-Content of jinja2 template used with state to configure syslog servers,
-file ``salt://templates/nr_syslog_cfg.j2`` or same as
-absolute path ``/etc/salt/template/nr_syslog_cfg.j2``::
+Jinja2 template used with state to configure syslog servers, file ``salt://templates/nr_syslog_cfg.j2`` 
+same as absolute path ``/etc/salt/template/nr_syslog_cfg.j2``::
 
     hostname {{ host.name }}
     !
@@ -202,7 +200,7 @@ absolute path ``/etc/salt/template/nr_syslog_cfg.j2``::
     logging host {{ server }}
     {%- endfor %}
 
-Content of state file ``/etc/salt/states/nr_cfg_syslog_and_ntp_state.sls``::
+SaltStack State file ``/etc/salt/states/nr_cfg_syslog_and_ntp_state.sls`` content::
 
     # apply logging configuration using jinja2 template
     configure_logging:
@@ -359,15 +357,15 @@ Reference
 `documentation <https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.elasticsearch.html#module-salt.modules.elasticsearch>`_ 
 for more details on Elasticsearch returner and module configuration.
 
-If all works well, should see new ``salt-nr_stats-v1`` indice created in Elasticsearch database::
+If all works well, should see new ``salt-nr_nornir-v1`` indice created in Elasticsearch database::
 
     [root@localhost ~]# curl 'localhost:9200/_cat/indices?v'
     health status index                    uuid                   pri rep docs.count docs.deleted store.size pri.store.size
-    green  open   salt-nr_stats-v1         p4w66-12345678912345   1   0      14779            0      6.3mb          6.3mb
+    green  open   salt-nr_nornir-v1         p4w66-12345678912345   1   0      14779            0      6.3mb          6.3mb
     
 Sample document entry::
 
-    [root@localhost ~]# curl -XGET 'localhost:9200/salt-nr_stats-v1/_search?pretty' -H 'Content-Type: application/json' -d '
+    [root@localhost ~]# curl -XGET 'localhost:9200/salt-nr_nornir-v1/_search?pretty' -H 'Content-Type: application/json' -d '
     > {
     > "size" : 1,
     > "query": {
@@ -392,7 +390,7 @@ Sample document entry::
         "max_score" : null,
         "hits" : [
           {
-            "_index" : "salt-nr_stats-v1",
+            "_index" : "salt-nr_nornir-v1",
             "_type" : "default",
             "_id" : "12345678",
             "_score" : null,
@@ -443,10 +441,10 @@ for details.
 Using runner to work with inventory information and search for hosts
 ====================================================================
 
-**Problem** - have 100 Nornir Proxy Minions managing 10000 devices, how do I know which
+**Problem Statement** - has 100 Nornir Proxy Minions managing 10000 devices, how do I know which
 device managed by which proxy.
 
-**Solution** - Nornir runner ``nr.inventory`` function can be used to present brief summary
+**Solution** - Nornir-runner ``nr.inventory`` function can be used to present brief summary
 about hosts::
 
     # find which Nornir Proxy minion manages IOL1 device
@@ -456,13 +454,6 @@ about hosts::
     +---+--------+----------+----------------+----------+--------+
     | 0 |  nrp1  |   IOL1   | 192.168.217.10 |   ios    |  lab   |
     +---+--------+----------+----------------+----------+--------+
-
-    # or produce JIRA style table report about all hosts
-    [root@localhost /]# salt-run nr.inventory FB="*" tk='{"tablefmt": "jira"}'
-    || minion   || hostname   || ip             || platform   || groups   ||
-    | nrp1     | IOL1       | 192.168.217.10 | ios        | lab      |
-    | nrp1     | IOL2       | 192.168.217.7  | ios        | lab      |
-
 
 Calling task plugins using nr.task
 ==================================
@@ -480,17 +471,17 @@ internally is equivalent to running this code::
     
     result = nr.run(task=netmiko_save_config, *args, **kwargs)
 
-where ``args`` and ``kwargs`` are arguments (if any) supplied on cli.
+where ``args`` and ``kwargs`` are arguments supplied on cli.
 
 Targeting devices behind Nornir proxy
 =====================================
 
-Nornir uses ``mornir_salt`` package to provide targeting capabilities built on top of
-Nornir module itself. Because of that it is good to read 
-`this <https://nornir-salt.readthedocs.io/en/latest/Functions.html#ffun>`_
-documentation notes first.
+Nornir uses ``nornir-salt`` package to provide targeting capabilities built on top of
+Nornir module itself. Because of that it is good idea to read 
+`FFun <https://nornir-salt.readthedocs.io/en/latest/Functions.html#ffun>`_ function
+documentation first.
 
-Combining SALT and nornir_salt targeting capabilities can help to address various usecase.
+Combining SaltStack and ``nornir-salt`` targeting capabilities can help to address various usecase.
 
 Examples::
 
@@ -509,12 +500,12 @@ Examples::
     # targeting all hosts that has name ending with ``accsw1``
     salt -I "proxy:proxytype:nornir" nr.cli "show clock" FB="*accsw1"
     
-By default Nornir does not use any filtering and simply run task against all devices, 
-there is Nornir proxy minion configuration ``nornir_filter_required`` parameter exists 
-to alter behavior to opposite resulting in error if no ``Fx`` filter provided.
+By default Nornir does not use any filtering and simply runs task against all devices.
+But Nornir proxy minion configuration ``nornir_filter_required`` parameter allows 
+to alter default behavior to opposite resulting in exception if no ``Fx`` filter provided.
 
-Saving results to files
-=======================
+Saving task results to files on a per-host basis
+================================================
 
 ``ToFileProcessor`` distributed with ``nornir_salt`` package can be used to save execution 
 module functions results to the file system of machine where proxy-minion process running.
