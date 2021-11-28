@@ -633,6 +633,43 @@ def test_state_nr_workflow_dcache_usage():
     assert "get_interfaces" not in inventory_data["nrp1"]["defaults"]["data"]
     assert "apply_mtu_config" not in inventory_data["nrp1"]["defaults"]["data"]
     
+
+def test_nr_cfg_syslog_and_ntp_state():
+    """
+    Run state similar to the one in docs use cases 
+    that demonstrates how to use nr.task and nr.cfg state modules.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["nr_cfg_syslog_and_ntp_state"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)     
+    for v in ret["nrp1"].values():
+        if v["__id__"] == "configure_logging":
+            assert v["changes"]["ceos1"]["netmiko_send_config"]["changed"] == True
+            assert v["changes"]["ceos1"]["netmiko_send_config"]["exception"] == None
+            assert "logging host 1.1.1.1" in v["changes"]["ceos1"]["netmiko_send_config"]["result"]
+            assert "logging host 2.2.2.2" in v["changes"]["ceos1"]["netmiko_send_config"]["result"]
+            assert v["changes"]["ceos2"]["netmiko_send_config"]["changed"] == True
+            assert v["changes"]["ceos2"]["netmiko_send_config"]["exception"] == None
+            assert "logging host 1.1.1.2" in v["changes"]["ceos2"]["netmiko_send_config"]["result"]
+            assert "logging host 2.2.2.1" in v["changes"]["ceos2"]["netmiko_send_config"]["result"]
+        elif v["__id__"] == "configure_ntp":
+            assert "nornir_netmiko.tasks.netmiko_send_config" in v["changes"]["ceos1"]
+            assert "ntp server 7.7.7.7" in v["changes"]["ceos1"]["nornir_netmiko.tasks.netmiko_send_config"]
+            assert "ntp server 7.7.7.8" in v["changes"]["ceos1"]["nornir_netmiko.tasks.netmiko_send_config"]
+            assert "nornir_netmiko.tasks.netmiko_send_config" in v["changes"]["ceos2"]
+            assert "ntp server 7.7.7.7" in v["changes"]["ceos2"]["nornir_netmiko.tasks.netmiko_send_config"]
+            assert "ntp server 7.7.7.8" in v["changes"]["ceos2"]["nornir_netmiko.tasks.netmiko_send_config"]
+        elif v["__id__"] == "save_configuration":
+            assert "nornir_netmiko.tasks.netmiko_save_config" in v["changes"]["ceos1"]
+            assert "nornir_netmiko.tasks.netmiko_save_config" in v["changes"]["ceos2"]
+            
+# test_nr_cfg_syslog_and_ntp_state()
+
 # test_state_nr_workflow_dcache_usage()
 
 # def test_state_nr_workflow_some_steps_has_report_false():

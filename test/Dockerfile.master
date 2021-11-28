@@ -5,7 +5,7 @@ RUN yum install -y python3 nano tree
 
 # install SaltStack
 RUN rpm --import https://repo.saltproject.io/py3/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
-RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3002.repo | tee /etc/yum.repos.d/salt.repo
+RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3004.repo | tee /etc/yum.repos.d/salt.repo
 RUN yum install -y salt-master
 
 COPY . /tmp/salt_nornir/

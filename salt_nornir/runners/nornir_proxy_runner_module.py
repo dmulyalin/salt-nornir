@@ -62,6 +62,8 @@ try:
         TimeRemainingColumn,
         TimeElapsedColumn,
     )
+    from rich.console import Group
+    from rich.panel import Panel
     from rich.table import Table
 
     HAS_RICH = True
@@ -402,12 +404,13 @@ def event(jid="all", tag=None, mode="log", stop_signal=None):
     if HAS_RICH and mode == "bars":
         tasks = {}
         progress = Progress(
-            "{task.description}",
+            "[progress.description]{task.description}",
             BarColumn(),
-            "{task.percentage:>3.0f}%",
+            "[progress.percentage]{task.percentage:>3.0f}%",
             "{task.completed}/{task.total}",
             TimeElapsedColumn(),
-            "{task.fields}",
+            TextColumn("{task.fields[info]}"),
+            refresh_per_second=3,
         )
         # listen to events indefinitely if stop_signal is None
         with progress:
@@ -436,7 +439,7 @@ def event(jid="all", tag=None, mode="log", stop_signal=None):
                         progress.add_task(
                             "{jid}:{proxy_id}:{function}".format(**edata),
                             total=len(edata["hosts"]),
-                            fields={"info": "{task_type}".format(**edata)},
+                            info="{task_type}".format(**edata),
                         ),
                         len(edata["hosts"]),
                     ]
@@ -458,7 +461,7 @@ def event(jid="all", tag=None, mode="log", stop_signal=None):
                     tasks["{jid}:{task_name}".format(**edata)] = progress.add_task(
                         "{jid}:{proxy_id}:{function}".format(**edata),
                         total=tasks[edata["jid"]][1],
-                        fields={"info": "{task_type}:{task_name}".format(**edata)},
+                        info="{task_type}:{task_name}".format(**edata),
                     )
                 elif (
                     edata["task_type"] == "subtask"

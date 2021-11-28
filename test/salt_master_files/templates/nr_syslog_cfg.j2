@@ -1,0 +1,5 @@
+hostname {{ host.name }}
+!
+{%- for server in host.syslog %}
+logging host {{ server }}
+{%- endfor %}

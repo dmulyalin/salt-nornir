@@ -1,10 +1,11 @@
-# Testing environment for SALT-Nornir proxy Minion
+# Testing/Development environment for SALT-Nornir proxy Minion
 
 Based on: https://github.com/dehvCurtis/SaltStack-CentOS-Docker
 
 ## Setting up cEOS image
 
 Download cEOS-lab.tar.xz image from Arista website and import it in docker:
+
 docker import cEOS-lab.tar.xz ceosimage:4.26.0F
 
 ## Start the environment up
@@ -39,6 +40,7 @@ $  docker exec -it ceos1 bash
 
 To rebuild containers:
 
+$ docker-compose up --build
 $ docker-compose build salt-master
 $ docker-compose build salt-minion
 $ docker-compose build ceos1

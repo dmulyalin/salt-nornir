@@ -559,3 +559,186 @@ def test_nr_cfg_plugin_netmiko_command_batch_2():
         assert cmd in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
         
 # test_nr_cfg_plugin_netmiko_command_batch_1()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_nr_cfg_inline_commands_plugin_pyats():
+    """
+    This test pushes inline config commands to hosts.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=["ntp server 1.1.1.1", "ntp server 1.1.1.2"],
+        kwarg={"plugin": "pyats"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["pyatsunicon_send_config"]["changed"] is True
+        assert results["pyatsunicon_send_config"]["exception"] is None
+        assert results["pyatsunicon_send_config"]["failed"] is False
+        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
+        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+
+
+def test_nr_cfg_from_file_plugin_pyats():
+    """
+    This test pushes static config from same file to all hosts
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={"plugin": "pyats", "filename": "salt://templates/ntp_config.txt"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["pyatsunicon_send_config"]["changed"] is True
+        assert results["pyatsunicon_send_config"]["exception"] is None
+        assert results["pyatsunicon_send_config"]["failed"] is False
+        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
+        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+
+
+def test_nr_cfg_from_file_template_plugin_pyats():
+    """
+    This test generates config using Nornir inventory
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "plugin": "pyats",
+            "filename": "salt://templates/ntp_config_template.txt",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["pyatsunicon_send_config"]["changed"] is True
+        assert results["pyatsunicon_send_config"]["exception"] is None
+        assert results["pyatsunicon_send_config"]["failed"] is False
+        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
+        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+
+
+def test_nr_cfg_from_file_per_host_plugin_pyats():
+    """
+    To test per-device static config push
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "plugin": "pyats",
+            "filename": "salt://templates/per_host_cfg_snmp/{{ host.name }}.txt",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["pyatsunicon_send_config"]["changed"] is True
+        assert results["pyatsunicon_send_config"]["exception"] is None
+        assert results["pyatsunicon_send_config"]["failed"] is False
+        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
+        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+    # check result contains correct config
+    assert (
+        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"]
+    )
+    assert (
+        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"]
+    )
+
+
+def test_nr_cfg_from_file_per_host_template_plugin_pyats():
+    """
+    Push per host templated config
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "plugin": "pyats",
+            "filename": "salt://templates/per_host_cfg_snmp_template/{{ host.name }}.txt",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["pyatsunicon_send_config"]["changed"] is True
+        assert results["pyatsunicon_send_config"]["exception"] is None
+        assert results["pyatsunicon_send_config"]["failed"] is False
+        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
+        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+    # check result contains correct config
+    assert (
+        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"]
+    )
+    assert (
+        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"]
+    )
+
+
+def test_nr_cfg_from_non_existing_file_fail_pyats():
+    """
+    To test per-device static config push FAILURE DUE TO NON-EXISTING FILE
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "plugin": "pyats",
+            "filename": "salt://templates/per_host_cfg_snmp/{{ host.name }}_non_exist.txt",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret.items():
+        assert isinstance(results, str)
+        assert "CommandExecutionError: Failed to get" in results
+        
+        
+def test_nr_cfg_plugin_pyats_command_batch():
+    config = ["logging host 1.2.3.4", "logging host 1.2.3.5", "logging host 1.2.3.6"]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=config,
+        kwarg={"plugin": "pyats", "bulk": True, "bulk_chunk_lines": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for cmd in config:
+        assert cmd in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)

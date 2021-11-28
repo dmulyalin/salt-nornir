@@ -1,5 +1,8 @@
 import logging
 import pprint
+import time
+import pytest
+import socket
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +19,25 @@ except:
 if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
-
+    opts = salt.config.client_config("/etc/salt/master")
+    event = salt.utils.event.get_event(
+        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
+    )
+    
+# check if has access to always on sandbox devices
+sandbox_router = "sandbox-iosxe-latest-1.cisco.com"
+try:
+    s = socket.socket()
+    s.settimeout(5)
+    s.connect((sandbox_router, 22))
+    has_sandbox_iosxe_latest_1_ssh = True
+except:
+    has_sandbox_iosxe_latest_1_ssh = False
+    
+skip_if_not_has_sandbox_iosxe_latest_1_ssh = pytest.mark.skipif(
+    has_sandbox_iosxe_latest_1_ssh == False,
+    reason="Has no connection to {} router".format(sandbox_router),
+)
 
 def test_nr_cli_brief():
     ret = client.cmd(
@@ -800,3 +821,215 @@ def test_nr_cli_scrapli_plugin_render_command():
     assert "PING ceos2" in ret["nrp1"]["ceos2"]["ping ceos2"]
     
 # test_nr_cli_scrapli_plugin_render_command()
+
+
+def test_nr_cli_pyats_plugin_render_command():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["ping {{ host.name }}"],
+        kwarg={"plugin": "pyats"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "PING ceos1" in ret["nrp1"]["ceos1"]["ping ceos1"] 
+    assert "PING ceos2" in ret["nrp1"]["ceos2"]["ping ceos2"]
+    
+# test_nr_cli_pyats_plugin_render_command()
+
+def test_nr_cli_pyats_plugin():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname", "show clock"],
+        kwarg={"plugin": "pyats"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_pyats_plugin()
+
+
+def test_nr_cli_pyats_plugin_with_interval():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname", "show clock"],
+        kwarg={"plugin": "pyats", "interval": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_pyats_plugin_with_interval()
+
+
+def test_nr_cli_pyats_plugin_with_new_line_char():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show hostname _br_", "show clock _br_"],
+        kwarg={"plugin": "pyats", "interval": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "show clock" in ret["nrp1"]["ceos1"]
+    assert "show clock" in ret["nrp1"]["ceos2"]
+    assert "show hostname" in ret["nrp1"]["ceos1"]
+    assert "show hostname" in ret["nrp1"]["ceos2"]
+    
+# test_nr_cli_pyats_plugin_with_new_line_char()
+
+def test_nr_cli_pyats_plugin_filename():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=[],
+        kwarg={"filename": "salt://cli/show_cmd_2.txt", "plugin": "pyats"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "nrp1" in ret
+    assert len(ret["nrp1"]) == 2
+    for host_name, data in ret["nrp1"].items():
+
+        assert "show clock" in data, "No 'show clock' output from '{}'".format(
+            host_name
+        )
+        assert isinstance(data["show clock"], str)
+        assert (
+            "Clock source: local" in data["show clock"]
+        ), "Unexpected 'show clock' output from '{}'".format(host_name)
+
+        assert (
+            "show ip interface brief" in data
+        ), "No 'show ip interface brief output from '{}'".format(host_name)
+        assert isinstance(data["show ip interface brief"], str)
+        assert (
+            "IP Address" in data["show ip interface brief"]
+        ), "Unexpected 'show ip interface brief' output from '{}'".format(host_name)
+        
+# test_nr_cli_pyats_plugin_filename()
+
+
+def test_nr_cli_pyats_plugin_via_pool():
+    """
+    This test measures time for task to complete, it should take less than 6 seconds
+    to finish if all good.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=[
+            "enable", "enable", "enable",
+            "ping 8.8.8.8 interval 1 timeout 1", 
+            "ping 1.2.3.4 interval 1 timeout 1", 
+            "ping 4.4.8.8 interval 1 timeout 1",
+        ],
+        kwarg={"plugin": "pyats", "via": "vty_1", "FB": "ceos1", "event_progress": True},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    
+    event_start = event.get_event(
+        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=10,
+    )
+    event_end = event.get_event(
+        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=20,
+    )
+
+    start_time = time.strptime(event_start["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S") 
+    end_time = time.strptime(event_end["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S")
+    elapsed = time.mktime(end_time) - time.mktime(start_time)
+    
+    assert elapsed < 10, "Took more then 10seconds to finish commands"
+    assert "ping 8.8.8.8 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+    assert "ping 1.2.3.4 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+    assert "ping 4.4.8.8 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+
+# test_nr_cli_pyats_plugin_via_pool()
+
+
+def test_nr_cli_pyats_plugin_via_default():
+    """
+    This test measures time for task to complete, it should take more than 6 seconds
+    to finish if all good.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=[
+            "enable", "enable", "enable",
+            "ping 8.8.8.8 interval 1 timeout 1", 
+            "ping 1.2.3.4 interval 1 timeout 1", 
+            "ping 4.4.8.8 interval 1 timeout 1",
+        ],
+        kwarg={"plugin": "pyats", "via": "default", "FB": "ceos1", "event_progress": True},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    
+    event_start = event.get_event(
+        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=10,
+    )
+    event_end = event.get_event(
+        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=20,
+    )
+
+    start_time = time.strptime(event_start["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S") 
+    end_time = time.strptime(event_end["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S")
+    elapsed = time.mktime(end_time) - time.mktime(start_time)
+    
+    assert 20 > elapsed > 10, "Took less then 10s or mote then 20s to finish commands"
+    assert "ping 8.8.8.8 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+    assert "ping 1.2.3.4 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+    assert "ping 4.4.8.8 interval 1 timeout 1" in ret["nrp1"]["ceos1"]
+
+# test_nr_cli_pyats_plugin_via_default()
+
+
+def test_nr_cli_pyats_plugin_parse_eos_fail():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "pyats", "parse": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert "Could not find parser" in ret["nrp1"]["ceos1"]["show clock"]
+    assert "Could not find parser" in ret["nrp1"]["ceos1"]["show version"]
+    assert "Could not find parser" in ret["nrp1"]["ceos2"]["show clock"]
+    assert "Could not find parser" in ret["nrp1"]["ceos2"]["show version"]
+    
+# test_nr_cli_pyats_plugin_parse_eos_fail()
+
+@skip_if_not_has_sandbox_iosxe_latest_1_ssh
+def test_nr_cli_pyats_plugin_parse_nrp2_iosxe():
+    ret = client.cmd(
+        tgt="nrp2",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "pyats", "parse": True, "add_details": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp2"]["csr1000v-1"]["show clock"]["result"], dict)
+    assert isinstance(ret["nrp2"]["csr1000v-1"]["show version"]["result"], dict)
+    assert ret["nrp2"]["csr1000v-1"]["show clock"]["failed"] == False
+    assert ret["nrp2"]["csr1000v-1"]["show version"]["failed"] == False
+    
+# test_nr_cli_pyats_plugin_parse_nrp2_iosxe()

@@ -537,7 +537,7 @@ def _get_or_import_task_fun(plugin):
     in globals() dictionary for future reference.
     """
     task_fun = plugin.split(".")[-1]
-    if task_fun in globals():
+    if task_fun in globals() and plugin == globals()[task_fun].__module__:
         task_function = globals()[task_fun]
     # check if plugin referring to file on master, download and compile it if so
     elif plugin.startswith("salt://"):
@@ -551,6 +551,10 @@ def _get_or_import_task_fun(plugin):
             )
         task_function = _load_custom_task_fun_from_text(function_text, "task")
     else:
+        log.debug("Nornir-proxy PID {}, _get_or_import_task_fun, importing {} from {}".format(
+                os.getpid(), task_fun, plugin
+            )
+        )
         # import task function, below two lines are the same as
         # from nornir.plugins.tasks import task_fun as task_function
         module = __import__(plugin, fromlist=[""])

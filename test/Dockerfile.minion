@@ -6,7 +6,7 @@ RUN yum install -y openssh-server openssh-clients
 
 # install SaltStack
 RUN rpm --import https://repo.saltproject.io/py3/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
-RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3002.repo | tee /etc/yum.repos.d/salt.repo
+RUN curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/3004.repo | tee /etc/yum.repos.d/salt.repo
 RUN yum install -y salt-minion
 
 COPY . /tmp/salt_nornir/
@@ -22,4 +22,4 @@ RUN python3 -m pip install git+https://github.com/dmulyalin/ttp_templates.git
 RUN python3 -m pip install /tmp/salt_nornir/nornir_salt
 RUN python3 -m pip install /tmp/salt_nornir/
 
-ENTRYPOINT ["salt-proxy", "--proxyid=nrp1", "-l", "debug"]
+ENTRYPOINT salt-proxy --proxyid=$PROXY_ID -l debug

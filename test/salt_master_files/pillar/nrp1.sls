@@ -8,15 +8,42 @@ hosts:
     platform: arista_eos
     groups: [lab, eos_params]
     data:
+      syslog: ["1.1.1.1", "2.2.2.2"]
       location: "North West Hall DC1"
-
+    connection_options:
+      pyatsunicon:
+        extras:
+          devices:
+            ceos1:
+              os: eos
+              credentials:
+                default:
+                  username: nornir
+                  password: nornir
+              connections:
+                default:
+                  protocol: ssh
+                  ip: 10.0.1.4
+                  port: 22
+                vty_1:
+                  protocol: ssh
+                  ip: 10.0.1.4
+                  pool: 3
+              
   ceos2:
     hostname: 10.0.1.5
     platform: arista_eos
     groups: [lab, eos_params]
     data:
+      syslog: ["1.1.1.2", "2.2.2.1"]
       location: "East City Warehouse"
-          
+    connection_options:
+      pyatsunicon:
+        platform: eos
+        extras:
+          devices:
+            ceos2: {}
+            
 groups: 
   lab:
     username: nornir

@@ -23,6 +23,16 @@ Python and Plugins
 
 ![architecture][architecture]
 
+# Advantages
+
+Some notable benefits:
+
+- Well tested - overall 382 tests combined as of release 0.8.0
+- Brings together SaltStack and a wealth of open-source libraries - Nornir, Netmiko, NAPALM, Scrapli, Scrapli-Netconf, Ncclient, Genie&PyATS (free, not open-source), PyGNMI, NTC-Templates, TTP, Jmespath, lxml, xmltodict, requests
+- Capable of addressing overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
+- Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
+- Integrate anything with anything, all you can do via CLI you can do via SaltStack and Nornir Python API or SaltStack REST API
+
 # Contributing
 
 Issues, bug reports and feature requests are welcomed.

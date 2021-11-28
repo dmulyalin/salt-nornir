@@ -9,7 +9,7 @@ Introduction
 ------------
 
 Nornir Execution Module complements Nornir Proxy Minion Module to interact 
-with devices over SSH, Telnet, NETCONF or any other methods supported by 
+with devices over SSH, Telnet, NETCONF or any other methods supported by
 Nornir connection plugins.
 
 Things to keep in mind:
@@ -979,7 +979,7 @@ def cli(*commands, **kwargs):
     :param filename: (str) path to file with multiline commands string
     :param kwargs: (dict) any additional arguments to use with specified ``plugin`` send command method
     :param plugin: (str) name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
-      or ``napalm``
+      or ``napalm`` or ``pyats``
 
     Sample Usage::
 
@@ -1035,6 +1035,9 @@ def cli(*commands, **kwargs):
     elif plugin.lower() == "napalm":
         task_fun = "nornir_salt.plugins.tasks.napalm_send_commands"
         kwargs["connection_name"] = "napalm"
+    elif plugin.lower() ==  "pyats":
+        task_fun = "nornir_salt.plugins.tasks.pyatsunicon_send_commands"
+        kwargs["connection_name"] = "pyatsunicon"
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run commands task
@@ -1055,16 +1058,17 @@ def cfg(*commands, **kwargs):
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` or ``scrapli``
+    :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` 
+        or ``scrapli`` or ``pyats``
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
         dictionary ``commit`` argument supplied to commit call using ``**commit``
 
-    .. warning:: ``dry_run`` not supported by ``netmiko`` plugin
+    .. warning:: ``dry_run`` not supported by ``netmiko`` and ``pyats`` plugins
 
-    .. warning:: ``commit`` not supported by ``scrapli`` plugin. To commit need to send commit
+    .. warning:: ``commit`` not supported by ``scrapli`` and ``pyats`` plugins. To commit need to send commit
         command as part of configuration, moreover, scrapli will not exit configuration mode,
-        need to send exit command as part of configuration mode as well.
+        need to send exit command as part of configuration commands as well.
 
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -1120,6 +1124,9 @@ def cfg(*commands, **kwargs):
     elif plugin.lower() == "scrapli":
         task_fun = "nornir_salt.plugins.tasks.scrapli_send_config"
         kwargs["connection_name"] = "scrapli"
+    elif plugin.lower() == "pyats":
+        task_fun = "nornir_salt.plugins.tasks.pyatsunicon_send_config"
+        kwargs["connection_name"] = "pyatsunicon"
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # work and return results
