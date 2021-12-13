@@ -33,6 +33,11 @@ Some notable benefits:
 - Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
 - Integrate anything with anything, all you can do via CLI you can do via SaltStack and Nornir Python API or SaltStack REST API
 
+# Communication and discussion
+
+Network To Code [salt-nornir Slack Channel](https://app.slack.com/client/T09LQ7E9E/C02MPR34DGF)
+Open an [issue](https://github.com/dmulyalin/salt-nornir/issues)
+
 # Contributing
 
 Issues, bug reports and feature requests are welcomed.
