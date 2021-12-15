@@ -23,7 +23,7 @@ Python and Plugins.
 
 ![architecture][architecture]
 
-Nornir Proxy acts as a bridge between SaltStack and network automation libraries.
+Nornir Proxy acts as a bridge between SaltStack and a wide set of network automation libraries.
 
 # Advantages
 
@@ -38,7 +38,10 @@ Some notable benefits:
 # Communication and discussion
 
 Network To Code [salt-nornir Slack Channel](https://app.slack.com/client/T09LQ7E9E/C02MPR34DGF)
+
 Open an [issue](https://github.com/dmulyalin/salt-nornir/issues)
+
+Start a [discussion](https://github.com/dmulyalin/salt-nornir/discussions)
 
 # Contributing
 
