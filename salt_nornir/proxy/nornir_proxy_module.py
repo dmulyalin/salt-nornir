@@ -58,9 +58,9 @@ Nornir proxy pillar parameters
 - ``proxy_always_alive`` - boolean, default True, keep connections with devices alive on True
   and tears them down after each job on False
 - ``job_wait_timeout`` - int, seconds to wait for job return until give up, default 600s
-- ``memory_threshold_mbyte`` - int, value in MBytes above each to trigger ``memory_threshold_action``
+- ``memory_threshold_mbyte`` - int, value in MBytes above each to trigger ``memory_threshold_action``, default is 300
 - ``memory_threshold_action`` - str, action to implement if ``memory_threshold_mbyte`` exceeded,
-  possible actions: ``log``- send syslog message, ``restart`` - shutsdown proxy minion process.
+  possible actions: ``log`` (default) - send syslog message, ``restart`` - shuts down proxy minion process.
 - ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
   per-host basis, default is ``/var/salt-nornir/{proxy_id}/files/``
 - ``files_max_count`` - int, maximum number of files for 
@@ -419,7 +419,7 @@ def initialized():
 
 def shutdown():
     """
-    This function implements this protocol to perform graceful shutdown:
+    This function implements this protocol to perform Nornir graceful shutdown:
 
     1. Signal worker and watchdog threads to stop
     2. Close all connections to devices
@@ -579,11 +579,12 @@ def _watchdog():
                 # restart if reached 95% of available file descriptors limit
                 if fd_in_use > fd_limit * 0.95:
                     log.critical(
-                        "Nornir-proxy MAIN PID {} watchdog, file descriptors in use: {}, limit: {}, reached 95% threshold, restarting".format(
+                        "Nornir-proxy MAIN PID {} watchdog, file descriptors in use: {}, limit: {}, reached 95% threshold, shutting down".format(
                             os.getpid(), fd_in_use, fd_limit
                         )
                     )
-                    shutdown()
+                    if shutdown():
+                        kill_nornir()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, file descritors usage check error: {}".format(
@@ -603,7 +604,8 @@ def _watchdog():
                         )
                     )
                 elif nornir_data["memory_threshold_action"] == "restart":
-                    shutdown()
+                    if shutdown():
+                        kill_nornir()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, memory usage check error: {}".format(

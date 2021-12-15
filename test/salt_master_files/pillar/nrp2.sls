@@ -10,7 +10,7 @@ hosts:
     password: C1sco12345
     port: 22
     connection_options:
-      pyatsunicon:
+      pyats:
         extras:
           devices:
             csr1000v-1:

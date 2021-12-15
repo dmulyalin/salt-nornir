@@ -11,7 +11,7 @@ hosts:
       syslog: ["1.1.1.1", "2.2.2.2"]
       location: "North West Hall DC1"
     connection_options:
-      pyatsunicon:
+      pyats:
         extras:
           devices:
             ceos1:
@@ -38,7 +38,7 @@ hosts:
       syslog: ["1.1.1.2", "2.2.2.1"]
       location: "East City Warehouse"
     connection_options:
-      pyatsunicon:
+      pyats:
         platform: eos
         extras:
           devices:

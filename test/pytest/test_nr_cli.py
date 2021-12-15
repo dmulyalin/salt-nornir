@@ -943,10 +943,10 @@ def test_nr_cli_pyats_plugin_via_pool():
     )    
     
     event_start = event.get_event(
-        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=10,
+        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyats_send_commands", match_type="regex", wait=10,
     )
     event_end = event.get_event(
-        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=20,
+        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyats_send_commands", match_type="regex", wait=20,
     )
 
     start_time = time.strptime(event_start["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S") 
@@ -981,10 +981,10 @@ def test_nr_cli_pyats_plugin_via_default():
     )    
     
     event_start = event.get_event(
-        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=10,
+        tag="nornir-proxy/.+/nrp1/ceos1/task/started/nornir_salt.plugins.tasks.pyats_send_commands", match_type="regex", wait=10,
     )
     event_end = event.get_event(
-        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyatsunicon_send_commands", match_type="regex", wait=20,
+        tag="nornir-proxy/.+/nrp1/ceos1/task/completed/nornir_salt.plugins.tasks.pyats_send_commands", match_type="regex", wait=20,
     )
 
     start_time = time.strptime(event_start["_stamp"].split(".")[0], "%Y-%m-%dT%H:%M:%S") 

@@ -594,11 +594,11 @@ def test_nr_cfg_inline_commands_plugin_pyats():
     )
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["pyatsunicon_send_config"]["changed"] is True
-        assert results["pyatsunicon_send_config"]["exception"] is None
-        assert results["pyatsunicon_send_config"]["failed"] is False
-        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
-        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+        assert results["pyats_send_config"]["changed"] is True
+        assert results["pyats_send_config"]["exception"] is None
+        assert results["pyats_send_config"]["failed"] is False
+        assert isinstance(results["pyats_send_config"]["result"], str)
+        assert len(results["pyats_send_config"]["result"]) > 0
 
 
 def test_nr_cfg_from_file_plugin_pyats():
@@ -615,11 +615,11 @@ def test_nr_cfg_from_file_plugin_pyats():
     )
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["pyatsunicon_send_config"]["changed"] is True
-        assert results["pyatsunicon_send_config"]["exception"] is None
-        assert results["pyatsunicon_send_config"]["failed"] is False
-        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
-        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+        assert results["pyats_send_config"]["changed"] is True
+        assert results["pyats_send_config"]["exception"] is None
+        assert results["pyats_send_config"]["failed"] is False
+        assert isinstance(results["pyats_send_config"]["result"], str)
+        assert len(results["pyats_send_config"]["result"]) > 0
 
 
 def test_nr_cfg_from_file_template_plugin_pyats():
@@ -639,11 +639,11 @@ def test_nr_cfg_from_file_template_plugin_pyats():
     )
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["pyatsunicon_send_config"]["changed"] is True
-        assert results["pyatsunicon_send_config"]["exception"] is None
-        assert results["pyatsunicon_send_config"]["failed"] is False
-        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
-        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+        assert results["pyats_send_config"]["changed"] is True
+        assert results["pyats_send_config"]["exception"] is None
+        assert results["pyats_send_config"]["failed"] is False
+        assert isinstance(results["pyats_send_config"]["result"], str)
+        assert len(results["pyats_send_config"]["result"]) > 0
 
 
 def test_nr_cfg_from_file_per_host_plugin_pyats():
@@ -663,17 +663,17 @@ def test_nr_cfg_from_file_per_host_plugin_pyats():
     )
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["pyatsunicon_send_config"]["changed"] is True
-        assert results["pyatsunicon_send_config"]["exception"] is None
-        assert results["pyatsunicon_send_config"]["failed"] is False
-        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
-        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+        assert results["pyats_send_config"]["changed"] is True
+        assert results["pyats_send_config"]["exception"] is None
+        assert results["pyats_send_config"]["failed"] is False
+        assert isinstance(results["pyats_send_config"]["result"], str)
+        assert len(results["pyats_send_config"]["result"]) > 0
     # check result contains correct config
     assert (
-        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"]
+        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyats_send_config"]["result"]
     )
     assert (
-        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"]
+        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyats_send_config"]["result"]
     )
 
 
@@ -694,17 +694,17 @@ def test_nr_cfg_from_file_per_host_template_plugin_pyats():
     )
     for host, results in ret["nrp1"].items():
         assert len(results.keys()) == 1, "Got additional results: {}".format(results)
-        assert results["pyatsunicon_send_config"]["changed"] is True
-        assert results["pyatsunicon_send_config"]["exception"] is None
-        assert results["pyatsunicon_send_config"]["failed"] is False
-        assert isinstance(results["pyatsunicon_send_config"]["result"], str)
-        assert len(results["pyatsunicon_send_config"]["result"]) > 0
+        assert results["pyats_send_config"]["changed"] is True
+        assert results["pyats_send_config"]["exception"] is None
+        assert results["pyats_send_config"]["failed"] is False
+        assert isinstance(results["pyats_send_config"]["result"], str)
+        assert len(results["pyats_send_config"]["result"]) > 0
     # check result contains correct config
     assert (
-        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"]
+        "North West Hall DC1" in ret["nrp1"]["ceos1"]["pyats_send_config"]["result"]
     )
     assert (
-        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"]
+        "East City Warehouse" in ret["nrp1"]["ceos2"]["pyats_send_config"]["result"]
     )
 
 
@@ -740,5 +740,5 @@ def test_nr_cfg_plugin_pyats_command_batch():
     )
     pprint.pprint(ret)
     for cmd in config:
-        assert cmd in ret["nrp1"]["ceos1"]["pyatsunicon_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
-        assert cmd in ret["nrp1"]["ceos2"]["pyatsunicon_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos1"]["pyats_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
+        assert cmd in ret["nrp1"]["ceos2"]["pyats_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)

@@ -1036,8 +1036,8 @@ def cli(*commands, **kwargs):
         task_fun = "nornir_salt.plugins.tasks.napalm_send_commands"
         kwargs["connection_name"] = "napalm"
     elif plugin.lower() ==  "pyats":
-        task_fun = "nornir_salt.plugins.tasks.pyatsunicon_send_commands"
-        kwargs["connection_name"] = "pyatsunicon"
+        task_fun = "nornir_salt.plugins.tasks.pyats_send_commands"
+        kwargs["connection_name"] = "pyats"
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run commands task
@@ -1125,8 +1125,8 @@ def cfg(*commands, **kwargs):
         task_fun = "nornir_salt.plugins.tasks.scrapli_send_config"
         kwargs["connection_name"] = "scrapli"
     elif plugin.lower() == "pyats":
-        task_fun = "nornir_salt.plugins.tasks.pyatsunicon_send_config"
-        kwargs["connection_name"] = "pyatsunicon"
+        task_fun = "nornir_salt.plugins.tasks.pyats_send_config"
+        kwargs["connection_name"] = "pyats"
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # work and return results
@@ -1201,7 +1201,7 @@ def cfg_gen(*commands, **kwargs):
     )
 
 
-def tping(ports=[], timeout=1, host=None, **kwargs):
+def tping(ports=None, timeout=1, host=None, **kwargs):
     """
     Tests connection to TCP port(s) by trying to establish a three way
     handshake. Useful for network discovery or testing.
@@ -1230,7 +1230,7 @@ def tping(ports=[], timeout=1, host=None, **kwargs):
             kwarg={"FB": "LAB-RT[123]"},
         )
     """
-    kwargs["ports"] = ports
+    kwargs["ports"] = ports or []
     kwargs["timeout"] = timeout
     kwargs["host"] = host
     # work and return results
@@ -1806,6 +1806,7 @@ def do(*args, **kwargs):
 
     # check if need to list all actions
     if "dir" in args or "dir_list" in args:
+        pattern = args[1] if len(args) == 2 else None
         actions_config = (
             __salt__["config.get"](key="nornir:actions", merge="recurse")
             if not filepath
@@ -1813,6 +1814,9 @@ def do(*args, **kwargs):
         )
         # iterate over actions and form brief list of them
         for action_name, data in actions_config.items():
+            # check if action name mathes the pattern
+            if pattern and not fnmatch.fnmatch(action_name, pattern):
+                continue
             ret["result"].append(
                 {
                     "action name": action_name,

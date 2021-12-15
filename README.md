@@ -19,9 +19,11 @@ for details.
 
 # Architecture
 
-Python and Plugins
+Python and Plugins.
 
 ![architecture][architecture]
+
+Nornir Proxy acts as a bridge between SaltStack and network automation libraries.
 
 # Advantages
 

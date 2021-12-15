@@ -3,8 +3,8 @@ services:
     container_name: salt-master
     hostname: 'salt-master'
     build:
-      context: .
-      dockerfile: test/Dockerfile.master
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.master
     networks: 
       net0:
         ipv4_address: 10.0.0.2
@@ -22,15 +22,22 @@ services:
         source: ./salt_nornir/
         target: /usr/local/lib/python3.6/site-packages/salt_nornir/
       - type: bind
-        source: ./nornir_salt/nornir_salt/
+        source: ../nornir_salt/nornir_salt/
         target: /usr/local/lib/python3.6/site-packages/nornir_salt/
+      # bind local folder to salt-master in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
         
   salt-minion-nrp1:
     container_name: salt-minion-nrp1
     hostname: 'salt-minion-nrp1'
     build:
-      context: .
-      dockerfile: test/Dockerfile.minion
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.minion
     environment:
       PROXY_ID: "nrp1"
     networks: 
@@ -46,19 +53,22 @@ services:
         source: ./salt_nornir/
         target: /usr/local/lib/python3.6/site-packages/salt_nornir/
       - type: bind
-        source: ./nornir_salt/nornir_salt/
+        source: ../nornir_salt/nornir_salt/
         target: /usr/local/lib/python3.6/site-packages/nornir_salt/
       # bind local folder to salt-minion in case need to pip install nornir-salt
       - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
         source: .
         target: /tmp/salt_nornir/
-
+        
   salt-minion-nrp2:
     container_name: salt-minion-nrp2
     hostname: 'salt-minion-nrp2'
     build:
-      context: .
-      dockerfile: test/Dockerfile.minion
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.minion
     environment:
       PROXY_ID: "nrp2"
     networks: 
@@ -74,9 +84,12 @@ services:
         source: ./salt_nornir/
         target: /usr/local/lib/python3.6/site-packages/salt_nornir/
       - type: bind
-        source: ./nornir_salt/nornir_salt/
+        source: ../nornir_salt/nornir_salt/
         target: /usr/local/lib/python3.6/site-packages/nornir_salt/
       # bind local folder to salt-minion in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
       - type: bind
         source: .
         target: /tmp/salt_nornir/
@@ -86,8 +99,8 @@ services:
     hostname: 'ceos1'
     privileged: true
     build:
-      context: .
-      dockerfile: test/Dockerfile.ceos1
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos1
     networks:
       # need ceos-dummy as its assigned to linux OS so that 
       # second network assigned to cEOS instance
@@ -100,8 +113,8 @@ services:
     hostname: 'ceos2'
     privileged: true
     build:
-      context: .
-      dockerfile: test/Dockerfile.ceos2
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos2
     networks:
       ceos-dummy: {}
       net1:

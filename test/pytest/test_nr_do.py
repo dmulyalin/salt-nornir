@@ -226,14 +226,13 @@ def test_nr_do_dir_filepath():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.do",
-        arg=["dir"],
-        kwarg={"filepath": "salt://actions/actions_file.txt"},
+        arg=["dir_list", "config*"],
         tgt_type="glob",
         timeout=60,
     )
     # pprint.pprint(ret)
-    assert isinstance(ret["nrp1"]["result"], str)
-    assert "action name" in ret["nrp1"]["result"]
-    assert "description" in ret["nrp1"]["result"]
+    assert isinstance(ret["nrp1"]["result"], list)
+    for item in ret["nrp1"]["result"]:
+        assert "config" in item["action name"]
     
 # test_nr_do_dir_filepath()
