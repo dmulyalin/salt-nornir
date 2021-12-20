@@ -1595,32 +1595,37 @@ def nc(*args, **kwargs):
 
         salt nrp1 nr.nc help method_name=edit_config
 
-    * ``locked`` - same as ``edit_config``, but runs this (presumably more reliable) work flow:
+    * ``transaction`` - same as ``edit_config``, but runs this (presumably more reliable) work flow:
 
-        1. Lock target configuration/datastore
-        2. Discard/clean previous changes if any
+        1. Lock target configuration datastore
+        2. If client and server supports it - Discard previous changes if any
         3. Edit configuration
-        4. Validate new confiugration if plugin and server supports it
-        5. Run commit confirmed if plugin and server supports it
-        6. Run final commit
-        7. Unlock target configuration/datastore
+        4. If client and server supports it - validate configuration if ``validate`` argument is True
+        5. If client and server supports it - do commit confirmed if ``confirmed`` argument is True
+        6. If client and server supports it - do commit operation 
+        7. Unlock target configuration datastore
+        8. If client and server supports it - discard all changes if any of steps 3, 4, 5 or 6 fail
+        9. Return results list of dictionaries keyed by step name
 
-        If any of steps 3, 4, 5, 6 fails, all changes discarded.
+        If any of steps 3, 4, 5, 6 fail, all changes discarded.
 
         Sample usage::
 
-            salt nrp1 nr.nc locked target="candidate" config="salt://path/to/config_file.xml" FB="*core-1"
+            salt nrp1 nr.nc transaction target="candidate" config="salt://path/to/config_file.xml" FB="*core-1"
 
     .. warning:: beware of difference in keywords required by different plugins, e.g. ``filter`` for ``ncclient``
-      vs ``filter_``/``filters`` for ``scrapli_netconf``, consult modules' api help for required arguments,
-      using, for instance ``help`` call: ``salt nrp1 nr.nc help method_name=get_config``
+      vs ``filter_``/``filters`` for ``scrapli_netconf``, consrefer to  modules' api documentation for required 
+      arguments, using, for instance ``help`` call: ``salt nrp1 nr.nc help method_name=get_config``
 
     Examples of sample usage for ``ncclient`` plugin::
 
         salt nrp1 nr.nc server_capabilities FB="*"
         salt nrp1 nr.nc get_config filter='["subtree", "salt://rpc/get_config_data.xml"]' source="running"
         salt nrp1 nr.nc edit_config target="running" config="salt://rpc/edit_config_data.xml" FB="ceos1"
+        salt nrp1 nr.nc transaction target="candidate" config="salt://rpc/edit_config_data.xml"
         salt nrp1 nr.nc commit
+        salt nrp1 nr.nc rpc data="salt://rpc/iosxe_rpc_edit_interface.xml"
+        salt nrp1 nr.nc get_schema identifier="ietf-interfaces" 
         salt nrp1 nr.nc get filter='<system-time xmlns="http://cisco.com/ns/yang/Cisco-IOS-XR-shellutil-oper"/>'
 
     Examples of sample usage for ``scrapli_netconf`` plugin::
@@ -1629,7 +1634,7 @@ def nc(*args, **kwargs):
         salt nrp1 nr.nc get_config source=running plugin=scrapli
         salt nrp1 nr.nc server_capabilities FB="*" plugin=scrapli
         salt nrp1 nr.nc rpc filter_=salt://rpc/get_config_rpc_ietf_interfaces.xml plugin=scrapli
-        salt nrp1 nr.nc locked target="candidate" config="salt://rpc/edit_config_ietf_interfaces.xml" plugin=scrapli
+        salt nrp1 nr.nc transaction target="candidate" config="salt://rpc/edit_config_ietf_interfaces.xml" plugin=scrapli
 
     Sample Python API usage from Salt-Master::
 
@@ -2232,8 +2237,7 @@ def nornir_fun(fun, *args, **kwargs):
     * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
-    * ``inventory`` - retrieves Nornir Process inventory data, accepts ``Fx`` arguments to return
-      inventory for a subset of hosts
+    * ``inventory`` - interract with Nornir Process inventory data, using ``InventoryFun`` function
     * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat
       name to return
     * ``version`` - returns a report of Nornir related packages installed versions
@@ -2251,6 +2255,10 @@ def nornir_fun(fun, *args, **kwargs):
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
+        salt nrp1 nr.nornir inventory create_host name="R1" hostname="1.2.3.4" platform="ios" groups='["lab"]'
+        salt nrp1 nr.nornir inventory update_host name="R1" data='{"foo": bar}'
+        salt nrp1 nr.nornir inventory read_host FB="R1"
+        salt nrp1 nr.nornir inventory call=delete_host name="R1"
         salt nrp1 nr.nornir stats stat="proxy_minion_id"
         salt nrp1 nr.nornir version
         salt nrp1 nr.nornir shutdown
@@ -2268,8 +2276,10 @@ def nornir_fun(fun, *args, **kwargs):
             arg=["stats"],
         )
     """
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     if fun == "inventory":
-        return __proxy__["nornir.inventory_data"](**kwargs)
+        kwargs.setdefault("call", args[0] if args else "read_inventory")
+        return task(plugin="inventory", **kwargs)
     elif fun == "stats":
         return __proxy__["nornir.stats"](*args, **kwargs)
     elif fun == "version":
@@ -2285,7 +2295,7 @@ def nornir_fun(fun, *args, **kwargs):
     elif fun == "test":
         return task(plugin="test", identity=_form_identity(kwargs, "nornir.test"))
     elif fun == "hosts":
-        return __proxy__["nornir.hosts_list"](**kwargs)
+        return __proxy__["nornir.list_hosts"](**kwargs)
     elif fun == "connections":
         return task(
             plugin="nornir_salt.plugins.tasks.connections",

@@ -1,0 +1,13 @@
+<config>
+  <interfaces xmlns="http://openconfig.net/yang/interfaces">
+   <interface>
+    <name>Loopback111</name>
+    <config>
+     <name>Loopback111</name>
+     <type xmlns:idx="urn:ietf:params:xml:ns:yang:iana-if-type">idx:softwareLoopback</type>
+     <enabled>true</enabled>
+     <description>Configured by NETCONF</description>
+    </config>
+   </interface>
+  </interfaces>
+</config>

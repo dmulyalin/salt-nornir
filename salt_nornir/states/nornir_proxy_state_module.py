@@ -350,8 +350,7 @@ def _run_workflow_step(
             step["kwargs"]["FL"] = list(FL)
 
         # get list of hosts matched by this step
-        matched_hosts = __salt__["nr.nornir"]("inventory", **step["kwargs"])
-        matched_hosts = list(matched_hosts["hosts"].keys())
+        matched_hosts = __salt__["nr.nornir"]("hosts", **step["kwargs"])
 
         # handle when have no hosts to run step against
         if not matched_hosts and report_all:
@@ -748,8 +747,7 @@ def workflow(*args, **kwargs):
     state_name = kwargs.pop("name")
 
     # get all hosts names
-    all_hosts = __salt__["nr.nornir"]("inventory", **common_filters)
-    all_hosts = list(all_hosts["hosts"].keys())
+    all_hosts = __salt__["nr.nornir"]("hosts", **common_filters)
 
     # form report and ret strutures
     report = {"details": [], "summary": {h: [] for h in all_hosts}}

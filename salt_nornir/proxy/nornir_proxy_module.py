@@ -158,7 +158,7 @@ with these default settings::
 Nornir Proxy Module functions
 -----------------------------
 
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.inventory_data
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.inventory_functions
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
@@ -221,6 +221,7 @@ try:
         HostsKeepalive,
         TabulateFormatter,
         DumpResults,
+        InventoryFun,
     )
     from nornir_salt.plugins.processors import (
         TestsProcessor,
@@ -461,7 +462,7 @@ def grains():
     """
     Populate grains
     """
-    return {"hosts": hosts_list(FB="*")}
+    return {"hosts": list_hosts(FB="*")}
 
 
 def grains_refresh():
@@ -727,6 +728,13 @@ def _worker(loader=None):
                 # stop this worker thread as another one will be started
                 shutdown()
                 break
+            if job["task_fun"] == "inventory":
+                output = InventoryFun(nornir_data["nr"], **job["kwargs"])
+                nornir_data["stats"]["jobs_completed"] += 1
+                nornir_data["res_queue"].put(
+                    {"output": output, "identity": job["identity"]}
+                )                
+                continue
             # execute nornir task
             task_fun = _get_or_import_task_fun(job["task_fun"], loader=loader)
             log.info(
@@ -1165,26 +1173,13 @@ def _rm_tasks_data_from_hosts(hosts):
 # -----------------------------------------------------------------------------
 
 
-def inventory_data(**kwargs):
+def list_hosts(**kwargs):
     """
-    Return Nornir inventory as a dictionary
+    Return a list of hosts managed by this Nornir instance
 
     :param Fx: filters to filter hosts
     """
-    # filter hosts to return inventory for
-    hosts = FFun(nornir_data["nr"], kwargs=kwargs)
-    return hosts.dict()["inventory"]
-
-
-def hosts_list(**kwargs):
-    """
-    Return list of hosts managed by this Nornir instance
-
-    :param Fx: filters to filter hosts
-    """
-    # filter hosts to return a list of hosts for
-    nr_filtered = FFun(nornir_data["nr"], kwargs=kwargs)
-    return list(nr_filtered.inventory.hosts.keys())
+    return InventoryFun(nornir_data["nr"], call="list_hosts", **kwargs)
 
 
 def run(task, loader, identity, name, **kwargs):
@@ -1457,6 +1452,9 @@ def nr_version():
         "pygnmi": "",
         "ttp-templates": "",
         "ntc-templates": "",
+        "pyats": "",
+        "cerberus": "",
+        "genie": ""
     }
 
     # get version of packages installed

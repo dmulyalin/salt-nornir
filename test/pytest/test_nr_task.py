@@ -1,6 +1,7 @@
 import logging
 import pprint
 import pytest
+import socket
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,21 @@ except:
 if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
+
+# check if has access to always on sandbox IOSXE device
+iosxe_sandbox_router = "sandbox-iosxe-latest-1.cisco.com" 
+s = socket.socket()
+s.settimeout(5)
+status = s.connect_ex((iosxe_sandbox_router, 830))
+if status == 0:
+    has_sandbox_iosxe_latest_1_metconf = True
+else:
+    has_sandbox_iosxe_latest_1_metconf = False
+s.close()
+skip_if_not_has_sandbox_iosxe_latest_1_netconf = pytest.mark.skipif(
+    has_sandbox_iosxe_latest_1_metconf == False,
+    reason="Has no connection to {} router".format(iosxe_sandbox_router),
+)
 
 
 def test_task_call_netmiko_send_command_brief():
@@ -136,3 +152,33 @@ def test_napalm_get_interfaces_with_jmespath():
     assert "mtu" in ret["nrp1"]["ceos2"]["nornir_napalm.plugins.tasks.napalm_get"]
     
 # test_napalm_get_interfaces_with_jmespath()
+
+@skip_if_not_has_sandbox_iosxe_latest_1_netconf
+def test_pyats_genie_api_ping_always_on_iosxe():
+    ret = client.cmd(
+        tgt="nrp2",
+        fun="nr.task",
+        kwarg={
+            "plugin": "nornir_salt.plugins.tasks.pyats_genie_api",
+            "FB": "csr1000v-1",
+            "api": "ping",
+            "address": "127.0.0.1",
+            "timeout": 1,
+            "count": 1
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    # {'nrp2': {'csr1000v-1': {'pyats_genie_api': {'ping': {'address': '127.0.0.1',
+    #                                                   'data_bytes': 100,
+    #                                                   'repeat': 1,
+    #                                                   'result_per_line': ['.'],
+    #                                                   'statistics': {'received': 0,
+    #                                                                  'send': 1,
+    #                                                                  'success_rate_percent': 0.0},
+    #                                                   'timeout_secs': 1}}}}}
+    assert "ping" in ret["nrp2"]["csr1000v-1"]["pyats_genie_api"]
+    assert ret["nrp2"]["csr1000v-1"]["pyats_genie_api"]["ping"]["address"] == "127.0.0.1"
+    
+# test_pyats_genie_api_ping_always_on_iosxe()

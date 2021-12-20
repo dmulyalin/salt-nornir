@@ -1,0 +1,26 @@
+<config>
+  <interfaces xmlns="http://openconfig.net/yang/interfaces">
+   <interface>
+    <name>Loopback112</name>
+    <config>
+     <name>Loopback112</name>
+     <type xmlns:idx="urn:ietf:params:xml:ns:yang:iana-if-type">idx:softwareLoopback</type>
+     <enabled>true</enabled>
+     <description>Configured by NETCONF Invalid</description>
+    </config>
+    <subinterfaces>
+     <subinterface>
+      <index>123</index>
+      <config>
+       <index>123</index>
+      </config>
+      <vlan xmlns="http://openconfig.net/yang/vlan">
+       <config>
+        <vlan-id>123</vlan-id>
+       </config>
+      </vlan>
+     </subinterface>
+    </subinterfaces>
+   </interface>
+  </interfaces>
+</config>

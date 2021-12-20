@@ -581,6 +581,13 @@ def test_nornir_refresh():
 # test_nornir_refresh()
 
 def test_nr_grains_hosts():
+    # refresh grains
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="saltutil.refresh_grains",
+        tgt_type="glob",
+        timeout=60,
+    )
     ret = client.cmd(
         tgt="nrp1",
         fun="grains.item",

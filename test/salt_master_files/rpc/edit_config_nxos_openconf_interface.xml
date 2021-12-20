@@ -1,0 +1,11 @@
+<config>
+  <interfaces xmlns="http://openconfig.net/yang/interfaces">
+   <interface>
+    <name>eth1/37</name>
+    <config>
+     <enabled>true</enabled>
+     <description>Configured by NETCONF</description>
+    </config>
+   </interface>
+  </interfaces>
+</config>

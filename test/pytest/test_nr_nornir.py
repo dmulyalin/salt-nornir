@@ -225,3 +225,157 @@ def test_disconnect_by_name():
     assert ret_after["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
     
 # test_disconnect_by_name()
+
+
+def test_inventory_create_and_delete_host():
+    # add new host
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={
+            "call": "create",
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    # pprint.pprint(res)
+    assert res["nrp1"] == True, "Failed to create new host"
+    
+    # verify new host added
+    hosts_list = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"]
+    ) 
+    # pprint.pprint(hosts_list)
+    assert "ceos1-1" in hosts_list["nrp1"], "New host not in hosts list"
+    
+    # try to get commands output from new host
+    output = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"FB": "ceos1-1", "add_details": True},
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    # pprint.pprint(output)
+    assert output["nrp1"]["ceos1-1"]["show clock"]["exception"] == None
+    assert output["nrp1"]["ceos1-1"]["show clock"]["failed"] == False
+    assert output["nrp1"]["ceos1-1"]["show hostname"]["exception"] == None
+    assert output["nrp1"]["ceos1-1"]["show hostname"]["failed"] == False
+    
+    # delete new host from inventory
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={
+            "call": "delete",
+            "name": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    assert res["nrp1"] == True, "Failed to remove host"
+    
+    # verify host deleted
+    hosts_list = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"]
+    ) 
+    assert "ceos1-1" not in hosts_list["nrp1"], "Host not deleted from inventory"
+    
+# test_inventory_create_and_delete_host()
+
+
+def test_inventory_update_host_data():
+    # update host data
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={
+            "call": "update",
+            "name": "ceos1",
+            "data": {
+                "Loopback123": {
+                    "ip": "1.2.3.4",
+                    "description": "Host update test"
+                }
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    
+    # generate config using updated data
+    cfg_gen_result = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=[
+            """
+            interface Loopback123 
+             ip address {{ host["Loopback123"]["ip"] }}
+             description {{ host["Loopback123"]["description"] }}
+        """],
+        kwarg={"FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )     
+    # pprint.pprint(cfg_gen_result)
+    # {'nrp1': {'ceos1': {'salt_cfg_gen': '\n'
+    #                     '            interface Loopback123 \n'
+    #                     '             ip address 1.2.3.4\n'
+    #                     '             description Host update '
+    #                     'test\n'
+    #                     '        '}}}
+    assert "ip address 1.2.3.4" in cfg_gen_result["nrp1"]["ceos1"]["salt_cfg_gen"]
+    assert "description Host update test" in cfg_gen_result["nrp1"]["ceos1"]["salt_cfg_gen"]
+    
+# test_inventory_update_host_data()
+
+def test_inventory_read_host_data():
+    # read host data
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={
+            "call": "read",
+            "FB": "ceos2",
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    # pprint.pprint(res)
+    assert isinstance(res["nrp1"]["ceos2"], dict)
+    assert "platform" in res["nrp1"]["ceos2"]
+    assert "hostname" in res["nrp1"]["ceos2"]
+    
+# test_inventory_read_host_data()
+
+def test_inventory_read_host_data_using_arg():
+    # read host data
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "read_host"],
+        kwarg={
+            "FB": "ceos2",
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    # pprint.pprint(res)
+    assert isinstance(res["nrp1"]["ceos2"], dict)
+    assert "platform" in res["nrp1"]["ceos2"]
+    assert "hostname" in res["nrp1"]["ceos2"]
+    
+# test_inventory_read_host_data_using_arg()

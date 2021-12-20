@@ -75,7 +75,8 @@ def test_state_nr_workflow():
             assert (
                 list(steps[0].values())[0] == "PASS"
             )  # check that first step is PASSed as it was pre-check
-
+            
+# test_state_nr_workflow()
 
 def test_state_nr_workflow_report_all():
     """
@@ -633,6 +634,7 @@ def test_state_nr_workflow_dcache_usage():
     assert "get_interfaces" not in inventory_data["nrp1"]["defaults"]["data"]
     assert "apply_mtu_config" not in inventory_data["nrp1"]["defaults"]["data"]
     
+# test_state_nr_workflow_dcache_usage()
 
 def test_nr_cfg_syslog_and_ntp_state():
     """
@@ -669,8 +671,6 @@ def test_nr_cfg_syslog_and_ntp_state():
             assert "nornir_netmiko.tasks.netmiko_save_config" in v["changes"]["ceos2"]
             
 # test_nr_cfg_syslog_and_ntp_state()
-
-# test_state_nr_workflow_dcache_usage()
 
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
