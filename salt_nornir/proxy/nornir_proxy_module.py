@@ -6,7 +6,7 @@ Nornir Proxy Module is a core component of Nornir Proxy Minion. However,
 users rarely have to interact with it directly unless they writing their
 own Execution or Runner or State or whatever modules for SaltStack.
 
-What is important to understand are configuration parameters you can use with 
+What is important to understand are configuration parameters you can use with
 Nornir Proxy Minion, as they can help to alter default behavior or control
 various aspects of Nornir Proxy Minion life cycle.
 
@@ -31,7 +31,7 @@ Nornir 3.x uses modular approach for plugins. As a result  required
 plugins need to be installed separately from Nornir Core library. Main
 collection of plugins to install is `nornir-salt <https://github.com/dmulyalin/nornir-salt>`_.
 Nornir Salt repository contains many function used by Salt Nornir Proxy
-Minion module and is mandatory to have on the system where proxy minion 
+Minion module and is mandatory to have on the system where proxy minion
 process runs.
 
 Nornir Proxy Configuration Parameters
@@ -42,16 +42,16 @@ Below parameters can be specified in Proxy Minion Pillar.
 - ``proxytype`` - string of value ``nornir``
 - ``multiprocessing`` - boolean, ``True`` by default, multiprocessing is a recommended way to run this proxy,
   threading mode also works, but might be prone to memory consumption issues
-- ``process_count_max`` - int, default is ``-1`` no limit, maximum number of processes to use to limit a number 
+- ``process_count_max`` - int, default is ``-1`` no limit, maximum number of processes to use to limit a number
   of tasks waiting to execute
 - ``nornir_filter_required`` - boolean, default is ``False``, to indicate if Nornir filter is mandatory
-  for tasks executed by this proxy-minion. Nornir has access to multiple devices, by default, if no filter 
+  for tasks executed by this proxy-minion. Nornir has access to multiple devices, by default, if no filter
   provided, task will run for all devices, ``nornir_filter_required`` allows to change behavior to opposite,
-  if no filter provided, task will not run at all. It is a safety measure against running task for all 
+  if no filter provided, task will not run at all. It is a safety measure against running task for all
   devices accidentally, instead, filter ``FB="*"`` can be used to run task for all devices.
-- ``runner`` - dictionary, Nornir Runner plugin parameters, default is 
+- ``runner`` - dictionary, Nornir Runner plugin parameters, default is
   `RetryRunner <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
-- ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is 
+- ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is
   `DictInventory  <https://nornir-salt.readthedocs.io/en/latest/Inventory%20Plugins.html#dictinventory-plugin>`_
   populated with data from proxy-minion pillar, pillar data ignored by any other inventory plugins
 - ``child_process_max_age`` - int, default is 660s, seconds to wait before forcefully kill child process
@@ -61,10 +61,10 @@ Below parameters can be specified in Proxy Minion Pillar.
 - ``memory_threshold_mbyte`` - int, default is 300, value in MBytes above each to trigger ``memory_threshold_action``
 - ``memory_threshold_action`` - str, default is ``log``, action to implement if ``memory_threshold_mbyte`` exceeded,
   possible actions: ``log`` - send syslog message, ``restart`` - shuts down proxy minion process.
-- ``files_base_path`` - str, default is ``/var/salt-nornir/{proxy_id}/files/``, OS path to folder where to save files 
+- ``files_base_path`` - str, default is ``/var/salt-nornir/{proxy_id}/files/``, OS path to folder where to save files
   on a per-host basis using `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html>_`,
-- ``files_max_count`` - int, default is 5, maximum number of file version for ``tf`` argument used by 
-  `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_ 
+- ``files_max_count`` - int, default is 5, maximum number of file version for ``tf`` argument used by
+  `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_
 - ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function, default is ``{}``
 - ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function, default is ``{}``
 - ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function, default is ``{}``
@@ -186,7 +186,7 @@ Nornir Proxy Module Functions
 
    * - Name
      - Description
-   * - `refresh_nornir`_ 
+   * - `refresh_nornir`_
      - Function to re-instantiate Nornir object instance refreshing pillar
    * - `execute_job`_
      - Function to place job in worker thread jobs queue
@@ -194,21 +194,21 @@ Nornir Proxy Module Functions
      - Retrieve Nornir Proxy Minion grains
    * - `grains_refresh`_
      - Refresh Nornir Proxy Minion grains
-   * -`init`_
+   * - `init`_
      - Initiate Nornir Proxy-module
-   * -`kill_nornir`_
+   * - `kill_nornir`_
      - Un-gracefully shutdown Nornir Proxy Minion process
-   * -`list_hosts`_
+   * - `list_hosts`_
      - Produces a list of hosts' names managed by this Proxy
-   * -`nr_data`_
-     - To retrieve values from ``nornir_data`` Nornir Proxy Minion dictionary 
-   * -`ping`_
+   * - `nr_data`_
+     - To retrieve values from ``nornir_data`` Nornir Proxy Minion dictionary
+   * - `ping`_
      - To test Nornir Proxy Minion process
-   * -`run`_
+   * - `run`_
      - Used to run Nornir Task
-   * -`shutdown`_
+   * - `shutdown`_
      - Gracefully shutdown Nornir Instance
-   * -`stats`_
+   * - `stats`_
      - Produces a dictionary of Nornir Proxy Minion statistics
 
 refresh_nornir
@@ -486,9 +486,7 @@ def init(opts, loader=None):
     # if loader not None, meaning init() called by _refresh_nornir function
     if loader:
         nornir_data["worker_thread"] = threading.Thread(
-            target=_worker,
-            name="{}_worker".format(opts["id"]),
-            args=(loader,),
+            target=_worker, name="{}_worker".format(opts["id"]), args=(loader,)
         )
     # salt >3003 requires loader context to call __salt__ within threads
     elif HAS_LOADER_CONTEXT:
@@ -500,9 +498,7 @@ def init(opts, loader=None):
     # salt <3003 does not use loader context
     else:
         nornir_data["worker_thread"] = threading.Thread(
-            target=_worker,
-            name="{}_worker".format(opts["id"]),
-            args=(None,),
+            target=_worker, name="{}_worker".format(opts["id"]), args=(None,)
         )
     nornir_data["worker_thread"].start()
     nornir_data["watchdog_thread"] = threading.Thread(
@@ -660,7 +656,8 @@ def _get_or_import_task_fun(plugin):
             )
         task_function = _load_custom_task_fun_from_text(function_text, "task")
     else:
-        log.debug("Nornir-proxy PID {}, _get_or_import_task_fun, importing {} from {}".format(
+        log.debug(
+            "Nornir-proxy PID {}, _get_or_import_task_fun, importing {} from {}".format(
                 os.getpid(), task_fun, plugin
             )
         )
@@ -841,7 +838,7 @@ def _worker(loader=None):
                 nornir_data["stats"]["jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": output, "identity": job["identity"]}
-                )                
+                )
                 continue
             # execute nornir task
             task_fun = _get_or_import_task_fun(job["task_fun"], loader=loader)
@@ -963,13 +960,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
                 continue
             if isinstance(kwargs.get(key), str):
                 rendered = __render(kwargs[key])
-            elif isinstance(
-                kwargs.get(key),
-                (
-                    list,
-                    tuple,
-                ),
-            ):
+            elif isinstance(kwargs.get(key), (list, tuple)):
                 rendered = [__render(item) for item in kwargs[key]]
             else:
                 continue
@@ -1407,12 +1398,7 @@ def execute_job(task_fun, kwargs, identity):
     """
     # add new job in jobs queue
     nornir_data["jobs_queue"].put(
-        {
-            "task_fun": task_fun,
-            "kwargs": kwargs,
-            "identity": identity,
-            "name": task_fun,
-        }
+        {"task_fun": task_fun, "kwargs": kwargs, "identity": identity, "name": task_fun}
     )
     # wait for job to complete and return results
     start_time = time.time()
@@ -1562,7 +1548,7 @@ def nr_version():
         "ntc-templates": "",
         "pyats": "",
         "cerberus": "",
-        "genie": ""
+        "genie": "",
     }
 
     # get version of packages installed

@@ -7,11 +7,11 @@ Nornir State module reference.
 Introduction
 ------------
 
-This state module uses Nornir proxy execution module to apply configuration 
+This state module uses Nornir proxy execution module to apply configuration
 to devices.
 
 .. warning:: This module does not implement idempotent behavior, it is up to Nornir task
-  plugin to handle idempotency or up to user to define work flow steps to achieve desired 
+  plugin to handle idempotency or up to user to define work flow steps to achieve desired
   level of idempotency.
 
 Example
@@ -63,13 +63,13 @@ Nornir State Module Functions
 
    * - Name
      - Description
-   * - `cfg`_ 
+   * - `cfg`_
      - Configure devices using Nornir execution module ``nr.cfg`` function
-   * - `task`_ 
+   * - `task`_
      - Interact with devices using ``nr.task`` Execution Module function.
-   * - `workflow`_ 
+   * - `workflow`_
      - Executes work flow steps using any SaltStack Execution modules functions
-     
+
 cfg
 +++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.cfg
@@ -185,12 +185,7 @@ def cfg(*args, **kwargs):
         }
     else:
         result = __salt__["nr.cfg"](*args, **kwargs)
-        ret = {
-            "name": state_name,
-            "changes": result,
-            "result": True,
-            "comment": "",
-        }
+        ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
 
@@ -230,12 +225,7 @@ def task(*args, **kwargs):
         }
     else:
         result = __salt__["nr.task"](*args, **kwargs)
-        ret = {
-            "name": state_name,
-            "changes": result,
-            "result": True,
-            "comment": "",
-        }
+        ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
 
@@ -751,12 +741,7 @@ def workflow(*args, **kwargs):
 
     # form report and ret strutures
     report = {"details": [], "summary": {h: [] for h in all_hosts}}
-    ret = {
-        "name": state_name,
-        "changes": report,
-        "result": True,
-        "comment": "",
-    }
+    ret = {"name": state_name, "changes": report, "result": True, "comment": ""}
 
     # run steps
     steps_names = []

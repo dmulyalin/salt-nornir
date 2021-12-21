@@ -38,8 +38,8 @@ setup(
     entry_points="""
     [salt.loader]
     module_dirs=salt_nornir.loader:module_dirs
-    proxy_dirs=salt_nornir.loader:proxy_dirs    
-    states_dirs=salt_nornir.loader:states_dirs    
+    proxy_dirs=salt_nornir.loader:proxy_dirs
+    states_dirs=salt_nornir.loader:states_dirs
     runner_dirs=salt_nornir.loader:runner_dirs
     """,
 )

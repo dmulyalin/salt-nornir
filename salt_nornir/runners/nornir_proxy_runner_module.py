@@ -2,7 +2,7 @@
 Nornir Runner Module
 ====================
 
-Nornir Runner module reference. 
+Nornir Runner module reference.
 
 .. note:: Runner module functions executed on same machine where salt-master process runs.
 
@@ -41,9 +41,7 @@ except:
 
 # import Nornir libs
 try:
-    from nornir_salt.plugins.functions import (
-        TabulateFormatter,
-    )
+    from nornir_salt.plugins.functions import TabulateFormatter
 
     HAS_NORNIR = True
 except ImportError:
@@ -307,11 +305,7 @@ def inventory(*args, **kwargs):
         # check if need to pass ret via tabulate
         if table:
             ret = TabulateFormatter(
-                ret,
-                tabulate=table,
-                headers=headers,
-                sortby=sortby,
-                reverse=reverse,
+                ret, tabulate=table, headers=headers, sortby=sortby, reverse=reverse
             )
     return ret
 

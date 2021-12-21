@@ -2,16 +2,16 @@
 Nornir Execution Module
 =======================
 
-SaltStack Nornir Execution Module exposes functionally of Nornir Proxy Minion to 
-work with devices and systems. Users can invoke Execution Modules functionality 
-using SALT CLI or one of SALT API - Python, REST. Usually, execution modules are 
-the modules that users work with a lot because they directly mapped to managed system 
+SaltStack Nornir Execution Module exposes functionally of Nornir Proxy Minion to
+work with devices and systems. Users can invoke Execution Modules functionality
+using SALT CLI or one of SALT API - Python, REST. Usually, execution modules are
+the modules that users work with a lot because they directly mapped to managed system
 functionality such as CLI or NETCONF server.
 
 Introduction
 ------------
 
-Nornir Execution Module complements Nornir Proxy Minion Module to interact 
+Nornir Execution Module complements Nornir Proxy Minion Module to interact
 with devices over SSH, Telnet, NETCONF or any other methods supported by
 Nornir connection plugins.
 
@@ -32,7 +32,7 @@ or use ``--timeout=60`` option to wait for minion return, as all together it mig
 5 seconds for task to complete. Alternatively, use ``--async`` option and query results afterwards::
 
     [root@localhost /]# salt nrp1 nr.cli "show clock" --async
-    
+
     Executed command with job ID: 20210211120453972915
     [root@localhost /]# salt-run jobs.lookup_jid 20210211120453972915
     nrp1:
@@ -45,7 +45,7 @@ or use ``--timeout=60`` option to wait for minion return, as all together it mig
             ----------
             show clock:
                 *08:17:22.632 EET Sat Feb 13 2021
-    [root@localhost /]# 
+    [root@localhost /]#
 
 AAA considerations
 ++++++++++++++++++
@@ -54,9 +54,9 @@ Quiet often AAA servers (Radius, Tacacs) might get overloaded with authenticatio
 and authorization requests coming from devices due to Nornir establishing
 connections with them, that effectively results in jobs failures.
 
-To overcome that problem Nornir Proxy Module uses 
-`Nornir Salt RetryRunner plugin <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_ 
-by default. ``RetryRunner`` developed to address aforementioned issue in addition to implementing 
+To overcome that problem Nornir Proxy Module uses
+`Nornir Salt RetryRunner plugin <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
+by default. ``RetryRunner`` developed to address aforementioned issue in addition to implementing
 retry logic.
 
 Targeting Nornir Hosts
@@ -64,7 +64,7 @@ Targeting Nornir Hosts
 
 Nornir can manage many devices and uses it's own inventory,
 additional filtering ``Fx`` functions introduced in
-`Nornir Salt library <https://github.com/dmulyalin/nornir-salt>`_ 
+`Nornir Salt library <https://github.com/dmulyalin/nornir-salt>`_
 to narrow down tasks execution to certain hosts/devices.
 
 Sample command to demonstrate targeting capabilities::
@@ -74,9 +74,9 @@ Sample command to demonstrate targeting capabilities::
 Jumphosts or Bastions
 +++++++++++++++++++++
 
-``RetryRunner`` included in Nornir Salt library supports ``nr.cli`` and ``nr.cfg`` 
-with ``plugin="netmiko"`` and ``nr.nc`` with ``plugin="ncclient"`` functions to 
-interact with devices behind SSH Jumphosts. 
+``RetryRunner`` included in Nornir Salt library supports ``nr.cli`` and ``nr.cfg``
+with ``plugin="netmiko"`` and ``nr.nc`` with ``plugin="ncclient"`` functions to
+interact with devices behind SSH Jumphosts.
 
 Sample Jumphost definition in host's inventory data of proxy-minion pillar::
 
@@ -99,20 +99,20 @@ and will use it to proxy connections to actual devices.
 Common CLI Arguments
 --------------------
 
-A number of Command Line Interface arguments can be supplied to Nornir Proxy 
-Module Execution Module functions to influence various aspects of task execution 
+A number of Command Line Interface arguments can be supplied to Nornir Proxy
+Module Execution Module functions to influence various aspects of task execution
 process.
 
-Some of the command line options use Nornir Processor plugins. This plugins tap into 
+Some of the command line options use Nornir Processor plugins. This plugins tap into
 task execution flow to perform additional actions or process task results.
 
-To invoke processor plugin need to supply execution module functions with processors 
+To invoke processor plugin need to supply execution module functions with processors
 arguments providing required parameters to control processor plugin behavior.
 
 All supported processors executed in this order::
 
     event_progress ->
-    -> DataProcessor -> 
+    -> DataProcessor ->
     -> iplkp ->
     -> xml_flake ->
     -> xpath ->
@@ -120,17 +120,17 @@ All supported processors executed in this order::
     -> match ->
     -> run_ttp ->
     -> ntfsm ->
-    -> TestsProcessor -> 
-    -> DiffProcessor -> 
+    -> TestsProcessor ->
+    -> DiffProcessor ->
     -> ToFileProcessor
-    
+
 .. list-table:: Common CLI Arguments Summary
    :widths: 15 85
    :header-rows: 1
 
    * - Name
      - Description
-   * - `Fx`_ 
+   * - `Fx`_
      - Filters to target subset of devices using FFun Nornir-Salt function
    * - `context`
      - Overrides context variables passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
@@ -138,17 +138,17 @@ All supported processors executed in this order::
      - Saves full task execution results to Nornir in-memory (RAM) Inventory ``defaults`` data
    * - `defaults`
      - Default template context passed by `render`_ to ``file.apply_template_on_contents`` exec mod function
-   * - `diff`_ 
+   * - `diff`_
      - Calls Nornir-Salt DiffProcessor to produce results difference
-   * - `dp`_ 
-     - Allows to call any function supported by Nornir-Salt DataProcessor 
+   * - `dp`_
+     - Allows to call any function supported by Nornir-Salt DataProcessor
    * - `download`_
      - Renders arguments content using Salt cp module
-   * - `dump`_ 
-     - Saves complete task results to local file system using Nornir-Salt DumpResults function       
-   * - `event_failed`_ 
-     - If True, emit events on Salt Events Bus for failed tasks 
-   * - `event_progress`_ 
+   * - `dump`_
+     - Saves complete task results to local file system using Nornir-Salt DumpResults function
+   * - `event_failed`_
+     - If True, emit events on Salt Events Bus for failed tasks
+   * - `event_progress`_
      - If True, emit events on Salt Events Bus for tasks execution progress
    * - `hcache`_
      - Saves host's task execution results to host's in-memory (RAM) Inventory data
@@ -156,31 +156,31 @@ All supported processors executed in this order::
      - Performs in CSV file or DNS lookup of IPv4 and IPv6 addresses to replace them in output
    * - `jmespath`_
      - uses JMESPath library to run query against structured results data
-   * - `match`_ 
-     - Filters text output using Nornir-Salt DataProcessor match function 
-   * - `ntfsm`_ 
+   * - `match`_
+     - Filters text output using Nornir-Salt DataProcessor match function
+   * - `ntfsm`_
      - Parse nr.cli output using TextFSM ntc-templates
-   * - `render`_ 
+   * - `render`_
      - Renders arguments content using Salt renderer system
-   * - `run_ttp`_ 
+   * - `run_ttp`_
      - Calls Nornir-Salt DataProcessor run_ttp function to parse results using TTP
    * - `saltenv`
      - `Salt Environment <https://docs.saltproject.io/en/latest/ref/states/top.html#environments>`_ name to use with `render`_ and `download`_ to source files, default is ``base``
-   * - `table`_ 
-     - Formats results to text table using Nornir-Salt TabulateFormatter 
+   * - `table`_
+     - Formats results to text table using Nornir-Salt TabulateFormatter
    * - `template_engine`
      - Template Engine name to use with `render`_ to render files, default is ``jinja``
-   * - `tests`_ 
+   * - `tests`_
      - Run tests for task results using Nornir-Salt TestsProcessor
-   * - `tf`_ 
+   * - `tf`_
      - Saves results to local file system using Nornir-Salt ToFileProcessor
-   * - `to_dict`_ 
+   * - `to_dict`_
      - Transforms results to structured data using Nornir-Salt ResultSerializer
-   * - `xml_flake`_ 
+   * - `xml_flake`_
      - Uses Nornir-Salt DataProcessor ``xml_flake`` function to filter XML output
-   * - `xpath`_ 
+   * - `xpath`_
      - Uses Nornir-Salt DataProcessor ``xpath`` function to filter XML output
-     
+
 Fx
 ++
 
@@ -199,7 +199,7 @@ Sample usage::
 dcache
 +++++++
 
-Saves full task execution results to Nornir ``defaults`` in-memory (RAM) inventory data. Saved 
+Saves full task execution results to Nornir ``defaults`` in-memory (RAM) inventory data. Saved
 information non-persistent across Proxy Minion reboots.
 
 Primary usecase is to share task results between tasks for rendering, targeting or processing.
@@ -208,18 +208,18 @@ Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.htt
 
 CLI Arguments:
 
-* ``dcache`` - nornir inventory ``defaults`` data dictionary key name to save results under 
+* ``dcache`` - nornir inventory ``defaults`` data dictionary key name to save results under
   or if set to boolean True, uses ``dcache`` as a key name
 
 Sample usage::
 
     salt nrp1 nr.cli "show clock" dcache="show_clock_output"
     salt nrp1 nr.cli "show clock" dcache=True
-    
+
 To view in-memory ``defaults`` inventory can use utility function::
 
     salt npr1 nr.nornir inventory
-    
+
 To clean up cached data can either restart Proxy Minion or use utility function::
 
     salt npr1 nr.nornir clear_dcache cache_keys='["key1", "key2"]'
@@ -227,7 +227,7 @@ To clean up cached data can either restart Proxy Minion or use utility function:
 diff
 ++++
 
-Uses Nornir Salt `DiffProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/DiffProcessor.html#diffprocessor-plugin>`_ 
+Uses Nornir Salt `DiffProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/DiffProcessor.html#diffprocessor-plugin>`_
 to produce difference between current task results and previous results saved by ``ToFileProcessor``.
 
 Supported functions: ``nr.task, nr.cli, nr.nc, nr.do, nr.http, nr.gnmi``
@@ -244,7 +244,7 @@ Sample usage::
 dp
 ++
 
-Uses Nornir-Salt `DataProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#dataprocessor-plugin>`_ 
+Uses Nornir-Salt `DataProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#dataprocessor-plugin>`_
 designed to help with processing Nornir task results.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
@@ -253,8 +253,8 @@ CLI Arguments:
 
 * ``dp`` - data processor functions list to process task results
 
-CLI argument ``dp`` can be comma-separated string or list of ``DataProcessor`` function names 
-or dictionary keyed by ``DataProcessor`` function name with values set to dictionary which 
+CLI argument ``dp`` can be comma-separated string or list of ``DataProcessor`` function names
+or dictionary keyed by ``DataProcessor`` function name with values set to dictionary which
 contains arguments for ``DataProcessor`` function.
 
 Sample usage::
@@ -264,7 +264,7 @@ Sample usage::
     salt nrp1 nr.nc get_config dp='["load_xml", "flatten"]'
     salt nrp1 nr.cli "show version" dp='[{"fun": "match", "pattern": "Version"}]'
     salt nrp1 nr.nc get_config source=running dp='[{"fun": "xml_flatten"}, {"fun": "key_filter", "pattern": "*bgp*, *BGP*"}]'
-    
+
 Last example will call ``xml_flatten`` function first following with ``key_filter`` with
 ``{"pattern": "*bgp*, *BGP*"}`` dictionary arguments.
 
@@ -274,9 +274,9 @@ download
 SaltStack has `cp module <https://docs.saltproject.io/en/latest/ref/renderers/index.html#renderers>`_,
 allowing to download files from Salt Master, ``donwload`` keyword can be used to indicate
 arguments that should download content for.
-    
+
 Keys listed in ``download`` argument ignored by `render`_ argument even if same key contained
-with ``render`` argument. Arguemnts names listed in ``donwload`` are not rendered, only loaded 
+with ``render`` argument. Arguemnts names listed in ``donwload`` are not rendered, only loaded
 from Salt Master.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
@@ -288,15 +288,15 @@ CLI Arguments:
 For example, to render content for filename argument::
 
     salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" download='["filename"]'
-    
+
 Primary use cases for this keyword is revolving around enabling or disabling dowloading
-and rendering for certain arguments. Execution Module Functions adjust ``download`` keyword 
+and rendering for certain arguments. Execution Module Functions adjust ``download`` keyword
 list content by themselves and usually do not require manual modifications.
 
 dump
 ++++
 
-Salt Event bus has limit on the amount of data it can transfer from Proxy Minion to Master, 
+Salt Event bus has limit on the amount of data it can transfer from Proxy Minion to Master,
 because of that, results produced by Proxy minion might get trimmed beyond certain threshold.
 
 This can be addressed in several ways:
@@ -304,9 +304,9 @@ This can be addressed in several ways:
 * increase event bus data transmission threshold
 * use returner to return results to external database or other system
 
-In addition to above option, Nornir Proxy Minion can make use of Nornir Salt 
-`DumpResults <https://nornir-salt.readthedocs.io/en/latest/Functions/DumpResults.html#dumpresults>`_ 
-function to save complete results of task execution to local file system. That data 
+In addition to above option, Nornir Proxy Minion can make use of Nornir Salt
+`DumpResults <https://nornir-salt.readthedocs.io/en/latest/Functions/DumpResults.html#dumpresults>`_
+function to save complete results of task execution to local file system. That data
 can be later retrieved from proxy Minion machine.
 
 Another usecase that ``DumpResults`` function can help to solve is results logging for audit,
@@ -344,21 +344,21 @@ system can act upon them and trigger execution of various actions.
 Event's tag formed using this formatter::
 
     nornir-proxy/{proxy_id}/{host}/task/failed/{name}
-    
+
 Where:
 
 * ``proxy_id`` - Nornir Proxy Minion ID
 * ``host`` - hostname of device that failed this task
 * ``name`` - name of the failed task
-    
+
 Event body contains task execution results dictionary.
 
 Failed tasks determined using results ``failed`` or ``success`` attributes, if ``failed``
 is True or ``success`` is False task considered as failed.
 
-Combining ``event_failed`` with ``nr.test`` function allows to implement event driven 
-automation in response to certain tests failure. Each test translated to a separate 
-task result and ``event_failed`` emit events on a per-test basis enabling to construct 
+Combining ``event_failed`` with ``nr.test`` function allows to implement event driven
+automation in response to certain tests failure. Each test translated to a separate
+task result and ``event_failed`` emit events on a per-test basis enabling to construct
 very granular react actions on Salt Master.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi, nr.file, nr.diff, nr.find, nr.learn``
@@ -374,7 +374,7 @@ Sample usage::
 event_progress
 ++++++++++++++
 
-Argument to use Nornir-Salt ``SaltEventProcessor`` plugin to emit task execution progress events to 
+Argument to use Nornir-Salt ``SaltEventProcessor`` plugin to emit task execution progress events to
 SaltStack Events Bus. This is mainly useful for tracking tasks' flow, debugging and general assurance.
 
 For example, ``event_progress`` used by ``nr.call`` Runner Module function to capture and print
@@ -389,17 +389,17 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.cli "show clock" event_progress=True
-    
-To listen to events generated by Proxy Minion when ``event_progress=True`` can open additional session 
+
+To listen to events generated by Proxy Minion when ``event_progress=True`` can open additional session
 to master server and run ``salt-run nr.event`` runner function.
 
-Nornir Proxy Minion pillar parameter ``event_progress_all`` can be used to control default bhaviour, 
+Nornir Proxy Minion pillar parameter ``event_progress_all`` can be used to control default bhaviour,
 ``event_progress`` overrides ``event_progress_all`` parameter.
 
 hcache
 ++++++
 
-Saves individual host's task execution results in host's in-memory (RAM) inventory data. Saved 
+Saves individual host's task execution results in host's in-memory (RAM) inventory data. Saved
 information non-persistent across Proxy Minion reboots.
 
 Primary usecase is to share task results data between tasks for rendering, targeting or processing.
@@ -408,18 +408,18 @@ Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.htt
 
 CLI Arguments:
 
-* ``hcache`` - host's data dictionary key name to save results under or if set to boolean True, uses 
+* ``hcache`` - host's data dictionary key name to save results under or if set to boolean True, uses
   ``hcache`` as a key name
 
 Sample usage::
 
     salt nrp1 nr.cli "show clock" hcache="show_clock_output"
     salt nrp1 nr.cli "show clock" hcache=True
-    
+
 To view in-memory inventory can use utility function::
 
     salt npr1 nr.nornir inventory FB="hosname-1"
-    
+
 To clean up cached data can either restart Proxy Minion or use utility function::
 
     salt npr1 nr.nornir clear_hcache FB="hosname-1"
@@ -428,8 +428,8 @@ To clean up cached data can either restart Proxy Minion or use utility function:
 iplkp
 +++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`iplkp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#iplkp>`_ 
+Uses Nornir-Salt ``DataProcessor``
+`iplkp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#iplkp>`_
 function to lookup IPv4 and IPv6 addresses using DNS or CSV file and replace
 them in device output with lookup results.
 
@@ -437,10 +437,10 @@ Supported functions: ``nr.cli``
 
 CLI Arguments:
 
-* ``iplkp`` - value can be ``dns`` to indicate that need to use DNS or reference to 
+* ``iplkp`` - value can be ``dns`` to indicate that need to use DNS or reference to
   a CSV file on Salt Master in a format ``salt://path/to/file.txt``
 
-First column in CSV file must be IPv4 or IPv6 address, second column should 
+First column in CSV file must be IPv4 or IPv6 address, second column should
 contain replacement value.
 
 ``iplkp`` uses this formatter to replace IP addresses in results: ``{ip}({lookup})`` -
@@ -457,7 +457,7 @@ Where ``salt://lookup/ip.txt`` content is::
     ip,hostname
     10.0.1.4,ceos1:Eth1
     10.0.1.5,ceos2:Eth1
-    
+
 And this would be the results produced::
 
     nrp1:
@@ -465,19 +465,19 @@ And this would be the results produced::
         ceos1:
             ----------
             show ip int brief:
-                                                                                          Address 
-                Interface       IP Address        Status       Protocol            MTU    Owner   
-                --------------- ----------------- ------------ -------------- ----------- ------- 
-                Ethernet1       10.0.1.4(ceos1:Eth1)/24       up           up                 1500            
-                Loopback1       1.1.1.1/24        up           up                65535                      
-    
+                                                                                          Address
+                Interface       IP Address        Status       Protocol            MTU    Owner
+                --------------- ----------------- ------------ -------------- ----------- -------
+                Ethernet1       10.0.1.4(ceos1:Eth1)/24       up           up                 1500
+                Loopback1       1.1.1.1/24        up           up                65535
+
 ``iplkp`` replaced ``10.0.1.4`` with lookup results ``10.0.1.4(ceos1:Eth1)`` in device output.
 
 jmespath
 ++++++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`jmespath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#jmespath>`_ 
+Uses Nornir-Salt ``DataProcessor``
+`jmespath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#jmespath>`_
 to run JMESPath query against structured data results or JSON string.
 
 Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli, nr.gnmi``
@@ -489,12 +489,12 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.task nornir_napalm.plugins.tasks.napalm_get getters='["get_interfaces"]' jmespath='interfaces'
-    
+
 match
 +++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`match function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#match>`_  
+Uses Nornir-Salt ``DataProcessor``
+`match function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#match>`_
 to filter text results using regular expression pattern.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
@@ -508,12 +508,12 @@ Sample usage::
 
     salt nrp1 nr.cli "show version" match="Version.*"
     salt nrp1 nr.cli "show version" match="Version.*" before=1
-    
+
 ntfsm
 +++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`ntfsm function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#ntfsm>`_  
+Uses Nornir-Salt ``DataProcessor``
+`ntfsm function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#ntfsm>`_
 to parse show commands output using TextFSM ntc-templates.
 
 Supported functions: ``nr.cli``
@@ -531,9 +531,9 @@ render
 ++++++
 
 SaltStack has `renderers system <https://docs.saltproject.io/en/latest/ref/renderers/index.html#renderers>`_,
-that system allows to render text files content while having access to all Salt Execution Module 
+that system allows to render text files content while having access to all Salt Execution Module
 Functions and inventory data.
-    
+
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
@@ -543,16 +543,16 @@ CLI Arguments:
 For example, to render content for filename argument::
 
     salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" render='["filename"]'
-    
-Primary use cases for this keyword is revolving around enabling or disabling rendering for 
-certain arguments. Execution Module Functions adjust ``render`` keyword list content by 
+
+Primary use cases for this keyword is revolving around enabling or disabling rendering for
+certain arguments. Execution Module Functions adjust ``render`` keyword list content by
 themselves and usually do not require any modifications.
 
-run_ttp 
+run_ttp
 +++++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`run_ttp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#run-ttp>`_ 
+Uses Nornir-Salt ``DataProcessor``
+`run_ttp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#run-ttp>`_
 to parse text results using TTP library and produce structured data.
 
 Supported functions: ``nr.task, nr.cli, nr.do``
@@ -568,44 +568,44 @@ Sample usage::
     salt nrp1 nr.cli "show version" run_ttp="salt://ttp/parse_version.txt"
     salt nrp1 nr.cli "show ip arp" run_ttp="ttp://platform/cisco_ios_show_ip_arp.txt"
     salt nrp1 nr.cli run_ttp="salt://ttp/parse_commands.txt" ttp_structure=list
-    
+
 TTP templates can be specified inline, sourced from salt-master using ``salt://path`` or from
 TTP Templates collection repository using ``ttp://path`` providing that it is installed on
 proxy minion machine.
 
-``run_ttp`` with ``nr.cli`` function also supports sourcing commands to collect from devices 
+``run_ttp`` with ``nr.cli`` function also supports sourcing commands to collect from devices
 from within TTP template input tags using ``commands`` argument. For example::
 
     <input name="version">
     commands = ["show version"]
     </input>
-    
+
     <input name="interfaces">
     commands = ["show run"]
     </input>
-    
+
     <group name="facts" input="version">
     cEOS tools version: {{ tools_version }}
     Kernel version: {{ kernel_version }}
     Total memory: {{ total_memory}} kB
     Free memory: {{ total_memory}} kB
     </group>
-      
+
     <group name="interf" input="interfaces">
     interface {{ interface }}
        description {{ description | re(".*") }}
        ip address {{ ip }}/{{ mask }}
     </group>
-    
-Supplying above template to ``nr.cli`` function with ``run_ttp`` argument will result 
-in running ``show version`` and ``show run`` commands, placing output in appropriate 
+
+Supplying above template to ``nr.cli`` function with ``run_ttp`` argument will result
+in running ``show version`` and ``show run`` commands, placing output in appropriate
 inputs and parsing it with dedicated groups, returning parsing results.
 
 table
 +++++
 
-Uses Nornir Salt 
-`TabulateFormatter function <https://nornir-salt.readthedocs.io/en/latest/Functions/TabulateFormatter.html#tabulateformatter>`_ 
+Uses Nornir Salt
+`TabulateFormatter function <https://nornir-salt.readthedocs.io/en/latest/Functions/TabulateFormatter.html#tabulateformatter>`_
 to transform task results in a text table representation.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do``
@@ -624,15 +624,15 @@ Sample usage::
     salt nrp1 nr.cli "show clock" table=True
     salt nrp1 nr.cli "show clock" table=True headers="host, results"
     salt nrp1 nr.cli "show clock" table=True headers="host, results" sortby="host" reverse=True
-    
+
 tests
 +++++
 
-Uses Nornir Salt 
-`TestsProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/TestsProcessor.html#testsprocessor-plugin>`_ 
+Uses Nornir Salt
+`TestsProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/TestsProcessor.html#testsprocessor-plugin>`_
 to test task results.
 
-Tests can be specified inline as a list of lists or can reference tests suite 
+Tests can be specified inline as a list of lists or can reference tests suite
 file on salt-master using ``salt://path`` format.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
@@ -651,9 +651,9 @@ Sample usage::
 tf
 ++
 
-Uses Nornir Salt 
-`ToFileProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_ 
-to save task execution results to proxy minion local file system under ``files_base_path``, default is 
+Uses Nornir Salt
+`ToFileProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_
+to save task execution results to proxy minion local file system under ``files_base_path``, default is
 ``/var/salt-nornir/{proxy_id}/files/``
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
@@ -665,12 +665,12 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" tf="logging_config"
-    
+
 to_dict
 +++++++
 
-Uses Nornir Salt 
-`ResultSerializer function <https://nornir-salt.readthedocs.io/en/latest/Functions/ResultSerializer.html#resultserializer>`_ 
+Uses Nornir Salt
+`ResultSerializer function <https://nornir-salt.readthedocs.io/en/latest/Functions/ResultSerializer.html#resultserializer>`_
 to transform task results in a structured data - dictionary or list.
 
 This function used by default for all task results unless ``TabulateFormatter`` ``table``
@@ -687,12 +687,12 @@ Sample usage::
 
     salt nrp1 nr.cli "show clock" add_detals=True
     salt nrp1 nr.cli "show clock" add_detals=True to_dict=False
-    
+
 xml_flake
 +++++++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`xml_flake function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xml-flake>`_ 
+Uses Nornir-Salt ``DataProcessor``
+`xml_flake function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xml-flake>`_
 to flatten XML results structure to dictionary and filter dictionary keys using glob pattern.
 
 Supported functions: ``nr.task, nr.nc, nr.do, nr.http``
@@ -708,8 +708,8 @@ Sample usage::
 xpath
 +++++
 
-Uses Nornir-Salt ``DataProcessor`` 
-`xpath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xpath>`_ 
+Uses Nornir-Salt ``DataProcessor``
+`xpath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xpath>`_
 to run xpath query against XML results.
 
 Supported functions: ``nr.task, nr.nc, nr.do, nr.http``
@@ -721,14 +721,14 @@ CLI Arguments:
 Sample usage::
 
     salt nrp1 nr.nc get_config xpath='//config/address[text()="1.1.1.11"]'
-    
+
 Beware that XML namespaces removed from XML results before running xpath
 on them. If this behavior is not desirable, need to use ``dp`` keyword instead
 with required arguments for ``xpath`` function including namespaces map dictionary.
 
 ``xpath`` function processes results received from device and executed locally on the minion
 machine, if you need to filter results returned from device, for ``nr.nc`` function consider
-using filter arguments. The complication is that if, for example, you running 
+using filter arguments. The complication is that if, for example, you running
 ``get_config`` NETCONF operation, full device config retrieved from device and passed via ``xpath``
 function on proxy minion, this could be processing intensive especially for big confiurations
 combined with significant number of devices simelteniously returning results.
@@ -736,7 +736,7 @@ combined with significant number of devices simelteniously returning results.
 Execution Module Functions
 --------------------------
 
-Table to summarize functions available in Nornir Proxy Execution Module and their purpose. 
+Table to summarize functions available in Nornir Proxy Execution Module and their purpose.
 
 +-----------------+---------------------------------------------------+--------------------+
 | nr.function     | description                                       | supported plugins  |
@@ -880,10 +880,7 @@ except:
 
 # import nornir libs
 try:
-    from nornir_salt.plugins.functions import (
-        TabulateFormatter,
-        DumpResults,
-    )
+    from nornir_salt.plugins.functions import TabulateFormatter, DumpResults
 
     HAS_NORNIR = True
 except ImportError:
@@ -1049,7 +1046,7 @@ def cli(*commands, **kwargs):
     elif plugin.lower() == "napalm":
         task_fun = "nornir_salt.plugins.tasks.napalm_send_commands"
         kwargs["connection_name"] = "napalm"
-    elif plugin.lower() ==  "pyats":
+    elif plugin.lower() == "pyats":
         task_fun = "nornir_salt.plugins.tasks.pyats_send_commands"
         kwargs["connection_name"] = "pyats"
     else:
@@ -1072,7 +1069,7 @@ def cfg(*commands, **kwargs):
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko`` 
+    :param plugin: (str) name of configuration task plugin to use - ``napalm`` (default) or ``netmiko``
         or ``scrapli`` or ``pyats``
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
@@ -1616,7 +1613,7 @@ def nc(*args, **kwargs):
         3. Edit configuration
         4. If client and server supports it - validate configuration if ``validate`` argument is True
         5. If client and server supports it - do commit confirmed if ``confirmed`` argument is True
-        6. If client and server supports it - do commit operation 
+        6. If client and server supports it - do commit operation
         7. Unlock target configuration datastore
         8. If client and server supports it - discard all changes if any of steps 3, 4, 5 or 6 fail
         9. Return results list of dictionaries keyed by step name
@@ -1628,7 +1625,7 @@ def nc(*args, **kwargs):
             salt nrp1 nr.nc transaction target="candidate" config="salt://path/to/config_file.xml" FB="*core-1"
 
     .. warning:: beware of difference in keywords required by different plugins, e.g. ``filter`` for ``ncclient``
-      vs ``filter_``/``filters`` for ``scrapli_netconf``, consrefer to  modules' api documentation for required 
+      vs ``filter_``/``filters`` for ``scrapli_netconf``, consrefer to  modules' api documentation for required
       arguments, using, for instance ``help`` call: ``salt nrp1 nr.nc help method_name=get_config``
 
     Examples of sample usage for ``ncclient`` plugin::
@@ -1639,7 +1636,7 @@ def nc(*args, **kwargs):
         salt nrp1 nr.nc transaction target="candidate" config="salt://rpc/edit_config_data.xml"
         salt nrp1 nr.nc commit
         salt nrp1 nr.nc rpc data="salt://rpc/iosxe_rpc_edit_interface.xml"
-        salt nrp1 nr.nc get_schema identifier="ietf-interfaces" 
+        salt nrp1 nr.nc get_schema identifier="ietf-interfaces"
         salt nrp1 nr.nc get filter='<system-time xmlns="http://cisco.com/ns/yang/Cisco-IOS-XR-shellutil-oper"/>'
 
     Examples of sample usage for ``scrapli_netconf`` plugin::
@@ -1815,8 +1812,7 @@ def do(*args, **kwargs):
     # load file if filepath provided
     if filepath:
         file_content_dict = __salt__["slsutil.renderer"](
-            path=filepath,
-            default_renderer=default_renderer,
+            path=filepath, default_renderer=default_renderer
         )
         if not file_content_dict:
             ret["failed"] = True
@@ -1996,7 +1992,7 @@ def file(*args, **kwargs):
         salt nrp1 nr.file read ip
         salt nrp1 nr.file rm ip interface
         salt nrp1 nr.file diff routes last='[1,2]'
-        
+
     Sample Python API usage from Salt-Master::
 
         import salt.client

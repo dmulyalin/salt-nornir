@@ -1,11 +1,11 @@
-services: 
+services:
   salt-master:
     container_name: salt-master
     hostname: 'salt-master'
     build:
       context: ..
       dockerfile: salt_nornir/test/Dockerfile.master
-    networks: 
+    networks:
       net0:
         ipv4_address: 10.0.0.2
     volumes:
@@ -31,7 +31,7 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
-        
+
   salt-minion-nrp1:
     container_name: salt-minion-nrp1
     hostname: 'salt-minion-nrp1'
@@ -40,7 +40,7 @@ services:
       dockerfile: salt_nornir/test/Dockerfile.minion
     environment:
       PROXY_ID: "nrp1"
-    networks: 
+    networks:
       net0:
         ipv4_address: 10.0.0.3
       net1:
@@ -62,7 +62,7 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
-        
+
   salt-minion-nrp2:
     container_name: salt-minion-nrp2
     hostname: 'salt-minion-nrp2'
@@ -71,7 +71,7 @@ services:
       dockerfile: salt_nornir/test/Dockerfile.minion
     environment:
       PROXY_ID: "nrp2"
-    networks: 
+    networks:
       net0:
         ipv4_address: 10.0.0.6
       net1:
@@ -93,7 +93,7 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
-        
+
   ceos1:
     container_name: ceos1
     hostname: 'ceos1'
@@ -102,7 +102,7 @@ services:
       context: ..
       dockerfile: salt_nornir/test/Dockerfile.ceos1
     networks:
-      # need ceos-dummy as its assigned to linux OS so that 
+      # need ceos-dummy as its assigned to linux OS so that
       # second network assigned to cEOS instance
       ceos-dummy: {}
       net1:
@@ -119,7 +119,7 @@ services:
       ceos-dummy: {}
       net1:
         ipv4_address: 10.0.1.5
-      
+
 networks:
   net0:
     ipam:

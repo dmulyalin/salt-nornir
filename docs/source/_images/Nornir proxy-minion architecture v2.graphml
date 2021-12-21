@@ -75,7 +75,7 @@ Process</y:NodeLabel>
     <node id="n5">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="-296.3739999999997" y="-333.227324922041"/>
+          <y:Geometry height="55.0" width="60.0" x="-349.5085218800645" y="-333.227324922041"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -92,7 +92,7 @@ Device</y:NodeLabel>
     <node id="n6">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="-189.61599999999976" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="-242.75052188006458" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -109,7 +109,7 @@ Device</y:NodeLabel>
     <node id="n7">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="-83.11599999999964" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="-135.99252188006471" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -126,7 +126,7 @@ Device</y:NodeLabel>
     <node id="n8">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="129.88400000000058" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="182.22852188006567" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -143,7 +143,7 @@ Device</y:NodeLabel>
     <node id="n9">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-258.51599999999974" y="-499.69999999999993"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-311.65052188006456" y="-499.69999999999993"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="81.328125" x="3.935937499999966" xml:space="preserve" y="4.0">NETCONF</y:NodeLabel>
@@ -154,7 +154,7 @@ Device</y:NodeLabel>
     <node id="n10">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-310.9739999999996" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-364.1085218800644" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="66.2421875" x="11.478906249999966" xml:space="preserve" y="4.0">Ncclient</y:NodeLabel>
@@ -165,10 +165,10 @@ Device</y:NodeLabel>
     <node id="n11">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-204.21599999999972" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-257.35052188006455" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="14" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="38.302734375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="56.1103515625" x="16.544824218749966" xml:space="preserve" y="-2.0593671875000155">Scrapli 
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="14" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="38.302734375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="56.1103515625" x="16.544824218749966" xml:space="preserve" y="-2.0593671875000155">Scrapli
 Netconf</y:NodeLabel>
           <y:Shape type="roundrectangle"/>
         </y:ShapeNode>
@@ -188,7 +188,7 @@ Netconf</y:NodeLabel>
     <node id="n13">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="97.7999999999999" x="-422.03199999999947" y="-499.69999999999993"/>
+          <y:Geometry height="34.18399999999997" width="97.7999999999999" x="-475.1665218800643" y="-499.69999999999993"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="92.0" x="2.8999999999999773" xml:space="preserve" y="4.0">RESTCONF</y:NodeLabel>
@@ -199,7 +199,7 @@ Netconf</y:NodeLabel>
     <node id="n14">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="115.28400000000062" y="-499.69999999999993"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="167.6285218800657" y="-499.69999999999993"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="43.1015625" x="23.049218749999966" xml:space="preserve" y="4.0">gNMI</y:NodeLabel>
@@ -211,7 +211,7 @@ Netconf</y:NodeLabel>
       <data key="d4" xml:space="preserve"><![CDATA[https://github.com/ktbyers/netmiko]]></data>
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-97.71599999999961" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-150.59252188006468" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="67.125" x="11.037499999999966" xml:space="preserve" y="5.2912187499999845">Netmiko</y:NodeLabel>
@@ -222,7 +222,7 @@ Netconf</y:NodeLabel>
     <node id="n16">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="8.784000000000503" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="61.12852188006565" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="57.359375" x="15.920312499999966" xml:space="preserve" y="5.2912187499999845">Scrapli</y:NodeLabel>
@@ -234,7 +234,7 @@ Netconf</y:NodeLabel>
       <data key="d4" xml:space="preserve"><![CDATA[https://github.com/napalm-automation/napalm]]></data>
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="221.78400000000067" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="274.12852188006576" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="72.4375" x="8.381249999999966" xml:space="preserve" y="4.0">NAPALM</y:NodeLabel>
@@ -245,7 +245,7 @@ Netconf</y:NodeLabel>
     <node id="n18">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-417.7319999999995" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-470.86652188006434" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="14" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="38.302734375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="62.3583984375" x="13.420800781249966" xml:space="preserve" y="-2.0593671875000155">Python
@@ -257,7 +257,7 @@ requests</y:NodeLabel>
     <node id="n19">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="115.28400000000062" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="167.6285218800657" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="65.34375" x="11.928124999999966" xml:space="preserve" y="5.2912187499999845">PyGNMI</y:NodeLabel>
@@ -268,7 +268,7 @@ requests</y:NodeLabel>
     <node id="n20">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="23.38400000000047" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="75.72852188006561" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -285,7 +285,7 @@ Device</y:NodeLabel>
     <node id="n21">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="-403.13199999999955" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="-456.2665218800644" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -302,7 +302,7 @@ Device</y:NodeLabel>
     <node id="n22">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="236.38400000000058" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="288.72852188006567" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -385,7 +385,7 @@ Device</y:NodeLabel>
     <node id="n29">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="328.2840000000008" y="-416.4636624610205"/>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="380.6285218800659" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.92626953125" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="89.22998046875" x="-0.014990234375034106" xml:space="preserve" y="7.1288652343749845">Other Plugins</y:NodeLabel>
@@ -396,7 +396,7 @@ Device</y:NodeLabel>
     <node id="n30">
       <data key="d6">
         <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-          <y:Geometry height="55.0" width="60.0" x="342.8840000000007" y="-333.7942429592413"/>
+          <y:Geometry height="55.0" width="60.0" x="395.2285218800658" y="-333.7942429592413"/>
           <y:Fill color="#000000" transparent="false"/>
           <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
@@ -482,6 +482,35 @@ Device</y:NodeLabel>
         </y:ShapeNode>
       </data>
     </node>
+    <node id="n35">
+      <data key="d6">
+        <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
+          <y:Geometry height="55.0" width="60.0" x="-30.13199999999955" y="-333.7942429592413"/>
+          <y:Fill color="#000000" transparent="false"/>
+          <y:BorderStyle color="#00FFFF" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="b" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="51.34375" x="4.328125" xml:space="preserve" y="17.59765625">Network
+Device</y:NodeLabel>
+          <y:StyleProperties>
+            <y:Property class="java.awt.Color" name="com.yworks.bpmn.icon.line.color" value="#000000"/>
+            <y:Property class="java.awt.Color" name="com.yworks.bpmn.icon.fill2" value="#d4d4d4cc"/>
+            <y:Property class="java.awt.Color" name="com.yworks.bpmn.icon.fill" value="#ffffffe6"/>
+            <y:Property class="com.yworks.yfiles.bpmn.view.BPMNTypeEnum" name="com.yworks.bpmn.type" value="ARTIFACT_TYPE_DATA_STORE"/>
+          </y:StyleProperties>
+        </y:GenericNode>
+      </data>
+    </node>
+    <node id="n36">
+      <data key="d4" xml:space="preserve"><![CDATA[https://github.com/ktbyers/netmiko]]></data>
+      <data key="d6">
+        <y:ShapeNode>
+          <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-44.731999999999516" y="-416.4636624610205"/>
+          <y:Fill color="#FFFFFF" transparent="false"/>
+          <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="55.5703125" x="16.814843749999966" xml:space="preserve" y="5.2912187499999845">PyATS</y:NodeLabel>
+          <y:Shape type="roundrectangle"/>
+        </y:ShapeNode>
+      </data>
+    </node>
     <edge id="e0" source="n1" target="n2">
       <data key="d10">
         <y:PolyLineEdge>
@@ -518,7 +547,7 @@ Device</y:NodeLabel>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.336921142577808" xml:space="preserve" y="15.212235068234861">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.336921538267575" xml:space="preserve" y="15.212235068234861">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
@@ -539,7 +568,7 @@ Device</y:NodeLabel>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.336916748046633" xml:space="preserve" y="14.85025432111911">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.336917143736429" xml:space="preserve" y="14.85025432111911">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
@@ -549,7 +578,7 @@ Device</y:NodeLabel>
         <y:PolyLineEdge>
           <y:Path sx="-9.985798963200011" sy="27.49585728346443" tx="0.0" ty="0.0">
             <y:Point x="-10.117798963199562" y="-546.1887039999999"/>
-            <y:Point x="-213.91599999999977" y="-515.3735948799999"/>
+            <y:Point x="-267.0505218800646" y="-515.3735948799999"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
@@ -574,7 +603,7 @@ Device</y:NodeLabel>
         <y:PolyLineEdge>
           <y:Path sx="-21.58221066240003" sy="27.482435510664516" tx="0.0" ty="0.0">
             <y:Point x="-21.71421066239958" y="-553.8122709504"/>
-            <y:Point x="-373.13199999999955" y="-518.3735948799999"/>
+            <y:Point x="-426.2665218800644" y="-518.3735948799999"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
@@ -587,7 +616,7 @@ Device</y:NodeLabel>
         <y:PolyLineEdge>
           <y:Path sx="7.364303359999553" sy="27.515412470889657" tx="0.0" ty="0.0">
             <y:Point x="7.232303360000003" y="-546.1887039999999"/>
-            <y:Point x="159.88400000000058" y="-521.548"/>
+            <y:Point x="212.22852188006567" y="-521.548"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
@@ -600,7 +629,7 @@ Device</y:NodeLabel>
         <y:PolyLineEdge>
           <y:Path sx="15.995594239999605" sy="27.515412470889657" tx="0.0" ty="0.0">
             <y:Point x="15.863594240000054" y="-553.322106836009"/>
-            <y:Point x="266.3840000000006" y="-526.548"/>
+            <y:Point x="318.72852188006567" y="-526.548"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
@@ -614,7 +643,7 @@ Device</y:NodeLabel>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="40.685546875" x="-20.342772308349254" xml:space="preserve" y="7.49966838361911">Telnet,
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="40.685546875" x="-20.34277212420534" xml:space="preserve" y="7.49966838361911">Telnet,
 SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
@@ -626,7 +655,7 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.33691293334914" xml:space="preserve" y="14.85025432111911">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.336915436828917" xml:space="preserve" y="14.85025432111911">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
@@ -637,7 +666,7 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="35.330078125" x="-17.665050537108925" xml:space="preserve" y="14.85025432111911">HTTP<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="35.330078125" x="-17.66505093279875" xml:space="preserve" y="14.85025432111911">HTTP<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
@@ -648,7 +677,7 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="55.345703125" x="-27.672854248046292" xml:space="preserve" y="14.85025432111911">HTTP/2.0<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="55.345703125" x="-27.67284530743433" xml:space="preserve" y="14.85025432111911">HTTP/2.0<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
@@ -659,7 +688,7 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
-          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="32.0078125" x="-16.003908935546292" xml:space="preserve" y="10.041206259508726">SSH,
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="33.40234375" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="32.0078125" x="-16.003899994934272" xml:space="preserve" y="10.041206259508726">SSH,
 API<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="1.0" segment="-1"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
@@ -740,7 +769,7 @@ API<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
         <y:PolyLineEdge>
           <y:Path sx="24.828420887469747" sy="27.469013737864486" tx="0.0" ty="0.0">
             <y:Point x="24.696420887470197" y="-558.86364544"/>
-            <y:Point x="372.8840000000008" y="-532.2364480000001"/>
+            <y:Point x="425.2285218800659" y="-532.2364480000001"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
@@ -773,6 +802,28 @@ API<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
           <y:LineStyle color="#00FF00" type="line" width="1.0"/>
+          <y:Arrows source="none" target="none"/>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e27" source="n36" target="n35">
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
+          <y:LineStyle color="#000000" type="line" width="1.0"/>
+          <y:Arrows source="none" target="none"/>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="28.673828125" x="-14.33691406321481" xml:space="preserve" y="14.85025432111911">SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="0.0" distance="30.0" distanceToCenter="true" position="center" ratio="0.5" segment="0"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e28" source="n12" target="n36">
+      <data key="d9"/>
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
+          <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>

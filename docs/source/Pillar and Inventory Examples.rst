@@ -14,7 +14,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
 - Netmiko - uses SSH and platform ``arista_eos`` under base arguments definition
 - NAPALM - uses Arista eAPI over HTTP poer 80 and platform ``eos`` as specified in eos_params group's ``connection_options``
 - Ncclient - as specified in eos_params group's ``connection_options`` uses port 830 with default device type
-- PyATS - for ceos1 has multiple connections defined, including a pool of 3 connections for ``vty_1`` connection. 
+- PyATS - for ceos1 has multiple connections defined, including a pool of 3 connections for ``vty_1`` connection.
   For ceos2 parameters sourced from base arguments.
 - HTTP - uses port 6020 over HTTPS as specified in eos_params group's ``connection_options``
 - Scrapli - uses SSH without verifying the keys, platform ``arista_eos`` as specified in eos_params group's ``connection_options``
@@ -26,7 +26,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
     proxy:
       proxytype: nornir
       multiprocessing: True
-    
+
     hosts:
       ceos1:
         hostname: 10.0.1.4
@@ -51,7 +51,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
                       protocol: ssh
                       ip: 10.0.1.4
                       pool: 3
-                  
+
       ceos2:
         hostname: 10.0.1.5
         platform: arista_eos
@@ -62,8 +62,8 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
             extras:
               devices:
                 ceos2: {}
-                
-    groups: 
+
+    groups:
       creds:
         username: nornir
         password: nornir
@@ -80,7 +80,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
               ssh_config_file: True
               auth_strict_key: False
               transport: paramiko
-              transport_options: 
+              transport_options:
                 # refer to https://github.com/saltstack/salt/issues/59962 for details
                 # on why need netconf_force_pty False
                 netconf_force_pty: False
@@ -89,7 +89,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
             extras:
               optional_args:
                 transport: http
-                port: 80  
+                port: 80
           ncclient:
             port: 830
             extras:
@@ -108,7 +108,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
             port: 6030
             extras:
               insecure: True
-              
+
 Cisco IOS-XE
 ============
 
@@ -125,7 +125,7 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
     proxy:
       proxytype: nornir
       multiprocessing: True
-      
+
     hosts:
       csr1000v-1:
         hostname: sandbox-iosxe-latest-1.cisco.com
@@ -166,9 +166,9 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
           transport: paramiko
           ssh_config_file: True
           auth_strict_key: False
-          transport_options: 
+          transport_options:
             netconf_force_pty: False
-            
+
 Cisco IOSXR
 ===========
 
@@ -183,7 +183,7 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
     proxy:
       proxytype: nornir
       multiprocessing: True
-      
+
     hosts:
       iosxr1:
         hostname: sandbox-iosxr-1.cisco.com
@@ -204,9 +204,9 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options: 
-                netconf_force_pty: False    
-    
+              transport_options:
+                netconf_force_pty: False
+
 Cisco NXOS
 ===========
 
@@ -221,7 +221,7 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
     proxy:
       proxytype: nornir
       multiprocessing: True
-      
+
     hosts:
       nxos1:
         hostname: sandbox-nxos-1.cisco.com
@@ -242,5 +242,5 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options: 
-                netconf_force_pty: False 
+              transport_options:
+                netconf_force_pty: False
