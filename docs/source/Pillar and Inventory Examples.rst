@@ -116,10 +116,12 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
 
 - Netmiko - uses SSH and platform ``cisco_ios`` under base arguments definition
 - PyATS - uses ``iosxe`` platform with SSH protocol on port 22 as specified in ``connection_options``
-- HTTP - uses HTTPS transport on port 443 as specified in ``connection_options``
+- HTTP - uses HTTPS transport on port 443 with base url "restconf/data" as specified in ``connection_options``
 - Ncclient - uses port 830 with platform name ``iosxe`` as specified in ``connection_options``
 - Scrapli-Netconf - uses port 830 with paramiko transport as specified in ``connection_options``
-
+- NAPALM - uses SSH and platform ``ios`` as specified in ``connection_options``
+- Scrapli - uses SSH and platform ``cisco_iosxe`` without verifying SSH keys as specified in ``connection_options``
+ 
 .. code-block:: yaml
 
     proxy:
@@ -144,30 +146,37 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
                       ip: 131.226.217.143
                       protocol: ssh
                       port: 22
-      http:
-        port: 443
-        extras:
-          transport: https
-          verify: False
-          base_url: "restconf/data"
-          headers:
-            Content-Type: "application/yang-data+json"
-            Accept: "application/yang-data+json"
-      ncclient:
-        port: 830
-        extras:
-          allow_agent: False
-          hostkey_verify: False
-          device_params:
-            name: iosxe
-      scrapli_netconf:
-        port: 830
-        extras:
-          transport: paramiko
-          ssh_config_file: True
-          auth_strict_key: False
-          transport_options:
-            netconf_force_pty: False
+          napalm:
+            platform: ios
+          scrapli:
+            platform: cisco_iosxe
+            extras:
+              auth_strict_key: False
+              ssh_config_file: False
+          http:
+            port: 443
+            extras:
+              transport: https
+              verify: False
+              base_url: "restconf/data"
+              headers:
+                Content-Type: "application/yang-data+json"
+                Accept: "application/yang-data+json"
+          ncclient:
+            port: 830
+            extras:
+              allow_agent: False
+              hostkey_verify: False
+              device_params:
+                name: iosxe
+          scrapli_netconf:
+            port: 830
+            extras:
+              transport: paramiko
+              ssh_config_file: True
+              auth_strict_key: False
+              transport_options: 
+                netconf_force_pty: False
 
 Cisco IOSXR
 ===========
@@ -177,6 +186,9 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
 - Netmiko - uses SSH and platform ``cisco_xr`` under base arguments definition
 - Ncclient - uses port 830 with platform name ``iosxr`` as specified in ``connection_options``
 - Scrapli-Netconf - uses port 830 as specified in ``connection_options``
+- NAPALM - uses SSH and platform ``iosxr`` as specified in ``connection_options``
+- Scrapli - uses SSH and platform ``cisco_iosxr`` without verifying SSH keys as specified in ``connection_options``
+- PyATS - uses ``iosxr`` platform with SSH protocol on port 22 as specified in ``connection_options``
 
 .. code-block:: yaml
 
@@ -189,9 +201,26 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
         hostname: sandbox-iosxr-1.cisco.com
         platform: cisco_xr
         username: admin
-        password: C1sco12345
+        password: "C1sco12345"
         port: 22
         connection_options:
+          pyats:
+            extras:
+              devices:
+                iosxr1:
+                  os: iosxr
+                  connections:
+                    default:
+                      ip: 131.226.217.150
+                      protocol: ssh
+                      port: 22
+          napalm:
+            platform: iosxr
+          scrapli:
+            platform: cisco_iosxr
+            extras:
+              auth_strict_key: False
+              ssh_config_file: False
           ncclient:
             port: 830
             extras:
@@ -204,7 +233,7 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options:
+              transport_options: 
                 netconf_force_pty: False
 
 Cisco NXOS
@@ -215,6 +244,9 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
 - Netmiko - uses SSH and platform ``nxos_ssh`` under base arguments definition
 - Ncclient - uses port 830 with platform name ``nexus`` as specified in ``connection_options``
 - Scrapli-Netconf - uses port 830 as specified in ``connection_options``
+- NAPALM - uses SSH and platform ``nxos_ssh`` as specified in ``connection_options``
+- Scrapli - uses SSH and platform ``cisco_nxos`` without verifying SSH keys as specified in ``connection_options``
+- PyATS - uses ``nxos`` platform with SSH protocol on port 22 as specified in ``connection_options``
 
 .. code-block:: yaml
 
@@ -223,13 +255,30 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
       multiprocessing: True
 
     hosts:
-      nxos1:
+      sandbox-nxos-1.cisco:
         hostname: sandbox-nxos-1.cisco.com
         platform: nxos_ssh
         username: admin
         password: "Admin_1234!"
         port: 22
         connection_options:
+          pyats:
+            extras:
+              devices:
+                sandbox-nxos-1.cisco:
+                  os: nxos
+                  connections:
+                    default:
+                      ip: 131.226.217.151
+                      protocol: ssh
+                      port: 22
+          napalm:
+            platform: nxos_ssh
+          scrapli:
+            platform: cisco_nxos
+            extras:
+              auth_strict_key: False
+              ssh_config_file: False
           ncclient:
             port: 830
             extras:
@@ -242,5 +291,5 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options:
-                netconf_force_pty: False
+              transport_options: 
+                netconf_force_pty: False  

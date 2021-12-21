@@ -1,5 +1,5 @@
 genie==21.10
-ipdbjmespath==0.10.0
+jmespath==0.10.0
 napalm==3.3.1
 ncclient==0.6.9
 netmiko==3.4.0

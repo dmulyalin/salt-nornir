@@ -40,6 +40,7 @@ and edit file ``/etc/salt/master``::
     interface: 0.0.0.0 # indicates IP address to listen/use for connections
     master_id: lab_salt_master
     pki_dir: /etc/salt/pki/master
+    timeout: 120
 
     file_roots:
       base:
