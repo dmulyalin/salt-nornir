@@ -14,3 +14,4 @@ Welcome to salt-nornir's documentation!
    Nornir State Module
    FAQ
    Use Cases
+   Pillar and Inventory Examples

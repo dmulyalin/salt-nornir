@@ -34,43 +34,43 @@ Nornir Salt repository contains many function used by Salt Nornir Proxy
 Minion module and is mandatory to have on the system where proxy minion 
 process runs.
 
-Nornir proxy pillar parameters
-------------------------------
+Nornir Proxy Configuration Parameters
+-------------------------------------
+
+Below parameters can be specified in Proxy Minion Pillar.
 
 - ``proxytype`` - string of value ``nornir``
-- ``multiprocessing`` - boolean, set to ``True`` is a recommended way to run this proxy
-- ``process_count_max`` maximum number of processes to use to limit
-  a number of tasks waiting to execute
-- ``nornir_filter_required`` - boolean, to indicate if Nornir filter is mandatory
-  for tasks executed by this proxy-minion. Nornir has access to
-  multiple devices, by default, if no filter provided, task will run for all
-  devices, ``nornir_filter_required`` allows to change behavior to opposite,
-  if no filter provided, task will not run at all. It is a safety measure against
-  running task for all devices accidentally, instead, filter ``FB="*"`` can be
-  used to run task for all devices.
+- ``multiprocessing`` - boolean, ``True`` by default, multiprocessing is a recommended way to run this proxy,
+  threading mode also works, but might be prone to memory consumption issues
+- ``process_count_max`` - int, default is ``-1`` no limit, maximum number of processes to use to limit a number 
+  of tasks waiting to execute
+- ``nornir_filter_required`` - boolean, default is ``False``, to indicate if Nornir filter is mandatory
+  for tasks executed by this proxy-minion. Nornir has access to multiple devices, by default, if no filter 
+  provided, task will run for all devices, ``nornir_filter_required`` allows to change behavior to opposite,
+  if no filter provided, task will not run at all. It is a safety measure against running task for all 
+  devices accidentally, instead, filter ``FB="*"`` can be used to run task for all devices.
 - ``runner`` - dictionary, Nornir Runner plugin parameters, default is 
   `RetryRunner <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
 - ``inventory`` - dictionary, Nornir Inventory plugin parameters, default is 
   `DictInventory  <https://nornir-salt.readthedocs.io/en/latest/Inventory%20Plugins.html#dictinventory-plugin>`_
   populated with data from proxy-minion pillar, pillar data ignored by any other inventory plugins
-- ``child_process_max_age`` - int, seconds to wait before forcefully kill child process, default 660s
-- ``watchdog_interval`` - int, interval in seconds between watchdog runs, default 30s
-- ``proxy_always_alive`` - boolean, default True, keep connections with devices alive on True
-  and tears them down after each job on False
-- ``job_wait_timeout`` - int, seconds to wait for job return until give up, default 600s
-- ``memory_threshold_mbyte`` - int, value in MBytes above each to trigger ``memory_threshold_action``, default is 300
-- ``memory_threshold_action`` - str, action to implement if ``memory_threshold_mbyte`` exceeded,
-  possible actions: ``log`` (default) - send syslog message, ``restart`` - shuts down proxy minion process.
-- ``files_base_path`` - str, OS path to folder where to save ToFile processor files on a 
-  per-host basis, default is ``/var/salt-nornir/{proxy_id}/files/``
-- ``files_max_count`` - int, maximum number of files for 
+- ``child_process_max_age`` - int, default is 660s, seconds to wait before forcefully kill child process
+- ``watchdog_interval`` - int, default is 30s, interval in seconds between watchdog runs
+- ``proxy_always_alive`` - boolean, default is True, keep connections with devices alive or tear them down after each job
+- ``job_wait_timeout`` - int, default is 600s, seconds to wait for job return until give up
+- ``memory_threshold_mbyte`` - int, default is 300, value in MBytes above each to trigger ``memory_threshold_action``
+- ``memory_threshold_action`` - str, default is ``log``, action to implement if ``memory_threshold_mbyte`` exceeded,
+  possible actions: ``log`` - send syslog message, ``restart`` - shuts down proxy minion process.
+- ``files_base_path`` - str, default is ``/var/salt-nornir/{proxy_id}/files/``, OS path to folder where to save files 
+  on a per-host basis using `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html>_`,
+- ``files_max_count`` - int, default is 5, maximum number of file version for ``tf`` argument used by 
   `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_ 
-  ``tf`` argument
-- ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function
-- ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function
-- ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function
-- ``event_progress_all`` - boolean, if True uses ``SaltEventProcessor`` with all tasks to emit progress events, 
-  default is False, per-task ``event_progress`` argument overrides ``event_progress_all`` parameter.
+- ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function, default is ``{}``
+- ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function, default is ``{}``
+- ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function, default is ``{}``
+- ``event_progress_all`` - boolean, default is False, if True emits progress events for all tasks using
+  `SaltEventProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/SaltEventProcessor.html>_`,
+  per-task ``event_progress`` argument overrides ``event_progress_all`` parameter.
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
@@ -99,15 +99,20 @@ Nornir proxy-minion pillar example:
       nr_cfg: {}
       nr_nc: {}
       runner:
-         plugin: threaded
+         plugin: RetryRunner
          options:
-             num_workers: 100
+            num_workers: 100
+            num_connectors: 10
+            connect_retry: 3
+            connect_backoff: 1000
+            connect_splay: 100
+            task_retry: 3
+            task_backoff: 1000
+            task_splay: 100
+            reconnect_on_fail: True
+            task_timeout: 600
       inventory:
-         plugin: SimpleInventory
-         options:
-           host_file: "/var/salt-nonir/proxy-id-1/hosts.yaml"
-           group_file: "/var/salt-nonir/proxy-id-1/groups.yaml"
-           defaults_file: "/var/salt-nonir/proxy-id-1/defaults.yaml"
+         plugin: DictInventory
 
     hosts:
       IOL1:
@@ -130,6 +135,23 @@ Nornir proxy-minion pillar example:
             optional_args: {dest_file_system: "system:"}
 
     defaults: {}
+
+In case if want to use other type of inventory or runner plugin can define their settings
+in pillar configuration:
+
+.. code-block:: yaml
+
+    proxy:
+      runner:
+         plugin: threaded
+         options:
+             num_workers: 100
+      inventory:
+         plugin: SimpleInventory
+         options:
+           host_file: "/var/salt-nonir/proxy-id-1/hosts.yaml"
+           group_file: "/var/salt-nonir/proxy-id-1/groups.yaml"
+           defaults_file: "/var/salt-nonir/proxy-id-1/defaults.yaml"
 
 Nornir runners
 --------------
@@ -155,18 +177,104 @@ with these default settings::
         },
     }
 
-Nornir Proxy Module functions
+Nornir Proxy Module Functions
 -----------------------------
 
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.inventory_functions
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
+.. list-table:: Common CLI Arguments Summary
+   :widths: 15 85
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - `refresh_nornir`_ 
+     - Function to re-instantiate Nornir object instance refreshing pillar
+   * - `execute_job`_
+     - Function to place job in worker thread jobs queue
+   * - `grains`_
+     - Retrieve Nornir Proxy Minion grains
+   * - `grains_refresh`_
+     - Refresh Nornir Proxy Minion grains
+   * -`init`_
+     - Initiate Nornir Proxy-module
+   * -`kill_nornir`_
+     - Un-gracefully shutdown Nornir Proxy Minion process
+   * -`list_hosts`_
+     - Produces a list of hosts' names managed by this Proxy
+   * -`nr_data`_
+     - To retrieve values from ``nornir_data`` Nornir Proxy Minion dictionary 
+   * -`ping`_
+     - To test Nornir Proxy Minion process
+   * -`run`_
+     - Used to run Nornir Task
+   * -`shutdown`_
+     - Gracefully shutdown Nornir Instance
+   * -`stats`_
+     - Produces a dictionary of Nornir Proxy Minion statistics
+
+refresh_nornir
+++++++++++++++
+
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module._refresh_nornir
+
+execute_job
++++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.execute_job
+
+grains
+++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.grains
+
+grains_refresh
+++++++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.grains_refresh
+
+init
+++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.init
+
+kill_nornir
++++++++++++
+
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.kill_nornir
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
-.. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_version
+
+list_hosts
+++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.list_hosts
+
+nr_data
++++++++
+
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_data
+
+nr_version
+++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.nr_version
+
+ping
+++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.ping
+
+run
++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.run
+
+shutdown
+++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.shutdown
+
+stats
++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
 """
 
 # Import python std lib
@@ -306,7 +414,7 @@ def __virtual__():
 
 def init(opts, loader=None):
     """
-    Initiate nornir by calling InitNornir()
+    Initiate Nornir by calling InitNornir()
     """
     opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
     opts["process_count_max"] = opts["proxy"].get("process_count_max", -1)

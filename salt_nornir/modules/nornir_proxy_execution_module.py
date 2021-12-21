@@ -2,8 +2,11 @@
 Nornir Execution Module
 =======================
 
-SaltStack execution modules serve the purpose of exposing functionally to 
-interact with devices and systems.
+SaltStack Nornir Execution Module exposes functionally of Nornir Proxy Minion to 
+work with devices and systems. Users can invoke Execution Modules functionality 
+using SALT CLI or one of SALT API - Python, REST. Usually, execution modules are 
+the modules that users work with a lot because they directly mapped to managed system 
+functionality such as CLI or NETCONF server.
 
 Introduction
 ------------
@@ -16,9 +19,9 @@ Things to keep in mind:
 
 * execution module functions executed on same machine where proxy-minion process runs
 * ``multiprocessing`` set to ``True`` is recommended way of running Nornir proxy-minion
-* with multiprocessing on, dedicated process starts for each task
+* with multiprocessing on, dedicated process starts for each job
 * tasks executed one after another, but task execution against hosts happening in order
-  controlled by logic of Nornir runner in use, usually in parallel using threading.
+  controlled by logic of Nornir Runner in use, usually in parallel using threading.
 
 Commands timeout
 ++++++++++++++++
@@ -108,7 +111,18 @@ arguments providing required parameters to control processor plugin behavior.
 
 All supported processors executed in this order::
 
-    DataProcessor -> TestsProcessor -> DiffProcessor -> ToFileProcessor
+    event_progress ->
+    -> DataProcessor -> 
+    -> iplkp ->
+    -> xml_flake ->
+    -> xpath ->
+    -> jmespath ->
+    -> match ->
+    -> run_ttp ->
+    -> ntfsm ->
+    -> TestsProcessor -> 
+    -> DiffProcessor -> 
+    -> ToFileProcessor
     
 .. list-table:: Common CLI Arguments Summary
    :widths: 15 85
@@ -216,7 +230,7 @@ diff
 Uses Nornir Salt `DiffProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/DiffProcessor.html#diffprocessor-plugin>`_ 
 to produce difference between current task results and previous results saved by ``ToFileProcessor``.
 
-Supported functions: ``nr.task, nr.cli, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
 
@@ -233,7 +247,7 @@ dp
 Uses Nornir-Salt `DataProcessor plugin <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#dataprocessor-plugin>`_ 
 designed to help with processing Nornir task results.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
 
@@ -347,7 +361,7 @@ automation in response to certain tests failure. Each test translated to a separ
 task result and ``event_failed`` emit events on a per-test basis enabling to construct 
 very granular react actions on Salt Master.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi, nr.file, nr.diff, nr.find, nr.learn``
 
 CLI Arguments:
 
@@ -366,7 +380,7 @@ SaltStack Events Bus. This is mainly useful for tracking tasks' flow, debugging 
 For example, ``event_progress`` used by ``nr.call`` Runner Module function to capture and print
 messages to terminal informing user about task execution progress.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi, nr.file, nr.diff, nr.find, nr.learn``
 
 CLI Arguments:
 
@@ -466,7 +480,7 @@ Uses Nornir-Salt ``DataProcessor``
 `jmespath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#jmespath>`_ 
 to run JMESPath query against structured data results or JSON string.
 
-Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli``
+Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli, nr.gnmi``
 
 CLI Arguments:
 
@@ -520,7 +534,7 @@ SaltStack has `renderers system <https://docs.saltproject.io/en/latest/ref/rende
 that system allows to render text files content while having access to all Salt Execution Module 
 Functions and inventory data.
     
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
 
@@ -541,7 +555,7 @@ Uses Nornir-Salt ``DataProcessor``
 `run_ttp function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#run-ttp>`_ 
 to parse text results using TTP library and produce structured data.
 
-Supported functions: ``nr.task, nr.cli``
+Supported functions: ``nr.task, nr.cli, nr.do``
 
 CLI Arguments:
 
@@ -594,7 +608,7 @@ Uses Nornir Salt
 `TabulateFormatter function <https://nornir-salt.readthedocs.io/en/latest/Functions/TabulateFormatter.html#tabulateformatter>`_ 
 to transform task results in a text table representation.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do``
 
 CLI Arguments:
 
@@ -642,7 +656,7 @@ Uses Nornir Salt
 to save task execution results to proxy minion local file system under ``files_base_path``, default is 
 ``/var/salt-nornir/{proxy_id}/files/``
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
 
@@ -662,7 +676,7 @@ to transform task results in a structured data - dictionary or list.
 This function used by default for all task results unless ``TabulateFormatter`` ``table``
 argument provided.
 
-Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
 CLI Arguments:
 
@@ -681,7 +695,7 @@ Uses Nornir-Salt ``DataProcessor``
 `xml_flake function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xml-flake>`_ 
 to flatten XML results structure to dictionary and filter dictionary keys using glob pattern.
 
-Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http``
+Supported functions: ``nr.task, nr.nc, nr.do, nr.http``
 
 CLI Arguments:
 
@@ -698,7 +712,7 @@ Uses Nornir-Salt ``DataProcessor``
 `xpath function <https://nornir-salt.readthedocs.io/en/latest/Processors/DataProcessor.html#xpath>`_ 
 to run xpath query against XML results.
 
-Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli``
+Supported functions: ``nr.task, nr.nc, nr.do, nr.http``
 
 CLI Arguments:
 
@@ -1977,6 +1991,12 @@ def file(*args, **kwargs):
         last 1 and last 2 files
     :return: files unified difference
 
+    Sample usage::
+
+        salt nrp1 nr.file read ip
+        salt nrp1 nr.file rm ip interface
+        salt nrp1 nr.file diff routes last='[1,2]'
+        
     Sample Python API usage from Salt-Master::
 
         import salt.client
