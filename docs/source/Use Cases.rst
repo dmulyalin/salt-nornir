@@ -19,6 +19,10 @@ With Netmiko plugin::
 With Scrapli plugin::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=scrapli
+    
+With PyATS plugin::
+
+    salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=pyats
 
 Make sure that device configured accordingly and NAPALM or Scrapli or Netmiko can interact with it, e.g.
 for NAPALM SCP server enabled on Cisco IOS or Scrapli library installed on minion machine or hosts' connection
