@@ -95,12 +95,13 @@ def test_single_stat_call():
     assert len(ret["nrp1"].keys()) == 1
 
     
-def test_connections_list():
+def test_connections_list_all_workers():
     # close connections
     client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["disconnect"],
+        kwarg={"worker": "all"},
         tgt_type="glob",
         timeout=60,
     )    
@@ -109,10 +110,85 @@ def test_connections_list():
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"plugin": "netmiko"},
+        kwarg={"plugin": "netmiko", "worker": "all"},
         tgt_type="glob",
         timeout=60,
     )
+    # list active connections
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        kwarg={"worker": "all"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]) == 3, "Was expecting results from 3 workers"
+    for worker_name, res_data in ret["nrp1"].items():
+        assert len(res_data["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 1
+        assert res_data["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+        assert len(res_data["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 1
+        assert res_data["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    
+# test_connections_list_all_workers()
+
+
+def test_connections_list_worker_1_only():
+    # close connections
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        kwarg={"worker": 1},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # run some cli commands
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko", "worker": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # list active connections
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connections"],
+        kwarg={"worker": 1},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 1
+    assert ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    assert len(ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 1
+    assert ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    
+# test_connections_list_worker_1_only()
+
+
+def test_disconnect_worker_all():
+    # run some cli commands
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko", "worker": "all"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    # close connections from all workers by default
+    client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        tgt_type="glob",
+        timeout=60,
+    )   
     # list active connections
     ret = client.cmd(
         tgt="nrp1",
@@ -122,62 +198,72 @@ def test_connections_list():
         timeout=60,
     )
     pprint.pprint(ret)
-    assert len(ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 1
-    assert ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
-    assert len(ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 1
-    assert ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    assert len(ret["nrp1"]) == 3
+    for worker_name, res_data in ret["nrp1"].items():
+        assert len(res_data["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 0
+        assert len(res_data["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 0
     
-# test_connections_list()
+# test_disconnect_worker_all()
 
 
-def test_disconnect():
+def test_disconnect_worker_1():
     # run some cli commands
     client.cmd(
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"plugin": "netmiko"},
+        kwarg={"plugin": "netmiko", "worker": 1},
         tgt_type="glob",
         timeout=60,
     )
-    # close connections
-    client.cmd(
+    # close connections from 1st worker
+    disconnect_ret = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["disconnect"],
+        kwarg={"worker": 1},
         tgt_type="glob",
         timeout=60,
     )   
     # list active connections
-    ret = client.cmd(
+    connections_ret = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["connections"],
+        kwarg={"worker": 1},
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
-    assert len(ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 0
-    assert len(ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 0
+    pprint.pprint(disconnect_ret)
+    pprint.pprint(connections_ret)
+
+    assert disconnect_ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    assert disconnect_ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["status"] == "closed"
+    assert disconnect_ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    assert disconnect_ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"][0]["status"] == "closed"
     
-# test_disconnect()
+    assert len(connections_ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"]) == 0
+    assert len(connections_ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"]) == 0
+    
+# test_disconnect_worker_1()
 
-
-def test_disconnect_by_name():
-    # close connections
-    client.cmd(
+def test_disconnect_by_name_all_workers():
+    # close all connections
+    initial_disconnect_all_call = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["disconnect"],
         tgt_type="glob",
         timeout=60,
     ) 
+    print("initial_disconnect_all_call:")
+    pprint.pprint(initial_disconnect_all_call)
     # run some cli commands
     client.cmd(
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"plugin": "netmiko"},
+        kwarg={"plugin": "netmiko", "worker": "all"},
         tgt_type="glob",
         timeout=60,
     )
@@ -185,11 +271,11 @@ def test_disconnect_by_name():
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"plugin": "scrapli"},
+        kwarg={"plugin": "scrapli", "worker": "all"},
         tgt_type="glob",
         timeout=60,
     )
-    # list active connections
+    # get active connections for all workers
     ret_before = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -197,17 +283,24 @@ def test_disconnect_by_name():
         tgt_type="glob",
         timeout=60,
     )
-    conn_count_before_ceos1 = len(ret_before["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"])
-    conn_count_before_ceos2 = len(ret_before["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"])
-    # close connections
-    client.cmd(
+    print("active connections before disconnect:")
+    pprint.pprint(ret_before)
+    conn_count_before_ceos1, conn_count_before_ceos2 = [], []
+    for worker_name, res_data in ret_before["nrp1"].items():
+        conn_count_before_ceos1.append(len(res_data["ceos1"]["nornir_salt.plugins.tasks.connections"]))
+        conn_count_before_ceos2.append(len(res_data["ceos2"]["nornir_salt.plugins.tasks.connections"]))
+        
+    # close scrapli connections for all workers for ceos1 only
+    scrapli_disconect_call = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["disconnect"],
         kwarg={"conn_name": "scrapli", "FB": "ceos1"},
         tgt_type="glob",
         timeout=60,
-    )   
+    )  
+    print("scrapli_disconect_call:")
+    pprint.pprint(scrapli_disconect_call)
     # list active connections
     ret_after = client.cmd(
         tgt="nrp1",
@@ -216,18 +309,27 @@ def test_disconnect_by_name():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
-    conn_count_after_ceos1 = len(ret_after["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"])
-    conn_count_after_ceos2 = len(ret_after["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.connections"])
+    print("active connections after disconnect:")
+    pprint.pprint(ret_after)
+    conn_count_after_ceos1, conn_count_after_ceos2 = [], []
+    for worker_name, res_data in ret_after["nrp1"].items():
+        conn_count_after_ceos1.append(len(res_data["ceos1"]["nornir_salt.plugins.tasks.connections"]))
+        conn_count_after_ceos2.append(len(res_data["ceos2"]["nornir_salt.plugins.tasks.connections"]))
     
-    assert conn_count_before_ceos1 == 2 and conn_count_after_ceos1 == 1
-    assert conn_count_before_ceos2 == 2 and conn_count_after_ceos2 ==2
-    assert ret_after["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    # verify connections count
+    pprint.pprint(conn_count_before_ceos1)
+    pprint.pprint(conn_count_after_ceos1)
+    assert conn_count_before_ceos1 == [2, 2, 2] and conn_count_after_ceos1 == [1, 1, 1]
+    assert conn_count_before_ceos2 == [2, 2, 2] and conn_count_after_ceos2 == [2, 2, 2]
     
-# test_disconnect_by_name()
+    # verify that not-closed connections are netmiko
+    for worker_name, res_data in ret_after["nrp1"].items(): 
+        assert res_data["ceos1"]["nornir_salt.plugins.tasks.connections"][0]["connection_name"] == "netmiko"
+    
+# test_disconnect_by_name_all_workers()
 
 
-def test_inventory_create_and_delete_host():
+def test_inventory_create_and_delete_host_all_workers():
     # add new host
     res = client.cmd(
         tgt="nrp1",
@@ -243,8 +345,10 @@ def test_inventory_create_and_delete_host():
         tgt_type="glob",
         timeout=60,
     ) 
-    # pprint.pprint(res)
-    assert res["nrp1"] == True, "Failed to create new host"
+    print("ceos1-1 host add results:")
+    pprint.pprint(res)
+    for worker_name, res_data in res["nrp1"].items():
+        assert res_data == True, "Failed to create new host, worker: {}".format(worker_name)
     
     # verify new host added
     hosts_list = client.cmd(
@@ -271,7 +375,7 @@ def test_inventory_create_and_delete_host():
     assert output["nrp1"]["ceos1-1"]["show hostname"]["failed"] == False
     
     # delete new host from inventory
-    res = client.cmd(
+    delete_res = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
         arg=["inventory"],
@@ -282,7 +386,10 @@ def test_inventory_create_and_delete_host():
         tgt_type="glob",
         timeout=60,
     )     
-    assert res["nrp1"] == True, "Failed to remove host"
+    print("ceos1-1 host delete results:")
+    pprint.pprint(delete_res)
+    for worker_name, res_data in res["nrp1"].items():
+        assert res_data == True, "Failed to delete host ceos1-1, worker: {}".format(worker_name)
     
     # verify host deleted
     hosts_list = client.cmd(
@@ -292,7 +399,7 @@ def test_inventory_create_and_delete_host():
     ) 
     assert "ceos1-1" not in hosts_list["nrp1"], "Host not deleted from inventory"
     
-# test_inventory_create_and_delete_host()
+# test_inventory_create_and_delete_host_all_workers()
 
 
 def test_inventory_update_host_data():
@@ -379,3 +486,61 @@ def test_inventory_read_host_data_using_arg():
     assert "hostname" in res["nrp1"]["ceos2"]
     
 # test_inventory_read_host_data_using_arg()
+
+def test_nr_nornir_worker_stats_using_args():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["worker", "stats"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]) == 3, "Unexpected number of workers, was expecting 3"
+    for name, wkr in ret["nrp1"].items():
+        assert "is_busy" in wkr
+        assert "worker_connections" in wkr
+        assert "worker_hosts_tasks_failed" in wkr
+        assert "worker_jobs_completed" in wkr
+        assert "worker_jobs_failed" in wkr
+        assert "worker_jobs_queue" in wkr
+        assert "worker_jobs_started" in wkr
+        
+# test_nr_nornir_worker_stats_using_args()
+
+
+def test_nr_nornir_worker_stats_using_args_and_kwargs():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["worker"],
+        kwarg={"call": "stats"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]) == 3, "Unexpected number of workers, was expecting 3"
+    for name, wkr in ret["nrp1"].items():
+        assert "is_busy" in wkr
+        assert "worker_connections" in wkr
+        assert "worker_hosts_tasks_failed" in wkr
+        assert "worker_jobs_completed" in wkr
+        assert "worker_jobs_failed" in wkr
+        assert "worker_jobs_queue" in wkr
+        assert "worker_jobs_started" in wkr
+        
+# test_nr_nornir_worker_stats_using_args_and_kwargs()
+
+
+def test_nr_nornir_results_queue_dump():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["results_queue_dump"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)
+    assert ret["nrp1"] == [], "Unexpected return for results_queue_dump"

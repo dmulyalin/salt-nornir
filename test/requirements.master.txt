@@ -1,3 +1,4 @@
 ipdb
 pytest
-richtabulate
+rich
+tabulate

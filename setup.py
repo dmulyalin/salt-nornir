@@ -7,7 +7,7 @@ __author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
 
 setup(
     name="salt_nornir",
-    version="0.8.0",
+    version="0.9.0",
     author="Denis Mulyalin",
     author_email="d.mulyalin@gmail.com",
     description="SALTSTACK Nornir Modules",
@@ -32,8 +32,8 @@ setup(
         "napalm==3.*",
         "nornir_netmiko==0.*",
         "nornir_napalm==0.*",
-        "nornir_salt==0.8.*",
-        "psutil==5.8.*",
+        "nornir_salt==0.9.*",
+        "psutil==5.*",
     ],
     entry_points="""
     [salt.loader]

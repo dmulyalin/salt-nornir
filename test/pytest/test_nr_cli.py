@@ -1022,7 +1022,7 @@ def test_nr_cli_pyats_plugin_parse_nrp2_iosxe():
         tgt="nrp2",
         fun="nr.cli",
         arg=["show clock", "show version"],
-        kwarg={"plugin": "pyats", "parse": True, "add_details": True},
+        kwarg={"plugin": "pyats", "parse": True, "add_details": True, "FC": "csr"},
         tgt_type="glob",
         timeout=60,
     )

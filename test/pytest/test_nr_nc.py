@@ -30,7 +30,11 @@ if HAS_SALT:
 iosxe_sandbox_router = "sandbox-iosxe-latest-1.cisco.com" 
 s = socket.socket()
 s.settimeout(5)
-status = s.connect_ex((iosxe_sandbox_router, 830))
+try:
+    status = s.connect_ex((iosxe_sandbox_router, 830))
+except:
+    log.exception("Failed to check iosxe_sandbox_router connection.")
+    status = 1
 if status == 0:
     has_sandbox_iosxe_latest_1_metconf = True
 else:
@@ -45,7 +49,11 @@ skip_if_not_has_sandbox_iosxe_latest_1_netconf = pytest.mark.skipif(
 iosxr_sandbox_router = "sandbox-iosxr-1.cisco.com" 
 s = socket.socket()
 s.settimeout(5)
-status = s.connect_ex((iosxr_sandbox_router, 830))
+try:
+    status = s.connect_ex((iosxr_sandbox_router, 830))
+except:
+    log.exception("Failed to check iosxr_sandbox_router connection.")
+    status = 1
 if status == 0:
     has_sandbox_iosxr_latest_1_metconf = True
     # enable netconf on the iosxr box
@@ -74,7 +82,11 @@ skip_if_not_has_sandbox_iosxr_latest_1_netconf = pytest.mark.skipif(
 nxos_sandbox_router = "sandbox-iosxe-latest-1.cisco.com" 
 s = socket.socket()
 s.settimeout(5)
-status = s.connect_ex((nxos_sandbox_router, 830))
+try:
+    status = s.connect_ex((nxos_sandbox_router, 830))
+except:
+    log.exception("Failed to check nxos_sandbox_router connection.")
+    status = 1
 if status == 0:
     has_sandbox_nxos_latest_1_metconf = True
 else:
@@ -837,9 +849,9 @@ def test_ncclient_transaction_edit_config_iosxr_always_on():
             "plugin": "ncclient",
         },
         tgt_type="glob",
-        timeout=60,
+        timeout=600,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
     for host_name, data in ret["nrp2"].items():
         assert "transaction" in data, "No 'transaction' output from '{}'".format(host_name)
         assert isinstance(data["transaction"], list)
@@ -866,7 +878,7 @@ def test_ncclient_transaction_edit_config_invalid_iosxr_always_on():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
     for host_name, data in ret["nrp2"].items():
         assert "transaction" in data, "No 'transaction' output from '{}'".format(host_name)
         assert isinstance(data["transaction"], list)

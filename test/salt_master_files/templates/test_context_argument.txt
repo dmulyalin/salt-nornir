@@ -1,0 +1,3 @@
+logging host {{ log_host }}
+ntp server {{ ntp_server }}
+!

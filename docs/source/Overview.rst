@@ -111,7 +111,7 @@ Above architecture prone to these **drawbacks**:
 * Tasks executed sequentially one after another, if a lot of tasks scheduled simultaneously, they will consume resource waiting to execute
 
 To address double targeting, Nornir filtering capabilities utilized using additional filtering functions, reference nornir-salt module
-`FFun function <https://nornir-salt.readthedocs.io/en/latest/Functions.html#ffun>`_ for more information. But in short,
+`FFun function <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ for more information. But in short,
 have to use ``Fx`` parameters to filter hosts, for example::
 
     # target only IOL1 and IOL2 hosts:

@@ -199,7 +199,8 @@ def _run_job(
         events_thread.join(timeout=5)
 
     # kill local client instance
-    client.destroy()
+    if hasattr(client, "destroy"):
+        client.destroy()
 
     return ret
 

@@ -742,3 +742,126 @@ def test_nr_cfg_plugin_pyats_command_batch():
     for cmd in config:
         assert cmd in ret["nrp1"]["ceos1"]["pyats_send_config"]["result"], "Command not sent to ceos1 '{}'".format(cmd)
         assert cmd in ret["nrp1"]["ceos2"]["pyats_send_config"]["result"], "Command not sent to ceos2 '{}'".format(cmd)
+        
+        
+def test_nr_cfg_template_using_context_argument():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "plugin": "netmiko", 
+            "filename": "salt://templates/test_context_argument.txt",
+            "context": {
+                "log_host": "9.9.9.9", 
+                "ntp_server": "4.3.2.1",
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["failed"] == False
+    assert "logging host 9.9.9.9" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"]
+    assert "ntp server 4.3.2.1" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"]
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["failed"] == False
+    assert "logging host 9.9.9.9" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"]
+    assert "ntp server 4.3.2.1" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"]
+    
+# test_nr_cfg_template_using_context_argument()
+    
+    
+def test_inline_config_template_string_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": "snmp-server location {{ host.location }}",
+            "plugin": "netmiko"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"]
+    assert "snmp-server location East" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"]
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["changed"] == True
+    
+    
+def test_inline_config_template_string_napalm():
+    ret_del = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": "no snmp-server location {{ host.location }}",
+            "plugin": "netmiko"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": "snmp-server location {{ host.location }}",
+            "plugin": "napalm"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    print("Deleted config using netmiko:")
+    pprint.pprint(ret_del)
+    print("Applied config using NAPALAM:")
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["napalm_configure"]["diff"]
+    assert "snmp-server location East" in ret["nrp1"]["ceos2"]["napalm_configure"]["diff"]
+    assert ret["nrp1"]["ceos1"]["napalm_configure"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["napalm_configure"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["napalm_configure"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["napalm_configure"]["changed"] == True
+
+def test_inline_config_template_string_scrapli():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": "snmp-server location {{ host.location }}",
+            "plugin": "scrapli"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["scrapli_send_config"]["result"]
+    assert "snmp-server location East" in ret["nrp1"]["ceos2"]["scrapli_send_config"]["result"]
+    assert ret["nrp1"]["ceos1"]["scrapli_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["scrapli_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["scrapli_send_config"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["scrapli_send_config"]["changed"] == True
+
+def test_inline_config_template_string_pyats():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": "snmp-server location {{ host.location }}",
+            "plugin": "pyats"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["pyats_send_config"]["result"]
+    assert "snmp-server location East" in ret["nrp1"]["ceos2"]["pyats_send_config"]["result"]
+    assert ret["nrp1"]["ceos1"]["pyats_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["pyats_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["pyats_send_config"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["pyats_send_config"]["changed"] == True

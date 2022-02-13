@@ -19,7 +19,6 @@ if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
 
-
 def test_nr_test_inline_contains():
     ret = client.cmd(
         tgt="nrp1",
@@ -286,6 +285,7 @@ def test_nr_test_function_file_custom_function_use_list_of_tasks():
         tgt_type="glob",
         timeout=60,
     )
+    pprint.pprint(ret)
     assert len(ret["nrp1"]) == 4
     for item in ret["nrp1"]:
         assert item["result"] == "FAIL"
@@ -306,6 +306,7 @@ def test_nr_test_suite_with_custom_functions():
         tgt_type="glob",
         timeout=60,
     )
+    pprint.pprint(ret)
     assert len(ret["nrp1"]) == 10
     for item in ret["nrp1"]:
         if item["name"] == "test_cust_fun_1":
@@ -611,3 +612,54 @@ def test_nr_test_wait_timeout():
             assert i["exception"] == None
             
 # test_nr_test_wait_timeout()
+
+
+def test_nr_test_function_file_custom_function_add_host():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["show clock", "custom"],
+        kwarg={"function_file": "salt://tests/cust_fun_with_add_host.py", "add_host": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for i in ret["nrp1"]:
+        assert "host_name" in i, "Seems that host name not added to results"
+        
+# test_nr_test_function_file_custom_function_add_host()
+
+def test_nr_test_all_tasks_failed():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "nornir_salt.plugins.tasks.nr_test",
+            "excpt": True,
+            "tests": [["nornir_salt.plugins.tasks.nr_test", "contains", "foobar"]]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "Traceback" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.nr_test"]
+    assert "Traceback" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.nr_test"]
+                                               
+def test_nr_test_test_has_no_results_to_tes():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "tests": [["show clock", "contains", "local", "test1"], ["foo", "contains", "bar", "test2"]],
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["test2"]["result"] == "ERROR"
+    assert ret["nrp1"]["ceos1"]["test2"]["failed"] == True
+    assert ret["nrp1"]["ceos2"]["test2"]["result"] == "ERROR"
+    assert ret["nrp1"]["ceos2"]["test2"]["failed"] == True

@@ -19,7 +19,7 @@ With Netmiko plugin::
 With Scrapli plugin::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=scrapli
-    
+
 With PyATS plugin::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin=pyats

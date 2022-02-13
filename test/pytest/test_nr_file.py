@@ -28,21 +28,31 @@ def _clean_files():
         tgt_type="glob",
         timeout=60,
     )
+    verify_res = client.cmd(
+        tgt="nrp1",
+        fun="cmd.run",
+        arg=["ls -l /var/salt-nornir/nrp1/files/"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    if "total 0" not in verify_res["nrp1"]:
+        _clean_files()
     
 def _generate_files():
     _ = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"tf": "clock"},
+        kwarg={"tf": "clock", "tf_skip_failed": True},
         tgt_type="glob",
         timeout=60,
     )
-    res = client.cmd(
+    _ = client.cmd(
         tgt="nrp1",
         fun="nr.do",
         arg=["interfaces", "facts"],
-        kwarg={"tf": True},
+        kwarg={"tf": True, "tf_skip_failed": True},
         tgt_type="glob",
         timeout=60,
     ) 
@@ -210,7 +220,17 @@ def test_nr_file_rm_filegroup_all():
     _generate_files()
     _generate_files()
     
-    # check 
+    # list saved files first to verify all of them deleted later
+    interfaces_files = client.cmd(
+        tgt="nrp1",
+        fun="nr.file",
+        arg=["ls"],
+        kwarg={"filegroup": "interfaces"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    
+    # remove files 
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.file",
@@ -219,13 +239,13 @@ def test_nr_file_rm_filegroup_all():
         tgt_type="glob",
         timeout=60,
     )
-    pprint.pprint(ret)
+    pprint.pprint(ret, width=150)
 
-    assert ret["nrp1"].count("interfaces__") == 4, "Not all files removed"
+    assert ret["nrp1"].count("interfaces__") == interfaces_files["nrp1"].count("interfaces__"), "Not all 'interfaces' files removed"
     assert ret["nrp1"].count("clock__") == 0, "Clock files removed"
     assert ret["nrp1"].count("facts__") == 0, "Facts files removed"
     
-#test_nr_file_rm_filegroup_all()
+# test_nr_file_rm_filegroup_all()
 
 
 def test_nr_file_rm_all():

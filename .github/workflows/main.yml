@@ -1,0 +1,30 @@
+name: Salt-Nornir Tests
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  linters:
+    name: linters
+    strategy:
+      matrix:
+        python-version: [ '3.7' ]
+        platform: [windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools
+          pip install -r requirements-dev.txt
+      - name: Run pre-commit
+        run: pre-commit run --all-files

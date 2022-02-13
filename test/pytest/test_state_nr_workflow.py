@@ -38,7 +38,7 @@ def test_state_nr_workflow():
         tgt="nrp1",
         fun="state.sls",
         arg=["nr_workflow_state_1"],
-        kwarg={""},
+        kwarg={},
         tgt_type="glob",
         timeout=60,
     )
@@ -48,20 +48,24 @@ def test_state_nr_workflow():
         tgt="nrp1",
         fun="state.sls",
         arg=["nr_workflow_state_1"],
-        kwarg={""},
+        kwarg={},
         tgt_type="glob",
         timeout=60,
     )
+    print("First run results:")
+    pprint.pprint(ret_1st)
+    print("Second run results:")
+    pprint.pprint(ret_2nd)
     # verify first run
     for v in ret_1st["nrp1"].values():
         assert v["result"] == True
         assert len(v["changes"]["details"]) == 6
         for host_name, steps in v["changes"]["summary"].items():
-            assert len(steps) == 5  # check that did 5 steps
+            assert len(steps) == 7  # check that did 7 steps including test tasks commands output
             assert (
-                list(steps[0].values())[0] == "FAIL"
+                list(steps[1].values())[0] == "FAIL"
             )  # check that first step is failed as it was pre-check
-            for step in steps[1:]:  # check that status of remaining steps is PASS
+            for step in steps[2:]:  # check that status of remaining steps is PASS
                 step_name, step_status = list(step.items())[0]
                 assert step_status == "PASS", "Host {}, {} step result not PASS".format(
                     host_name, step_name
@@ -71,10 +75,10 @@ def test_state_nr_workflow():
         assert v["result"] == True
         assert len(v["changes"]["details"]) == 6
         for host_name, steps in v["changes"]["summary"].items():
-            assert len(steps) == 1  # check that did 1 step - 1st pre-check
+            assert len(steps) == 2  # check that did 1 step - 1st pre-check
             assert (
-                list(steps[0].values())[0] == "PASS"
-            )  # check that first step is PASSed as it was pre-check
+                list(steps[1].values())[0] == "PASS"
+            )  # check that second step is PASSed as it was pre-check
             
 # test_state_nr_workflow()
 
@@ -98,7 +102,7 @@ def test_state_nr_workflow_report_all():
         tgt="nrp1",
         fun="state.sls",
         arg=["nr_workflow_state_2"],
-        kwarg={""},
+        kwarg={},
         tgt_type="glob",
         timeout=60,
     )
@@ -108,10 +112,12 @@ def test_state_nr_workflow_report_all():
         tgt="nrp1",
         fun="state.sls",
         arg=["nr_workflow_state_2"],
-        kwarg={""},
+        kwarg={},
         tgt_type="glob",
         timeout=60,
     )
+    pprint.pprint(ret_1st)
+    pprint.pprint(ret_2nd)
     # verify first run
     for v in ret_1st["nrp1"].values():
         assert v["result"] == True

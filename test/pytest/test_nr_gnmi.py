@@ -25,33 +25,18 @@ if HAS_SALT:
     client = salt.client.LocalClient()
 
 
-def test_ncclient_dir_call():
+def test_gnmi_dir_call():
     ret = client.cmd(
         tgt="nrp1", fun="nr.gnmi", arg=["dir"], kwarg={}, tgt_type="glob", timeout=60
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'dir': ['capabilities',
-                            'close',
-                            'connect',
-                            'delete',
-                            'dir',
-                            'get',
-                            'help',
-                            'replace',
-                            'set',
-                            'subscribe',
-                            'update']},
-          'ceos2': {'dir': ['capabilities',
-                            'close',
-                            'connect',
-                            'delete',
-                            'dir',
-                            'get',
-                            'help',
-                            'replace',
-                            'set',
-                            'subscribe',
-                            'update']}}}
+    for capab in [
+        "dir", 'capabilities', 'close', 'connect', 'delete',
+        'dir', 'get', 'help', 'replace', 'set', 'subscribe',
+        'update'
+    ]:
+        assert capab in ret["nrp1"]["ceos1"]["dir"]
+        assert capab in ret["nrp1"]["ceos2"]["dir"]
     
 # test_ncclient_dir_call()
 
@@ -145,8 +130,10 @@ def test_gnmi_set_call_update():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos2': {'set': {'response': [{'op': 'UPDATE',
-                                                           'path': 'interfaces/interface[name=Loopback100]/config'}]}}}
+    assert ret["nrp1"]["ceos2"]["set"]["response"][0] == {
+        'op': 'UPDATE',
+        'path': 'interfaces/interface[name=Loopback100]/config'
+    }
     
 # test_ncclient_get_call_set_update()
 
@@ -175,10 +162,14 @@ def test_gnmi_set_call_replace():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos1': {'set': {'response': [{'op': 'REPLACE',
-                                 'path': 'interfaces/interface[name=Loopback1234]/config'}]}},
- 'ceos2': {'set': {'response': [{'op': 'REPLACE',
-                                 'path': 'interfaces/interface[name=Loopback1234]/config'}]}}}
+    assert ret["nrp1"]["ceos1"]["set"]["response"][0] == {
+        'op': 'REPLACE',
+        'path': 'interfaces/interface[name=Loopback1234]/config'
+    }
+    assert ret["nrp1"]["ceos2"]["set"]["response"][0] == {
+        'op': 'REPLACE',
+        'path': 'interfaces/interface[name=Loopback1234]/config'
+    }
     
 # test_gnmi_set_call_replace()
 
@@ -206,12 +197,16 @@ def test_gnmi_set_call_delete():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos1': {'set': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}},
- 'ceos2': {'set': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}}}
+    assert ret["nrp1"]["ceos1"]["set"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
+    assert ret["nrp1"]["ceos2"]["set"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
     
-# test_ncclient_get_call_set_delete()
+# test_gnmi_set_call_delete()
 
 
 def test_gnmi_subscribe_call_unsuppoted():
@@ -250,10 +245,15 @@ def test_gnmi_delete_call_args():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos1': {'delete': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}},
- 'ceos2': {'delete': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}}}
+    assert ret["nrp1"]["ceos1"]["delete"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
+    assert ret["nrp1"]["ceos2"]["delete"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
+
     
 # test_gnmi_delete_call_args()
 
@@ -281,10 +281,15 @@ def test_gnmi_delete_call_path_arg():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos1': {'delete': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}},
- 'ceos2': {'delete': {'response': [{'op': 'DELETE',
-                                 'path': 'interfaces/interface[name=Loopback555]'}]}}}
+    assert ret["nrp1"]["ceos1"]["delete"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
+    assert ret["nrp1"]["ceos2"]["delete"]["response"][0] == {
+        'op': 'DELETE',
+        'path': 'interfaces/interface[name=Loopback555]'
+    }
+
     
 # test_gnmi_delete_call_path_arg()
 
@@ -302,8 +307,10 @@ def test_gnmi_update_call():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos2': {'update': {'response': [{'op': 'UPDATE',
-                                                           'path': 'interfaces/interface[name=Loopback100]/config'}]}}}
+    assert ret["nrp1"]["ceos2"]["update"]["response"][0] == {
+        'op': 'UPDATE',
+        'path': 'interfaces/interface[name=Loopback100]/config'
+    }
     
 # test_gnmi_update_call()
 
@@ -333,10 +340,14 @@ def test_gnmi_replace_call():
         timeout=60
     )
     pprint.pprint(ret["nrp1"])
-    assert ret["nrp1"] == {'ceos1': {'replace': {'response': [{'op': 'REPLACE',
-                                 'path': 'interfaces/interface[name=Loopback1234]/config'}]}},
- 'ceos2': {'replace': {'response': [{'op': 'REPLACE',
-                                 'path': 'interfaces/interface[name=Loopback1234]/config'}]}}}
+    assert ret["nrp1"]["ceos1"]["replace"]["response"][0] == {
+        'op': 'REPLACE',
+        'path': 'interfaces/interface[name=Loopback1234]/config'
+    }
+    assert ret["nrp1"]["ceos2"]["replace"]["response"][0] == {
+        'op': 'REPLACE',
+        'path': 'interfaces/interface[name=Loopback1234]/config'
+    }
     
 # test_gnmi_replace_call()
 
@@ -368,28 +379,33 @@ def test_gnmi_set_call_from_filename():
         timeout=60
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'set': {'response': [{'op': 'DELETE',
-                                          'path': 'interfaces/interface[name=Loopback35]'},
-                                         {'op': 'DELETE',
-                                          'path': 'interfaces/interface[name=Loopback36]'},
-                                         {'op': 'REPLACE',
-                                          'path': 'interfaces/interface[name=Loopback35]/config'},
-                                         {'op': 'REPLACE',
-                                          'path': 'interfaces/interface[name=Loopback36]/config'},
-                                         {'op': 'UPDATE',
-                                          'path': 'interfaces/interface[name=Loopback35]/config'},
-                                         {'op': 'UPDATE',
-                                          'path': 'interfaces/interface[name=Loopback36]/config'}]}},
-          'ceos2': {'set': {'response': [{'op': 'DELETE',
-                                          'path': 'interfaces/interface[name=Loopback35]'},
-                                         {'op': 'DELETE',
-                                          'path': 'interfaces/interface[name=Loopback36]'},
-                                         {'op': 'REPLACE',
-                                          'path': 'interfaces/interface[name=Loopback35]/config'},
-                                         {'op': 'REPLACE',
-                                          'path': 'interfaces/interface[name=Loopback36]/config'},
-                                         {'op': 'UPDATE',
-                                          'path': 'interfaces/interface[name=Loopback35]/config'},
-                                         {'op': 'UPDATE',
-                                          'path': 'interfaces/interface[name=Loopback36]/config'}]}}}}
+    assert ret['nrp1']['ceos1']['set']['response'] == [
+        {'op': 'DELETE',
+         'path': 'interfaces/interface[name=Loopback35]'},
+        {'op': 'DELETE',
+         'path': 'interfaces/interface[name=Loopback36]'},
+        {'op': 'REPLACE',
+         'path': 'interfaces/interface[name=Loopback35]/config'},
+        {'op': 'REPLACE',
+         'path': 'interfaces/interface[name=Loopback36]/config'},
+        {'op': 'UPDATE',
+         'path': 'interfaces/interface[name=Loopback35]/config'},
+        {'op': 'UPDATE',
+         'path': 'interfaces/interface[name=Loopback36]/config'}
+    ]
+    
+    assert ret['nrp1']['ceos2']['set']['response'] == [
+        {'op': 'DELETE',
+         'path': 'interfaces/interface[name=Loopback35]'},
+        {'op': 'DELETE',
+         'path': 'interfaces/interface[name=Loopback36]'},
+        {'op': 'REPLACE',
+         'path': 'interfaces/interface[name=Loopback35]/config'},
+        {'op': 'REPLACE',
+         'path': 'interfaces/interface[name=Loopback36]/config'},
+        {'op': 'UPDATE',
+         'path': 'interfaces/interface[name=Loopback35]/config'},
+        {'op': 'UPDATE',
+         'path': 'interfaces/interface[name=Loopback36]/config'}
+    ]
 # test_gnmi_set_call_from_filename()

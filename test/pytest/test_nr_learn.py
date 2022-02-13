@@ -47,7 +47,7 @@ def test_nr_learn_using_nr_do_aliases():
         tgt="nrp1",
         fun="nr.learn",
         arg=["interfaces", "facts"],
-        kwarg={},
+        kwarg={"tf_skip_failed": True},
         tgt_type="glob",
         timeout=60,
     )

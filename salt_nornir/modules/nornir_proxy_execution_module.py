@@ -180,6 +180,8 @@ All supported processors executed in this order::
      - Uses Nornir-Salt DataProcessor ``xml_flake`` function to filter XML output
    * - `xpath`_
      - Uses Nornir-Salt DataProcessor ``xpath`` function to filter XML output
+   * - `worker`_
+     - Worker to use for task, supported values ``all`` or number from ``1`` to ``nornir_workers`` Proxy Minion parameter of default value 3
 
 Fx
 ++
@@ -360,6 +362,27 @@ Combining ``event_failed`` with ``nr.test`` function allows to implement event d
 automation in response to certain tests failure. Each test translated to a separate
 task result and ``event_failed`` emit events on a per-test basis enabling to construct
 very granular react actions on Salt Master.
+
+Sample event content::
+
+    nornir-proxy/nrp1/ceos1/task/failed/nornir_salt.plugins.tasks.nr_test   {
+        "_stamp": "2022-02-11T11:14:16.081755",
+        "cmd": "_minion_event",
+        "data": {
+            "changed": false,
+            "connection_retry": 3,
+            "diff": "",
+            "exception": "",
+            "failed": true,
+            "host": "ceos1",
+            "name": "nornir_salt.plugins.tasks.nr_test",
+            "result": "Traceback (most recent call last):\\n  File \"/usr/local/lib/python3.6/site-packages/nornir/core/task.py\", line 99, in start\\n    r = self.task(self, **self.params)\\n  File \"/usr/local/lib/python3.6/site-packages/nornir_salt/plugins/tasks/nr_test.py\", line 65, in nr_test\\n    raise RuntimeError(excpt_msg)\\nRuntimeError\\n",
+            "task_retry": 3
+        },
+        "id": "nrp1",
+        "pretag": null,
+        "tag": "nornir-proxy/nrp1/ceos1/task/failed/nornir_salt.plugins.tasks.nr_test"
+    }
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi, nr.file, nr.diff, nr.find, nr.learn``
 
@@ -661,10 +684,17 @@ Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.htt
 CLI Arguments:
 
 * ``tf`` - ``ToFileProcessor`` file group name where to save results
+* ``tf_skip_failed`` - boolean, default is False, if True, wil not save results for failed tasks
 
 Sample usage::
 
     salt nrp1 nr.cfg "logging host 1.1.1.1" tf="logging_config"
+    salt nrp1 nr.cfg "logging host 1.1.1.1" tf="logging_config" tf_skip_failed=True
+
+``tf_skip_failed`` can be useful when only want to save results to file for non failed tasks.
+For example, if ``RetryRunner`` runs task and it fails on first attempt but succeed on second,
+it might not make sense to store failed task results, which is the case by default, ``tf_skip_failed``
+help to alter that behavior.
 
 to_dict
 +++++++
@@ -732,6 +762,25 @@ using filter arguments. The complication is that if, for example, you running
 ``get_config`` NETCONF operation, full device config retrieved from device and passed via ``xpath``
 function on proxy minion, this could be processing intensive especially for big confiurations
 combined with significant number of devices simelteniously returning results.
+
+worker
+++++++
+
+Starting with Nornir 0.9.0 support added for several Nornir Insances with dedicated worker threads,
+allowing to greatly increase Proxy Minion task execution throughput. If no ``worker`` argument provided
+task can be executed by any of the workers.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.do, nr.http, nr.gnmi, nr.file, nr.diff, nr.find, nr.learn, nr.nornir``
+
+CLI Arguments:
+
+* ``worker`` - Worker to use for task, supported values ``all`` or number from ``1`` to ``nornir_workers`` Proxy Minion parameter of default value 3
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" worker=3
+    salt nrp1 nr.nornir connections worker=2
+    salt nrp1 nr.nornir disconect worker=all
 
 Execution Module Functions
 --------------------------
@@ -1064,7 +1113,7 @@ def cfg(*commands, **kwargs):
     ``netmiko_send_config`` or Scrapli ``send_config`` task plugin.
 
     :param commands: (list) list of commands or multiline string to send to device
-    :param filename: (str) path to file with configuration
+    :param filename: (str) path to file with configuration or template
     :param template_engine: (str) template engine to render configuration, default is jinja
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
@@ -1074,6 +1123,7 @@ def cfg(*commands, **kwargs):
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
         dictionary ``commit`` argument supplied to commit call using ``**commit``
+    :param config: (str) configuration string or template to send to device
 
     .. warning:: ``dry_run`` not supported by ``netmiko`` and ``pyats`` plugins
 
@@ -1093,6 +1143,8 @@ def cfg(*commands, **kwargs):
         salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
         salt nrp1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
         salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True}'
+        salt nrp1 nr.cfg config="snmp-server location {{ host.location }}"
+        salt nrp1 nr.cfg "snmp-server location {{ host.location }}"
 
     Filename argument can be a template string, for instance::
 
@@ -1120,7 +1172,7 @@ def cfg(*commands, **kwargs):
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "napalm")
     kwargs.setdefault("add_details", True)
-    kwargs.setdefault("render", ["commands", "filename"])
+    kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
@@ -1159,6 +1211,7 @@ def cfg_gen(*commands, **kwargs):
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
+    :param config: (str) configuration string or template to send to device
 
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -1168,6 +1221,8 @@ def cfg_gen(*commands, **kwargs):
     Sample usage::
 
         salt nrp1 nr.cfg_gen filename=salt://templates/template.j2 FB="R[12]"
+        salt nrp1 nr.cfg_gen config="snmp-server location {{ host.location }}"
+        salt nrp1 nr.cfg_gen "snmp-server location {{ host.location }}"
 
     Sample template.j2 content::
 
@@ -1199,7 +1254,7 @@ def cfg_gen(*commands, **kwargs):
     # get arguments
     default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
     kwargs = {**default_kwargs, **kwargs}
-    kwargs.setdefault("render", ["commands", "filename"])
+    kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
@@ -1423,7 +1478,7 @@ def test(*args, **kwargs):
     cli_not_command_tasks = ["run_ttp"]
 
     # check if need to download pattern file from salt master
-    if pattern.startswith("salt://"):
+    if str(pattern).startswith("salt://"):
         pattern = __salt__["cp.get_file_str"](pattern, saltenv=saltenv)
 
     # if test suite provided, download it from master and render it
@@ -2042,6 +2097,7 @@ def learn(*args, **kwargs):
 
     :param fun: (str) name of execution module function to call
     :param tf: (str) ``ToFileProcessor`` filegroup name
+    :param tf_skip_failed: (bool) default is True, do not save failed tasks
     :param args: (list) execution module function arguments
     :param kwargs: (dict) execution module function key-word arguments
 
@@ -2077,6 +2133,7 @@ def learn(*args, **kwargs):
     supported_functions = ["cli", "do", "http", "nc"]
     fun = kwargs.pop("fun", "do")
     kwargs["tf"] = True if fun == "do" else kwargs.get("tf")
+    kwargs.setdefault("tf_skip_failed", True)  # do not learn failed tasks
     kwargs["identity"] = _form_identity(
         kwargs, "learn.{}".format(".".join(args) if fun == "do" else fun)
     )
@@ -2249,28 +2306,35 @@ def nornir_fun(fun, *args, **kwargs):
 
     Available utility functions:
 
+    * ``dir`` - return a list of supported functions
     * ``test`` - this method tests proxy minion module worker thread without invoking any Nornir code
     * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
-    * ``inventory`` - interract with Nornir Process inventory data, using ``InventoryFun`` function
+    * ``inventory`` - interract with Nornir Process inventory data, using ``InventoryFun`` function,
+      by default, for ``read_host, read, read_inventory, list_hosts`` operations any Nornir worker
+      can respond, for other, non-read operations targets all Nornir workers
     * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat
       name to return
     * ``version`` - returns a report of Nornir related packages installed versions
     * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
     * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx``
       arguments to return only hosts matched by filter
-    * ``connections`` - list hosts' active connections, accepts ``Fx`` arguments to filter hosts to list
+    * ``connections`` - list hosts' active connections for all workers, accepts ``Fx`` arguments to filter hosts to list,
+      by default returns connections data for all Nornir workers
     * ``disconnect`` - close host connections, accepts ``Fx`` arguments to filter hosts and ``conn_name``
-      of connection to close, by default closes all connections
+      of connection to close, by default closes all connections for all Nornir workers
     * ``clear_hcache`` - clear task results cache from hosts' data, accepts ``cache_keys`` list argument
-      of key names to remove, if no ``cache_keys`` argument provided removes all cached data
+      of key names to remove, if no ``cache_keys`` argument provided removes all cached data, by default targets all Nornir workers
     * ``clear_dcache`` - clear task results cache from defaults data, accepts ``cache_keys`` list argument
-      of key names to remove, if no ``cache_keys`` argument provided removes all cached data
+      of key names to remove, if no ``cache_keys`` argument provided removes all cached data, by default targets all Nornir workers
+    * ``workers/worker`` - call nornir worker utilities e.g. ``stats``
+    * ``results_queue_dump`` - return content of results queue
 
     Sample Usage::
 
         salt nrp1 nr.nornir inventory FB="R[12]"
+        salt nrp1 nr.nornir inventory FB="R[12]" worker="all"
         salt nrp1 nr.nornir inventory create_host name="R1" hostname="1.2.3.4" platform="ios" groups='["lab"]'
         salt nrp1 nr.nornir inventory update_host name="R1" data='{"foo": bar}'
         salt nrp1 nr.nornir inventory read_host FB="R1"
@@ -2280,6 +2344,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir shutdown
         salt nrp1 nr.nornir clear_hcache cache_keys='["key1", "key2]'
         salt nrp1 nr.nornir clear_dcache cache_keys='["key1", "key2]'
+        salt nrp1 nr.nornir workers stats
 
     Sample Python API usage from Salt-Master::
 
@@ -2292,9 +2357,30 @@ def nornir_fun(fun, *args, **kwargs):
             arg=["stats"],
         )
     """
+    supported_functions = [
+        "dir",
+        "test",
+        "inventory",
+        "stats",
+        "version",
+        "shutdown",
+        "initialized",
+        "kill",
+        "refresh",
+        "connections",
+        "disconnect",
+        "clear_hcache",
+        "clear_dcache",
+        "workers",
+        "worker",
+        "results_queue_dump",
+    ]
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     if fun == "inventory":
         kwargs.setdefault("call", args[0] if args else "read_inventory")
+        # make sure by default targets all workers for non read operations
+        if kwargs["call"] not in ["read_host", "read", "read_inventory", "list_hosts"]:
+            kwargs.setdefault("worker", "all")
         return task(plugin="inventory", **kwargs)
     elif fun == "stats":
         return __proxy__["nornir.stats"](*args, **kwargs)
@@ -2313,6 +2399,7 @@ def nornir_fun(fun, *args, **kwargs):
     elif fun == "hosts":
         return __proxy__["nornir.list_hosts"](**kwargs)
     elif fun == "connections":
+        kwargs.setdefault("worker", "all")
         return task(
             plugin="nornir_salt.plugins.tasks.connections",
             call="ls",
@@ -2320,6 +2407,7 @@ def nornir_fun(fun, *args, **kwargs):
             **kwargs,
         )
     elif fun == "disconnect":
+        kwargs.setdefault("worker", "all")
         return task(
             plugin="nornir_salt.plugins.tasks.connections",
             call="close",
@@ -2327,19 +2415,32 @@ def nornir_fun(fun, *args, **kwargs):
             **kwargs,
         )
     elif fun == "clear_hcache":
+        # make sure to cleare hcache for all workers by default
+        kwargs.setdefault("worker", "all")
         return task(
             plugin="nornir_salt.plugins.tasks.salt_clear_hcache",
             identity=_form_identity(kwargs, "nornir.clear_hcache"),
             **kwargs,
         )
     elif fun == "clear_dcache":
+        # make sure to always cleare dcache for all workers
+        kwargs["worker"] = "all"
         return task(
             plugin="clear_dcache",
             identity=_form_identity(kwargs, "nornir.clear_dcache"),
             **kwargs,
         )
+    elif fun in ["workers", "worker"]:
+        kwargs["call"] = args[0] if len(args) == 1 else kwargs["call"]
+        return __proxy__["nornir.workers_utils"](**kwargs)
+    elif fun == "dir":
+        return {"Supported functions": sorted(supported_functions)}
+    elif fun == "results_queue_dump":
+        return __proxy__["nornir.queues_utils"](call="results_queue_dump")
     else:
-        return "Uncknown function '{}'.format(fun)"
+        return "Uncknown function '{}', call 'dir' to list supported functions".format(
+            fun
+        )
 
 
 def gnmi(call, *args, **kwargs):

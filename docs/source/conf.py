@@ -24,11 +24,11 @@ if not on_rtd:
 # -- Project information -----------------------------------------------------
 
 project = 'salt-nornir'
-copyright = '2021, Denis Mulyalin'
+copyright = '2022, Denis Mulyalin'
 author = 'Denis Mulyalin'
 
 # The full version, including alpha/beta/rc tags
-release = '0.8.0'
+release = '0.9.0'
 
 
 # -- General configuration ---------------------------------------------------

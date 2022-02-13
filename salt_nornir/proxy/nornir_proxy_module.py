@@ -56,18 +56,25 @@ Below parameters can be specified in Proxy Minion Pillar.
   populated with data from proxy-minion pillar, pillar data ignored by any other inventory plugins
 - ``child_process_max_age`` - int, default is 660s, seconds to wait before forcefully kill child process
 - ``watchdog_interval`` - int, default is 30s, interval in seconds between watchdog runs
-- ``proxy_always_alive`` - boolean, default is True, keep connections with devices alive or tear them down after each job
+- ``proxy_always_alive`` - boolean, default is True, keep connections with devices alive or tear them down
+  immidiately after each job
+- ``connections_idle_timeout`` - int, seconds, default is 1 equivalent to ``proxy_always_alive`` set to True, if
+  value equals 0 renders same behavior as if ``proxy_always_alive`` is False, if value above 1 - all host's
+  device connections torn down after it was not in use for longer then idle timeout value even if
+  ``proxy_always_alive`` set to True
 - ``job_wait_timeout`` - int, default is 600s, seconds to wait for job return until give up
 - ``memory_threshold_mbyte`` - int, default is 300, value in MBytes above each to trigger ``memory_threshold_action``
 - ``memory_threshold_action`` - str, default is ``log``, action to implement if ``memory_threshold_mbyte`` exceeded,
   possible actions: ``log`` - send syslog message, ``restart`` - shuts down proxy minion process.
+- ``nornir_workers`` - number of Nornir instances to create, each instance has worker thread associated with it
+  allowing to run multiple tasks against hosts, as each worker deque tasks from jobs queue, default is 3
 - ``files_base_path`` - str, default is ``/var/salt-nornir/{proxy_id}/files/``, OS path to folder where to save files
   on a per-host basis using `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html>_`,
 - ``files_max_count`` - int, default is 5, maximum number of file version for ``tf`` argument used by
   `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html#tofileprocessor-plugin>`_
-- ``nr_cli`` - dictionary of default kwargs to use with ``nr.cli`` execution module function, default is ``{}``
-- ``nr_cfg`` - dictionary of default kwargs to use with ``nr.cfg`` execution module function, default is ``{}``
-- ``nr_nc`` - dictionary of default kwargs to use with ``nr.nc`` execution module function, default is ``{}``
+- ``nr_cli`` - dictionary of default arguments to use with ``nr.cli`` execution module function, default is none
+- ``nr_cfg`` - dictionary of default arguments to use with ``nr.cfg`` execution module function, default is none
+- ``nr_nc`` - dictionary of default arguments to use with ``nr.nc`` execution module function, default is none
 - ``event_progress_all`` - boolean, default is False, if True emits progress events for all tasks using
   `SaltEventProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/SaltEventProcessor.html>_`,
   per-task ``event_progress`` argument overrides ``event_progress_all`` parameter.
@@ -87,6 +94,7 @@ Nornir proxy-minion pillar example:
       multiprocessing: True
       nornir_filter_required: True
       proxy_always_alive: True
+      connections_idle_timeout: 1
       watchdog_interval: 30
       child_process_max_age: 660
       job_wait_timeout: 600
@@ -204,12 +212,16 @@ Nornir Proxy Module Functions
      - To retrieve values from ``nornir_data`` Nornir Proxy Minion dictionary
    * - `ping`_
      - To test Nornir Proxy Minion process
+   * - `queues_utils`_
+     - Utility function to manage Proxy Minion queues
    * - `run`_
      - Used to run Nornir Task
    * - `shutdown`_
      - Gracefully shutdown Nornir Instance
    * - `stats`_
      - Produces a dictionary of Nornir Proxy Minion statistics
+   * - `workers_utils`_
+     - Utility function to manage Proxy Minion workers
 
 refresh_nornir
 ++++++++++++++
@@ -261,6 +273,11 @@ ping
 
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.ping
 
+queues_utils
+++++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.queues_utils
+
 run
 +++
 
@@ -275,6 +292,11 @@ stats
 +++++
 
 .. autofunction:: salt_nornir.proxy.nornir_proxy_module.stats
+
+workers_utils
++++++++++++++
+
+.. autofunction:: salt_nornir.proxy.nornir_proxy_module.workers_utils
 """
 
 # Import python std lib
@@ -287,6 +309,7 @@ import time
 import traceback
 import signal
 import psutil
+import copy
 
 try:
     import resource
@@ -370,6 +393,7 @@ stats_dict = {
     "jobs_failed": 0,
     "jobs_job_queue_size": 0,
     "jobs_res_queue_size": 0,
+    "nornir_workers": 0,
     "hosts_count": 0,
     "hosts_connections_active": 0,
     "hosts_tasks_failed": 0,
@@ -381,13 +405,14 @@ stats_dict = {
     # "child_processes_ram_usage": 0
 }
 nornir_data = {
-    "nr": None,
     "initialized": False,
-    "stats": stats_dict.copy(),
+    "stats": copy.deepcopy(stats_dict),
     "jobs_queue": None,
     "res_queue": None,
     "worker_thread": None,
     "watchdog_thread": None,
+    "nornir_workers": None,
+    "nrs": [],
 }
 
 # -----------------------------------------------------------------------------
@@ -447,9 +472,26 @@ def init(opts, loader=None):
             },
         },
     )
-    nornir_data["nr"] = InitNornir(
-        logging={"enabled": False}, runner=runner_config, inventory=inventory_config
-    )
+    nornir_data["nornir_workers"] = opts["proxy"].get("nornir_workers", 3)
+    for i in range(nornir_data["nornir_workers"]):
+        nornir_data["nrs"].append(
+            {
+                "nr": InitNornir(
+                    logging={"enabled": False},
+                    runner=copy.deepcopy(runner_config),
+                    inventory=copy.deepcopy(inventory_config),
+                ),
+                "connections_lock": multiprocessing.Lock(),
+                "is_busy": multiprocessing.Event(),
+                "worker_jobs_started": 0,
+                "worker_jobs_completed": 0,
+                "worker_jobs_failed": 0,
+                "worker_hosts_tasks_failed": 0,
+                "worker_connections": {},
+                "worker_id": i + 1,
+                "worker_jobs_queue": multiprocessing.Queue(),
+            }
+        )
     # add parameters from proxy configuration
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
@@ -460,6 +502,10 @@ def init(opts, loader=None):
     nornir_data["watchdog_interval"] = int(opts["proxy"].get("watchdog_interval", 30))
     nornir_data["job_wait_timeout"] = int(opts["proxy"].get("job_wait_timeout", 600))
     nornir_data["proxy_always_alive"] = opts["proxy"].get("proxy_always_alive", True)
+    nornir_data["connections_idle_timeout"] = opts["proxy"].get(
+        "connections_idle_timeout",
+        1 if nornir_data["proxy_always_alive"] is True else 0,
+    )
     nornir_data["event_progress_all"] = opts["proxy"].get("event_progress_all", False)
     nornir_data["memory_threshold_mbyte"] = int(
         opts["proxy"].get("memory_threshold_mbyte", 300)
@@ -478,31 +524,31 @@ def init(opts, loader=None):
     # add some stats
     nornir_data["stats"]["proxy_minion_id"] = opts["id"]
     nornir_data["stats"]["main_process_is_running"] = 1
-    nornir_data["stats"]["hosts_count"] = len(nornir_data["nr"].inventory.hosts.keys())
+    nornir_data["stats"]["hosts_count"] = len(
+        nornir_data["nrs"][0]["nr"].inventory.hosts.keys()
+    )
     # Initiate multiprocessing related queus, locks and threads
-    nornir_data["connections_lock"] = multiprocessing.Lock()
     nornir_data["jobs_queue"] = multiprocessing.Queue()
     nornir_data["res_queue"] = multiprocessing.Queue()
     # if loader not None, meaning init() called by _refresh_nornir function
     if loader:
-        nornir_data["worker_thread"] = threading.Thread(
-            target=_worker, name="{}_worker".format(opts["id"]), args=(loader,)
-        )
+        loader = loader
     # salt >3003 requires loader context to call __salt__ within threads
     elif HAS_LOADER_CONTEXT:
-        nornir_data["worker_thread"] = threading.Thread(
-            target=_worker,
-            name="{}_worker".format(opts["id"]),
-            args=(__salt__.loader(),),
-        )
+        loader = __salt__.loader()
     # salt <3003 does not use loader context
     else:
-        nornir_data["worker_thread"] = threading.Thread(
-            target=_worker, name="{}_worker".format(opts["id"]), args=(None,)
+        loader = None
+    # start worker threads
+    for i in range(nornir_data["nornir_workers"]):
+        nornir_data["nrs"][i]["worker_thread"] = threading.Thread(
+            target=_worker, args=(nornir_data["nrs"][i], loader)
         )
-    nornir_data["worker_thread"].start()
+    for nr in nornir_data["nrs"]:
+        nr["worker_thread"].start()
+    # start watchdog thread
     nornir_data["watchdog_thread"] = threading.Thread(
-        target=_watchdog, name="{}_watchdog".format(opts["id"])
+        target=_watchdog, name="{}_watchdog".format(opts["id"]), args=(loader,)
     )
     nornir_data["watchdog_thread"].start()
     return True
@@ -539,7 +585,8 @@ def shutdown():
         # trigger worker and watchdogs threads to stop
         nornir_data["initialized"] = False
         # close connections to devices
-        nornir_data["nr"].close_connections(on_good=True, on_failed=True)
+        for nr in nornir_data["nrs"]:
+            nr["nr"].close_connections(on_good=True, on_failed=True)
         # close queues
         nornir_data["jobs_queue"].close()
         nornir_data["jobs_queue"].join_thread()
@@ -549,7 +596,7 @@ def shutdown():
         for p in multiprocessing.active_children():
             os.kill(p.pid, signal.SIGKILL)
         # delete old Nornir Object
-        nornir_data["nr"] = None
+        nornir_data["nrs"] = []
         log.info("Nornir-proxy MAIN PID {}, Nornir shutted down".format(os.getpid()))
         return True
     except:
@@ -670,7 +717,7 @@ def _get_or_import_task_fun(plugin):
     return task_function
 
 
-def _watchdog():
+def _watchdog(loader):
     """
     Thread worker to maintain nornir proxy process and it's children liveability.
     """
@@ -720,10 +767,12 @@ def _watchdog():
             )
         # check if worker thread is alive and restart it if not
         try:
-            if not nornir_data["worker_thread"].is_alive():
-                nornir_data["worker_thread"] = threading.Thread(
-                    target=_worker, name="{}_worker".format(opts["id"])
-                ).start()
+            for nr in nornir_data["nrs"]:
+                if not nr["worker_thread"].is_alive():
+                    nr["worker_thread"] = threading.Thread(
+                        target=_worker, args=(nr, loader)
+                    )
+                    nr["worker_thread"].start()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, worker thread is_alive check error: {}".format(
@@ -764,20 +813,69 @@ def _watchdog():
                     os.getpid(), traceback.format_exc()
                 )
             )
+        # check if need to tear down connections that are idle
+        try:
+            # iterate over Nornir worker instances
+            timeout = nornir_data["connections_idle_timeout"]
+            for nr in nornir_data["nrs"]:
+                # get a list of hosts that aged beyond idle timeout
+                hosts_to_disconnect = []
+                if timeout > 1:
+                    for host_name in list(nr["worker_connections"].keys()):
+                        conn_data = nr["worker_connections"][host_name]
+                        age = time.time() - conn_data["last_use_timestamp"]
+                        if age > timeout:
+                            hosts_to_disconnect.append(host_name)
+                # run task to disconnect connections for aged hosts
+                if hosts_to_disconnect and nr["connections_lock"].acquire(block=False):
+                    try:
+                        aged_hosts = FFun(nr["nr"], FL=hosts_to_disconnect)
+                        aged_hosts.run(
+                            task=_get_or_import_task_fun(
+                                "nornir_salt.plugins.tasks.connections"
+                            ),
+                            call="close",
+                        )
+                        log.debug(
+                            "Nornir-proxy MAIN PID {} watchdog, nornir-worker-{}, disconnected: {}".format(
+                                os.getpid(), nr["worker_id"], hosts_to_disconnect
+                            )
+                        )
+                        # remove disconnected hosts from stats
+                        for h_name in hosts_to_disconnect:
+                            nr["worker_connections"].pop(h_name)
+                    except Exception as e:
+                        raise e
+                    finally:
+                        nr["connections_lock"].release()
+        except:
+            log.error(
+                "Nornir-proxy MAIN PID {} watchdog, connections idle check error: {}".format(
+                    os.getpid(), traceback.format_exc()
+                )
+            )
         # keepalive connections and clean up dead connections if any
         try:
-            if nornir_data["proxy_always_alive"] and nornir_data[
-                "connections_lock"
-            ].acquire(block=False):
-                try:
-                    stats = HostsKeepalive(nornir_data["nr"])
-                    nornir_data["stats"]["watchdog_dead_connections_cleaned"] += stats[
-                        "dead_connections_cleaned"
-                    ]
-                except Exception as e:
-                    raise e
-                finally:
-                    nornir_data["connections_lock"].release()
+            for nr in nornir_data["nrs"]:
+                if nornir_data["proxy_always_alive"] and nr["connections_lock"].acquire(
+                    block=False
+                ):
+                    log.debug(
+                        "Nornir-proxy {} MAIN PID {} watchdog, nornir-worker-{} connections keepalive".format(
+                            nornir_data["stats"]["proxy_minion_id"],
+                            nornir_data["stats"]["main_process_pid"],
+                            nr["worker_id"],
+                        )
+                    )
+                    try:
+                        stats = HostsKeepalive(nr["nr"])
+                        nornir_data["stats"][
+                            "watchdog_dead_connections_cleaned"
+                        ] += stats["dead_connections_cleaned"]
+                    except Exception as e:
+                        raise e
+                    finally:
+                        nr["connections_lock"].release()
         except:
             log.error(
                 "Nornir-proxy MAIN PID {} watchdog, HostsKeepalive check error: {}".format(
@@ -788,36 +886,57 @@ def _watchdog():
         time.sleep(nornir_data["watchdog_interval"])
 
 
-def _worker(loader=None):
+def _worker(wkr_data, loader):
     """
     Target function for worker thread to run jobs from
     jobs_queue submitted by execution module processes
+
+    :param wkr_data: (dict) dictionaru that contain nornir instance and other parameters
+    :param loader: (obj or None) SaltStack loader context object
     """
-    ppid = os.getpid()
+    worker_id = wkr_data["worker_id"]  # get worker ID integer
+    ppid = nornir_data["stats"]["main_process_pid"]
     while nornir_data["initialized"]:
+        wkr_data["is_busy"].clear()  # no longer busy
         time.sleep(0.01)
         job, output = None, None
         try:
-            # get job from queue
-            job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
-            # run job
-            nornir_data["stats"]["jobs_started"] += 1
+            # try to get job from worker specific queue
+            try:
+                job = wkr_data["worker_jobs_queue"].get(block=True, timeout=0.1)
+            except queue.Empty:
+                # check if all higher order workers are busy
+                if all(
+                    [
+                        wkr["is_busy"].is_set()
+                        for wkr in nornir_data["nrs"][: worker_id - 1]
+                    ]
+                ):
+                    # try to get job from shared queue
+                    job = nornir_data["jobs_queue"].get(block=True, timeout=0.1)
+                else:
+                    continue
+            # got the job, I am busy now
+            wkr_data["is_busy"].set()
+            wkr_data["worker_jobs_started"] += 1
             # check if its a call for a special task
             if job["task_fun"] == "test":
-                nornir_data["stats"]["jobs_completed"] += 1
+                wkr_data["worker_jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": True, "identity": job["identity"]}
                 )
                 continue
             if job["task_fun"] == "clear_dcache":
-                output = _clear_dcache(**job["kwargs"])
-                nornir_data["stats"]["jobs_completed"] += 1
+                output = _clear_dcache(
+                    nr=wkr_data["nr"], cache_keys=job["kwargs"].get("cache_keys")
+                )
+                wkr_data["worker_jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": output, "identity": job["identity"]}
                 )
                 continue
             if job["task_fun"] == "refresh":
-                nornir_data["stats"]["jobs_completed"] += 1
+                wkr_data["worker_jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": True, "identity": job["identity"]}
                 )
@@ -826,7 +945,7 @@ def _worker(loader=None):
                 # stop this worker thread as another one will be started
                 break
             if job["task_fun"] == "shutdown":
-                nornir_data["stats"]["jobs_completed"] += 1
+                wkr_data["worker_jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": True, "identity": job["identity"]}
                 )
@@ -834,8 +953,8 @@ def _worker(loader=None):
                 shutdown()
                 break
             if job["task_fun"] == "inventory":
-                output = InventoryFun(nornir_data["nr"], **job["kwargs"])
-                nornir_data["stats"]["jobs_completed"] += 1
+                output = InventoryFun(wkr_data["nr"], **job["kwargs"])
+                wkr_data["worker_jobs_completed"] += 1
                 nornir_data["res_queue"].put(
                     {"output": output, "identity": job["identity"]}
                 )
@@ -846,18 +965,20 @@ def _worker(loader=None):
                 "Nornir-proxy MAIN PID {} starting task '{}'".format(ppid, job["name"])
             )
             # lock connections and run the task
-            with nornir_data["connections_lock"]:
+            with wkr_data["connections_lock"]:
                 output = run(
                     task=task_fun,
                     loader=loader,
                     identity=job["identity"],
                     name=job["name"],
+                    nr=wkr_data["nr"],
+                    wkr_data=wkr_data,
                     **job["kwargs"],
                 )
-            nornir_data["stats"]["hosts_tasks_failed"] += len(
-                nornir_data["nr"].data.failed_hosts
+            wkr_data["worker_hosts_tasks_failed"] += len(
+                wkr_data["nr"].data.failed_hosts
             )
-            nornir_data["stats"]["jobs_completed"] += 1
+            wkr_data["worker_jobs_completed"] += 1
         except queue.Empty:
             continue
         except:
@@ -866,14 +987,17 @@ def _worker(loader=None):
                 ppid, job, tb
             )
             log.error(output)
-            nornir_data["stats"]["jobs_failed"] += 1
+            wkr_data["worker_jobs_failed"] += 1
         # submit job results in results queue
         nornir_data["res_queue"].put({"output": output, "identity": job["identity"]})
         del job, output
         # close connections to devices if proxy_always_alive is False
-        if nornir_data["proxy_always_alive"] is False:
+        if (
+            nornir_data["proxy_always_alive"] is False
+            or nornir_data["connections_idle_timeout"] == 0
+        ):
             try:
-                nornir_data["nr"].close_connections(on_good=True, on_failed=True)
+                wkr_data["nr"].close_connections(on_good=True, on_failed=True)
             except:
                 log.error(
                     "Nornir-proxy MAIN PID {} worker thread, Nornir close_connections error: {}".format(
@@ -1008,7 +1132,7 @@ def _download_files(download, kwargs):
         )
 
 
-def _add_processors(kwargs, loader, identity):
+def _add_processors(kwargs, loader, identity, nr):
     """
     Helper function to exctrat processors arguments and add processors
     to Nornir.
@@ -1022,8 +1146,9 @@ def _add_processors(kwargs, loader, identity):
 
     # get parameters
     tf = kwargs.pop("tf", None)  # to file
+    tf_skip_failed = kwargs.pop("tf_skip_failed", False)  # to file
     tests = kwargs.pop("tests", None)  # tests
-    remove_tasks = kwargs.pop("remove_tasks", True)  # testsand/or run_ttp
+    remove_tasks = kwargs.pop("remove_tasks", True)  # tests and/or run_ttp
     failed_only = kwargs.pop("failed_only", False)  # tests
     diff = kwargs.pop("diff", "")  # diff processor
     last = kwargs.pop("last", 1) if diff else None  # diff processor
@@ -1117,10 +1242,11 @@ def _add_processors(kwargs, loader, identity):
                 base_url=nornir_data["files_base_path"],
                 index=nornir_data["stats"]["proxy_minion_id"],
                 max_files=nornir_data["files_max_count"],
+                skip_failed=tf_skip_failed,
             )
         )
 
-    return nornir_data["nr"].with_processors(processors)
+    return nr.with_processors(processors)
 
 
 def _cache_task_results_to_host_data(hosts, results, cache_key):
@@ -1139,29 +1265,38 @@ def _cache_task_results_to_host_data(hosts, results, cache_key):
         )
     )
 
-    # iterate over hosts and save results to data cache
-    for host_name, host_object in hosts.inventory.hosts.items():
-        # add metadata on cache keys so that can clean them up
-        host_object.data.setdefault("_hcache_keys_", [])
-        if cache_key not in host_object.data["_hcache_keys_"]:
-            host_object.data["_hcache_keys_"].append(cache_key)
-        # cache results
-        host_object.data.setdefault(cache_key, {})
-        # dictionary results should be keyed by host name
-        if isinstance(results, dict):
-            host_object.data[cache_key].update(results.get(host_name, {}))
-        # save string results as is
-        elif isinstance(results, str):
-            host_object.data[cache_key] = results
-        # convert list results back to dictionary keyd by task name
-        elif isinstance(results, list):
-            host_object.data[cache_key].update(
-                {i["name"]: i["result"] for i in results if i["host"] == host_name}
-            )
-        else:
-            log.error(
-                "salt-nornir:hcache unsupported results type '{}'".format(type(results))
-            )
+    # form a list of hosts to add hcache to
+    hosts_to_cache = list(hosts.inventory.hosts.keys())
+
+    # iteare over Nornir instances and cache results to hosts
+    for nr in nornir_data["nrs"]:
+        # iterate over hosts and save results to data cache
+        for host_name, host_object in nr["nr"].inventory.hosts.items():
+            if host_name not in hosts_to_cache:
+                continue
+            # add metadata on cache keys so that can clean them up
+            host_object.data.setdefault("_hcache_keys_", [])
+            if cache_key not in host_object.data["_hcache_keys_"]:
+                host_object.data["_hcache_keys_"].append(cache_key)
+            # cache results
+            host_object.data.setdefault(cache_key, {})
+            # dictionary results should be keyed by host name
+            if isinstance(results, dict):
+                host_object.data[cache_key].update(results.get(host_name, {}))
+            # save string results as is
+            elif isinstance(results, str):
+                host_object.data[cache_key] = results
+            # convert list results back to dictionary keyd by task name
+            elif isinstance(results, list):
+                host_object.data[cache_key].update(
+                    {i["name"]: i["result"] for i in results if i["host"] == host_name}
+                )
+            else:
+                log.error(
+                    "salt-nornir:hcache unsupported results type '{}'".format(
+                        type(results)
+                    )
+                )
 
     log.debug(
         "salt-nornir:hcache saved results in hosts data under '{}' key".format(
@@ -1186,12 +1321,13 @@ def _cache_all_task_results_to_defaults_data(results, cache_key):
     )
 
     # add metadata about cache keys so that can clean them up later on
-    nornir_data["nr"].inventory.defaults.data.setdefault("_dcache_keys_", [])
-    if cache_key not in nornir_data["nr"].inventory.defaults.data["_dcache_keys_"]:
-        nornir_data["nr"].inventory.defaults.data["_dcache_keys_"].append(cache_key)
+    for nr in nornir_data["nrs"]:
+        nr["nr"].inventory.defaults.data.setdefault("_dcache_keys_", [])
+        if cache_key not in nr["nr"].inventory.defaults.data["_dcache_keys_"]:
+            nr["nr"].inventory.defaults.data["_dcache_keys_"].append(cache_key)
 
-    # cache results
-    nornir_data["nr"].inventory.defaults.data[cache_key] = results
+        # cache results
+        nr["nr"].inventory.defaults.data[cache_key] = results
     log.debug(
         "salt-nornir:dcache saved results in defaults data under '{}' key".format(
             cache_key
@@ -1199,29 +1335,27 @@ def _cache_all_task_results_to_defaults_data(results, cache_key):
     )
 
 
-def _clear_dcache(**kwargs):
+def _clear_dcache(nr, cache_keys=None):
     """
     Function to clear task results cache from defaults data.
 
     :param cache_keys: (str) list of key names to remove
+    :param nr: (obj) Nornir Instance to clear dcache for
     """
     result = {}
 
     # get keys to clear
-    cache_keys = kwargs.get("cache_keys", None)
     if cache_keys is None:
         # need to itearete over a copy of the keys - list() makes a copy
-        cache_keys = list(
-            nornir_data["nr"].inventory.defaults.data.get("_dcache_keys_", [])
-        )
+        cache_keys = list(nr.inventory.defaults.data.get("_dcache_keys_", []))
 
     # iterate over given cache keys and clean them up from data
     for key in cache_keys:
-        if key in nornir_data["nr"].inventory.defaults.data and key in nornir_data[
-            "nr"
-        ].inventory.defaults.data.get("_dcache_keys_", []):
-            nornir_data["nr"].inventory.defaults.data.pop(key)
-            nornir_data["nr"].inventory.defaults.data["_dcache_keys_"].remove(key)
+        if key in nr.inventory.defaults.data and key in nr.inventory.defaults.data.get(
+            "_dcache_keys_", []
+        ):
+            nr.inventory.defaults.data.pop(key)
+            nr.inventory.defaults.data["_dcache_keys_"].remove(key)
             result[key] = True
         else:
             result[key] = False
@@ -1242,16 +1376,29 @@ def _refresh_nornir(loader_):
 
     :param loader_: (obj) ``__salt__.loader`` object instance for ``init``
     """
-    log.info("Nornir-proxy refreshing!")
+    log.info("Nornir-proxy MAIN PID {}, refreshing".format(os.getpid()))
     if shutdown():
         # refresh all modules
         __salt__["saltutil.sync_all"]()
-        # refresh im memory pillar
+        # refresh in memory pillar
         __salt__["saltutil.refresh_pillar"]()
-        # get latest pillar data
+        # get latest pillar data from master
         __opts__["pillar"] = __salt__["pillar.items"]()
+        __opts__["proxy"] = __opts__["pillar"]["proxy"]
+        log.debug(
+            "Nornir-proxy MAIN PID {}, refreshing, new proxy data: {}".format(
+                os.getpid(), __opts__["proxy"]
+            )
+        )
+        log.debug(
+            "Nornir-proxy MAIN PID {}, refreshing, new pillar data: {}".format(
+                os.getpid(), __opts__["pillar"]
+            )
+        )
         # re-init proxy module
         init(__opts__, loader_)
+        # refresh in memory pillar one more time for salt to ead updated data
+        __salt__["saltutil.refresh_pillar"]()
         log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
         return True
     return False
@@ -1267,6 +1414,18 @@ def _rm_tasks_data_from_hosts(hosts):
         _ = host_object.data.pop("__task__", None)
 
 
+def _update_worker_connections(hosts, wkr_data):
+    """
+    Helper function to update stats for worker's hosts connections.
+
+    :param hosts: (obj) Nornir Object filtered instance
+    :param wkr_data: (dict) worker data dictionary
+    """
+    for host_name in hosts.inventory.hosts:
+        wkr_data["worker_connections"].setdefault(host_name, {})
+        wkr_data["worker_connections"][host_name]["last_use_timestamp"] = time.time()
+
+
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -1278,10 +1437,10 @@ def list_hosts(**kwargs):
 
     :param Fx: filters to filter hosts
     """
-    return InventoryFun(nornir_data["nr"], call="list_hosts", **kwargs)
+    return InventoryFun(nornir_data["nrs"][0]["nr"], call="list_hosts", **kwargs)
 
 
-def run(task, loader, identity, name, **kwargs):
+def run(task, loader, identity, name, nr, wkr_data, **kwargs):
     """
     Function for worker Thread to run Nornir tasks.
 
@@ -1290,6 +1449,7 @@ def run(task, loader, identity, name, **kwargs):
     :param identity: (dict) Task results queue identity for SaltEventProcessor
     :param kwargs: (dict) passed to ``task.run`` after extracting CLI arguments
     :param name: (str) Nornir task name to run
+    :param nr: (obj) Worker instance Nornir object
     """
     # extract attributes
     add_details = kwargs.pop("add_details", False)  # ResultSerializer
@@ -1309,17 +1469,19 @@ def run(task, loader, identity, name, **kwargs):
     dcache = kwargs.pop("dcache", False)  # cache task results
 
     # set dry_run argument
-    nornir_data["nr"].data.dry_run = kwargs.get("dry_run", False)
+    nr.data.dry_run = kwargs.get("dry_run", False)
 
     # reset failed hosts if any
-    nornir_data["nr"].data.reset_failed_hosts()
+    nr.data.reset_failed_hosts()
 
     # download files
     if download:
         _download_files(download, kwargs, loader=loader)
 
     # add processors
-    nr_with_processors = _add_processors(kwargs, loader=loader, identity=identity)
+    nr_with_processors = _add_processors(
+        kwargs, loader=loader, identity=identity, nr=nr
+    )
 
     # Filter hosts to run tasks for
     hosts, has_filter = FFun(
@@ -1337,6 +1499,9 @@ def run(task, loader, identity, name, **kwargs):
         _download_and_render_files(
             hosts, render, kwargs, ignore_keys=download, loader=loader
         )
+
+    # update hosts connections ages
+    _update_worker_connections(hosts, wkr_data)
 
     # run tasks
     result = hosts.run(
@@ -1396,10 +1561,79 @@ def execute_job(task_fun, kwargs, identity):
     ``identity`` parameter used to identify job results in results queue and
     must be unique for each submitted job.
     """
-    # add new job in jobs queue
-    nornir_data["jobs_queue"].put(
-        {"task_fun": task_fun, "kwargs": kwargs, "identity": identity, "name": task_fun}
-    )
+    # broadcast job to all nornir workers
+    if kwargs.get("worker") == "all":
+        _ = kwargs.pop("worker")
+        identities = []
+        results = []
+        # add jobs to the queue for each worker
+        for nr in nornir_data["nrs"]:
+            # make sure each worker receives its own copy of identity and kwargs
+            job_identity = copy.deepcopy(identity)
+            job_kwargs = copy.deepcopy(kwargs)
+            job_identity["worker"] = nr["worker_id"]
+            identities.append(job_identity)
+            nr["worker_jobs_queue"].put(
+                {
+                    "task_fun": task_fun,
+                    "kwargs": job_kwargs,
+                    "identity": job_identity,
+                    "name": task_fun,
+                }
+            )
+        # wait for jobs to complete and return results
+        start_time = time.time()
+        while (time.time() - start_time) < nornir_data["job_wait_timeout"]:
+            time.sleep(0.1)
+            try:
+                res = nornir_data["res_queue"].get(block=True, timeout=0.1)
+                if res["identity"] in identities:
+                    results.append(res)
+                else:
+                    nornir_data["res_queue"].put(res)
+            except queue.Empty:
+                continue
+            # check if collected results from all workers
+            if len(results) == nornir_data["nornir_workers"]:
+                break
+        else:
+            raise TimeoutError(
+                "Nornir-proxy MAIN PID {}, identities '{}', {}s job_wait_timeout expired.".format(
+                    os.getpid(), identities, nornir_data["job_wait_timeout"]
+                )
+            )
+        return {
+            "nornir-worker-{}".format(r["identity"]["worker"]): r["output"]
+            for r in results
+        }
+    # submit job to certain worker's queue only
+    elif kwargs.get("worker"):
+        if kwargs["worker"] not in list(range(1, len(nornir_data["nrs"]) + 1)):
+            return "Error: Non existing worker '{}'; worker IDs 1 - {}".format(
+                kwargs["worker"], len(nornir_data["nrs"])
+            )
+        nr = nornir_data["nrs"][kwargs.pop("worker") - 1]
+        identity["worker"] = nr["worker_id"]
+        # add job to the worker queue
+        nr["worker_jobs_queue"].put(
+            {
+                "task_fun": task_fun,
+                "kwargs": kwargs,
+                "identity": identity,
+                "name": task_fun,
+            }
+        )
+    # submit job to shared queue for one of the workers to execute
+    else:
+        nornir_data["jobs_queue"].put(
+            {
+                "task_fun": task_fun,
+                "kwargs": kwargs,
+                "identity": identity,
+                "name": task_fun,
+            }
+        )
+
     # wait for job to complete and return results
     start_time = time.time()
     while (time.time() - start_time) < nornir_data["job_wait_timeout"]:
@@ -1454,13 +1688,6 @@ def stats(*args, **kwargs):
     * ``main_process_fd_limit`` - int, fd count limit imposed by Operating System for minion process
     """
     stat = args[0] if args else kwargs.get("stat", None)
-    # get approximate queue sizes
-    try:
-        jobs_job_queue_size = nornir_data["jobs_queue"].qsize()
-        jobs_res_queue_size = nornir_data["res_queue"].qsize()
-    except:
-        jobs_job_queue_size = -1
-        jobs_res_queue_size = -1
     # get File Descriptors limit and usage
     try:
         if HAS_RESOURCE_LIB:
@@ -1476,17 +1703,28 @@ def stats(*args, **kwargs):
             "main_process_fd_count": fd_count,
             "main_process_fd_limit": fd_limit,
             "timestamp": time.ctime(),
-            "jobs_job_queue_size": jobs_job_queue_size,
-            "jobs_res_queue_size": jobs_res_queue_size,
+            "jobs_job_queue_size": nornir_data["jobs_queue"].qsize(),
+            "jobs_res_queue_size": nornir_data["res_queue"].qsize(),
             "child_processes_count": len(multiprocessing.active_children()),
             "hosts_connections_active": sum(
                 [
                     len(host.connections)
-                    for host in nornir_data["nr"].inventory.hosts.values()
+                    for nr in nornir_data["nrs"]
+                    for host in nr["nr"].inventory.hosts.values()
                 ]
             ),
+            "hosts_connections_idle_timeout": nornir_data["connections_idle_timeout"],
             "main_process_uptime_seconds": round(
                 time.time() - nornir_data["stats"]["main_process_start_time"], 3
+            ),
+            "nornir_workers": len(nornir_data["nrs"]),
+            "jobs_started": sum([w["worker_jobs_started"] for w in nornir_data["nrs"]]),
+            "jobs_completed": sum(
+                [w["worker_jobs_completed"] for w in nornir_data["nrs"]]
+            ),
+            "jobs_failed": sum([w["worker_jobs_failed"] for w in nornir_data["nrs"]]),
+            "hosts_tasks_failed": sum(
+                [w["worker_hosts_tasks_failed"] for w in nornir_data["nrs"]]
             ),
         }
     )
@@ -1601,3 +1839,85 @@ def kill_nornir(*args, **kwargs):
     os.kill(nornir_data["stats"]["main_process_pid"], signal.SIGKILL)
     # kill itself if still can
     os.kill(os.getpid(), signal.SIGKILL)
+
+
+def workers_utils(call):
+    """
+    Function to retrieve operational data for Nornir Worker instances
+
+    :param call: (str) utility to invoke
+
+    Supported calls:
+
+    * ``stats`` - return worker statistics keyed by worker id with these parameters:
+
+       * ``is_busy`` - boolean, indicates if worker doing the work
+       * ``worker_jobs_completed`` - counter of completed jobs
+       * ``worker_jobs_failed`` - counter of completely failed jobs
+       * ``worker_connections`` - hosts' connections info
+       * ``worker_jobs_queue`` - size of the worker specific jobs queue
+       * ``worker_hosts_tasks_failed`` - counter of overall host failed tasks
+       * ``worker_jobs_started`` - counter of started jobs
+
+    """
+    supported_calls = ["stats"]
+    if call == "stats":
+        ret = {}
+        for w in nornir_data["nrs"]:
+            # calculate connections age
+            worker_connections = {
+                host_name: {
+                    "last_use_timestamp": conn_data["last_use_timestamp"],
+                    "age": int(time.time() - conn_data["last_use_timestamp"]),
+                }
+                for host_name, conn_data in w["worker_connections"].items()
+            }
+            # form workers stats
+            ret["nornir-worker-{}".format(w["worker_id"])] = {
+                "is_busy": w["is_busy"].is_set(),
+                "worker_jobs_completed": w["worker_jobs_completed"],
+                "worker_jobs_failed": w["worker_jobs_failed"],
+                "worker_connections": worker_connections,
+                "worker_jobs_queue": w["worker_jobs_queue"].qsize(),
+                "worker_hosts_tasks_failed": w["worker_hosts_tasks_failed"],
+                "worker_jobs_started": w["worker_jobs_started"],
+            }
+        return ret
+    else:
+        raise CommandExecutionError(
+            "Nornir-proxy workers_utils unsupported call - '{}', supported - '{}'".format(
+                call, ", ".join(supported_calls)
+            )
+        )
+
+
+def queues_utils(call):
+    """
+    Function to retrieve operational data for job queues
+
+    :param call: (str) utility to invoke - ``results_queue_dump``
+
+    Suppoted calls:
+
+    * ``results_queue_dump`` - drain items from result queue and return their content,
+        put items copies back into the queue afterwards
+    """
+    supported_calls = ["results_queue_dump"]
+    if call == "results_queue_dump":
+        ret = []
+        # drain items from results queue
+        while True:
+            try:
+                ret.append(nornir_data["res_queue"].get(block=True, timeout=0.5))
+            except queue.Empty:
+                break
+        # put drained items copies back into the queue
+        for i in ret:
+            nornir_data["res_queue"].put(copy.deepcopy(i))
+        return ret
+    else:
+        raise CommandExecutionError(
+            "Nornir-proxy queues_utils unsupported call - '{}', supported - '{}'".format(
+                call, ", ".join(supported_calls)
+            )
+        )

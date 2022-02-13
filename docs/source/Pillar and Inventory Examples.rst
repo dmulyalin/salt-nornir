@@ -121,7 +121,7 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
 - Scrapli-Netconf - uses port 830 with paramiko transport as specified in ``connection_options``
 - NAPALM - uses SSH and platform ``ios`` as specified in ``connection_options``
 - Scrapli - uses SSH and platform ``cisco_iosxe`` without verifying SSH keys as specified in ``connection_options``
- 
+
 .. code-block:: yaml
 
     proxy:
@@ -175,7 +175,7 @@ Below inventory can be used with Cisoc IOSXE based devices and contains paramete
               transport: paramiko
               ssh_config_file: True
               auth_strict_key: False
-              transport_options: 
+              transport_options:
                 netconf_force_pty: False
 
 Cisco IOSXR
@@ -233,7 +233,7 @@ Below inventory can be used with Cisco IOSXR based devices and contains paramete
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options: 
+              transport_options:
                 netconf_force_pty: False
 
 Cisco NXOS
@@ -291,5 +291,5 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
             extras:
               ssh_config_file: True
               auth_strict_key: False
-              transport_options: 
-                netconf_force_pty: False  
+              transport_options:
+                netconf_force_pty: False

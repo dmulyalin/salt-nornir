@@ -32,7 +32,7 @@ def test_nr_call_cli():
         fun="nr.call",
         full_return=True,
         arg=["cli", "show clock"],
-        kwarg={},
+        kwarg={"FB": "ceos[12]"},
     )
     # pprint.pprint(ret)
     assert ret["success"] == True
@@ -47,7 +47,7 @@ def test_nr_call_cfg():
         fun="nr.call",
         full_return=True,
         arg=["cfg", "logging host 1.2.3.4", "logging host 1.2.3.5"],
-        kwarg={"plugin": "netmiko", "show_progress": False},
+        kwarg={"plugin": "netmiko", "show_progress": False, "FB": "ceos[12]"},
     )
     # pprint.pprint(ret)
     assert ret["success"] == True

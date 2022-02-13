@@ -29,7 +29,7 @@ Nornir Proxy acts as a bridge between SaltStack and a wide set of network automa
 
 Some notable benefits:
 
-- Well tested - overall 382 tests combined as of release 0.8.0
+- Well tested - overall 426 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.9.0
 - Brings together SaltStack and a wealth of open-source libraries - Nornir, Netmiko, NAPALM, Scrapli, Scrapli-Netconf, Ncclient, Genie&PyATS (free, not open-source), PyGNMI, NTC-Templates, TTP, Jmespath, lxml, xmltodict, requests
 - Capable of addressing overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
 - Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows

@@ -23,7 +23,11 @@ if HAS_SALT:
 iosxe_sandbox_router = "sandbox-iosxe-latest-1.cisco.com" 
 s = socket.socket()
 s.settimeout(5)
-status = s.connect_ex((iosxe_sandbox_router, 830))
+try:
+    status = s.connect_ex((iosxe_sandbox_router, 830))
+except:
+    log.exception("Failed to check iosxe_sandbox_router connection.")
+    status = 1
 if status == 0:
     has_sandbox_iosxe_latest_1_metconf = True
 else:

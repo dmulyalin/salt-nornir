@@ -19,7 +19,7 @@ except:
 if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
-
+    
 def _clean_files():
     _ = client.cmd(
         tgt="nrp1",
@@ -29,6 +29,16 @@ def _clean_files():
         tgt_type="glob",
         timeout=60,
     )
+    verify_res = client.cmd(
+        tgt="nrp1",
+        fun="cmd.run",
+        arg=["ls -l /var/salt-nornir/nrp1/files/"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )
+    if "total 0" not in verify_res["nrp1"]:
+        _clean_files()
     
 def _learn_staff():
     return client.cmd(
@@ -208,7 +218,7 @@ def test_nr_find_interfaces_with_filter_glob_last_2():
         timeout=60,
     )
 
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
                
     assert isinstance(ret["nrp1"], str)
     assert ret["nrp1"].count(" ceos1 ") == 1
