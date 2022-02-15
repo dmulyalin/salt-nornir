@@ -1,60 +1,59 @@
 Overview
 ########
 
-Nornir Proxy Minion is a collection of SaltStack modules and Nornir Plugins to
-interact with network devices using SaltStack command line interface utilities
-and Python API.
+Salt-Nornir is a `SaltStack Proxy Minion <https://saltproject.io/>`_ built for 
+Network Automation using `Nornir framework <https://nornir.readthedocs.io/>`_.
 
 .. image:: ./_images/Nornir_proxy_minion_architecture_v2.png
 
 Why Salt-Nornir?
 ================
 
-**First of all, scaling**
+**SCALING**
 
-Salt Nornir modules help to address scaling issues of interacting with devices at high numbers
-(hundreds to tens of thousands) effectively using resources (accomplish more with less), but
-without sacrificing execution speed.
+Salt-Nornir helps to address scaling issues of interacting with devices at high numbers, 
+efficiently using resources without sacrificing execution speed.
 
-To demonstrate, for each network device to manage with SALT, normally there is a
-dedicated proxy-minion process configured and started. Each process consumes about
-100 MByte of RAM providing in return capability to manage single network device.
+Normally, for each network device dedicated proxy-minion process configured 
+and once started, each consuming about 100 MByte of RAM.
 
-.. image:: ./_images/overview_usual_proxy-minion_architecture.png
+Contrary, single instance of Salt-Nornir Nornir Proxy Minion capable of managing multiple 
+network devices using Nornir.
 
-With nornir-proxy, while each proxy-minion process might consume more RAM, Nornir Proxy minion
-capable of managing multiple network devices using Nornir plugins.
+As a result, the more devices single Salt-Nornir Proxy Minion manages, the more system 
+resources saved.
 
-.. image:: ./_images/overview_nornir_proxy-minion_architecture.png
+At one extreme, single Salt-Nornir proxy can manage one device only, giving the fastest 
+execution time but consuming the most of resources. 
 
-As a result, the more devices single Nornir proxy minion manage, the less overall resources
-used compared to normal proxy minion. However, the more devices, the longer it usually takes
-to execute tasks - at one extreme, single Nornir proxy can manage one device only, giving the
-fastest execution time, on the other hand, Nornir proxy minion can  run tasks against 1000
-devices, crawling them over several minutes.
+At another extreme, Salt-Nornir proxy minion can manage 1000 devices, slowly crawling 
+them over time but saving on resource usage.
 
-Optimal number of devices managed by single Nornir proxy depends on the environment it operates in
-and should be decided on a case by case basis. Each connection to device requires resources to operate,
-usually around 2-3MByte of RAM per device, but might vary depending on the environment and plugins in use.
+Optimal number of devices managed by Salt-Nornir proxy depends on the environment it operates
+in and decided on a case by case basis.
 
-**Secondly, extendability and pluggability**
+**EXTENDABILITY**
 
-Nornir is Python, SALT is Python, Nornir is pluggable framework, SALT is pluggable
-framework, Nornir is open-source, SALT has open-source community version - sounds like a nice fit
-and it really is.
+Nornir and SALT both use Python, both are pluggable frameworks and both open-source.
 
-Given that both frameworks can expose themselves using Python and support modules/plugins,
-extendability is endless. Several examples:
+Given that both frameworks has Python API and native support for modules/plugins, extendability 
+is endless. 
 
-(1) Conventional Proxy Minion locked in a certain way of interacting with network
-devices, normally using single library of choice. Nornir, on the other hand, handles interactions
-via plugins. As a result same Nornir Proxy minion can use several plugins to interact with devices.
-As of now Norir Proxy Minion supports NAPALAM, Netmiko, Scrapli, Scrapli Netconf, Ncclient, PyGNMI
-and Python requests in addition to any other plugins that Nornir.
+Examples:
+
+(1) Usually Proxy Minion locked in a certain way of interacting with network devices using 
+single library of choice. Salt-Nornir, on the other hand, handles interactions using plugins. 
+
+As a result, same Salt-Nornir Proxy Minion can manage network devices using several libraries.
+Out of the box Salt-Nornir Proxy Minion comes with support for NAPALAM, Netmiko, Scrapli, Scrapli 
+Netconf, Ncclient, PyGNMI, PyATS and requests libraries to interact with network infrastructure.
 
 (2) SaltStack has CLI utilities, schedulers, returners, REST API, pillar, beacons, event bus, mine,
-templating engines systems and many other pluggable systems. All of them available for use with
-Nornir Proxy Minion.
+templating engines and many other pluggable systems. All of them available for use with Salt-Nornir 
+Proxy Minion.
+
+(3) In case none of the existing plugins suite the use case, Nornir Tasks plugins together with 
+SaltStack Python API systems can be used to address the problem. 
 
 How it fits together
 ====================
@@ -88,31 +87,25 @@ task execution and configuration management (Wikipedia)
 How it works
 ============
 
-Wrapping Nornir in Salt Proxy Minion allows to run jobs against multiple endpoints. As a result, single
-proxy process can deliver configuration or retrieve state from multiple devices using various
-connection methods.
+Wrapping Nornir in Salt Proxy Minion allows to run jobs against multiple devices. Single proxy 
+process can apply configuration or retrieve devices' state using Nornir plugins.
 
-Nornir Proxy supports devices' long running connections and shares access to devices with child
-processes. To facilitate efficient use of connection resources, proxy-minion designed to use queues for
-inter-process jobs communication.
+Salt-Nornir Proxy Minion controls and enables shared access to network devices resources using
+queues for child and main processes communication.
 
-This architecture helps avoid these problems:
+.. image:: ./_images/nornir_proxy_inter_process_communication_v1.png
 
-* If no long running connections exists to devices, each new task creates dedicated connections to devices, increasing overall execution time
-* Increase in the number of connections increases load on AAA system (Tacacs, Radius) as more tasks result in more authentication requests from devices
-
-.. image:: ./_images/nornir_proxy_inter_process_communication_v0.png
-
-Above architecture prone to these **drawbacks**:
+Above architecture assumes:
 
 * Double targeting required to narrow down tasks execution to a subset of hosts
-* In addition to knowing how pillar works, one will have to know how `Nornir inventory <https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html>`_ structured to use
-  it effectively, as Nornir inventory integrated in proxy-minion pillar
-* Tasks executed sequentially one after another, if a lot of tasks scheduled simultaneously, they will consume resource waiting to execute
+* In addition to knowing how pillar works, one need to know how `Nornir inventory <https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html>`_ 
+  structured, as Nornir inventory integrated with proxy-minion pillar
 
-To address double targeting, Nornir filtering capabilities utilized using additional filtering functions, reference nornir-salt module
-`FFun function <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ for more information. But in short,
-have to use ``Fx`` parameters to filter hosts, for example::
+To address double targeting, Salt-Nornir comes with filtering functions, refer to Nornir-Salt
+`FFun functions <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ for details. 
+Filter functions use ``Fx`` Salt CLI arguments to filter hosts. 
+
+For example::
 
     # target only IOL1 and IOL2 hosts:
     salt nrp1 nr.cli "show clock" FB="IOL[12]"
@@ -135,7 +128,7 @@ threading it is not prone to memory leak issues, however, having
 capability to log or restart process in response to consuming too much memory can
 be helpful in extreme cases like bugs in new software releases.
 
-2. **Stale child processes**. During nornir proxy minion testing was detected that some
+2. **Stale child processes**. During Nornir proxy minion testing was detected that some
 child processes started to execute tasks might stuck for unknown reason. Probably
 bug of some sort. That usually leads to child process running indefinitely, consuming
 system resources and task never been completed. To mitigate that problem, watchdog
