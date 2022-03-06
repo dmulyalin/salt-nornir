@@ -1,3 +1,6 @@
-psutil==5.8.*
+bandit
 black
-pre-commit==2.*
+flake8
+ipdb
+pre-commit
+pytest

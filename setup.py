@@ -1,13 +1,26 @@
 from setuptools import setup, find_packages
 
+__version__ = "0.9.0"
+__author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
+
 with open("README.md", "r") as f:
     long_description = f.read()
 
-__author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
+with open("requirements.txt", "r", encoding="utf8") as f:
+    REQUIREMENTS = [i for i in f.read().splitlines() if i.strip()]
+
+with open("requirements-dev.txt", "r", encoding="utf8") as f:
+    REQUIREMENTS_DEV = [i for i in f.read().splitlines() if i.strip()]
+
+with open("requirements-prodmax.txt", "r", encoding="utf8") as f:
+    REQUIREMENTS_PRODMAX = [i for i in f.read().splitlines() if i.strip()]
+
+with open("requirements-prodmin.txt", "r", encoding="utf8") as f:
+    REQUIREMENTS_PRODMIN = [i for i in f.read().splitlines() if i.strip()]
 
 setup(
     name="salt_nornir",
-    version="0.9.0",
+    version=__version__,
     author="Denis Mulyalin",
     author_email="d.mulyalin@gmail.com",
     description="SALTSTACK Nornir Modules",
@@ -18,6 +31,11 @@ setup(
     include_package_data=True,
     data_files=[("", ["LICENSE"])],
     keywords=["salt-extension"],
+    extras_require={
+        "dev": REQUIREMENTS_DEV + REQUIREMENTS_PRODMAX,
+        "prodmax": REQUIREMENTS_PRODMAX,
+        "prodmin": REQUIREMENTS_PRODMIN,
+    },
     classifiers=[
         "Topic :: Utilities",
         "Programming Language :: Python :: 3.6",
@@ -26,15 +44,7 @@ setup(
         "Operating System :: POSIX :: Linux",
     ],
     python_requires=">=3.6",
-    install_requires=[
-        "netmiko==3.*",
-        "nornir==3.*",
-        "napalm==3.*",
-        "nornir_netmiko==0.*",
-        "nornir_napalm==0.*",
-        "nornir_salt==0.9.*",
-        "psutil==5.*",
-    ],
+    install_requires=REQUIREMENTS,
     entry_points="""
     [salt.loader]
     module_dirs=salt_nornir.loader:module_dirs

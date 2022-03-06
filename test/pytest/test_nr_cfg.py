@@ -372,10 +372,11 @@ def test_nr_cfg_from_non_existing_file_fail():
         tgt_type="glob",
         timeout=60,
     )
-    for host, results in ret.items():
-        assert isinstance(results, str)
-        assert "CommandExecutionError: Failed to get" in results
-
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["failed"] == True
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["failed"] == True   
+    assert "Traceback" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["exception"]
+    assert "Traceback" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["exception"] 
 
 def test_nr_cfg_inline_commands_plugin_scrapli():
     """
@@ -723,9 +724,11 @@ def test_nr_cfg_from_non_existing_file_fail_pyats():
         tgt_type="glob",
         timeout=60,
     )
-    for host, results in ret.items():
-        assert isinstance(results, str)
-        assert "CommandExecutionError: Failed to get" in results
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["pyats_send_config"]["failed"] == True
+    assert ret["nrp1"]["ceos2"]["pyats_send_config"]["failed"] == True   
+    assert "Traceback" in ret["nrp1"]["ceos1"]["pyats_send_config"]["exception"]
+    assert "Traceback" in ret["nrp1"]["ceos2"]["pyats_send_config"]["exception"] 
         
         
 def test_nr_cfg_plugin_pyats_command_batch():
@@ -865,3 +868,50 @@ def test_inline_config_template_string_pyats():
     assert ret["nrp1"]["ceos2"]["pyats_send_config"]["failed"] == False
     assert ret["nrp1"]["ceos1"]["pyats_send_config"]["changed"] == True
     assert ret["nrp1"]["ceos2"]["pyats_send_config"]["changed"] == True
+    
+def test_inline_config_dict_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": {
+                "ceos1": "snmp-server location {{ host.location }}",
+                "ceos2": "snmp-server location {{ host.location }}"
+            },
+            "plugin": "netmiko",
+            "FL": ["ceos1", "ceos2"]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"]
+    assert "snmp-server location East" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"]
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["changed"] == True
+
+def test_inline_config_dict_netmiko_host_missing_fail():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={
+            "config": {
+                "ceos1": "snmp-server location {{ host.location }}",
+            },
+            "plugin": "netmiko",
+            "FL": ["ceos1", "ceos2"]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "snmp-server location North" in ret["nrp1"]["ceos1"]["netmiko_send_config"]["result"]
+    assert "Traceback" in ret["nrp1"]["ceos2"]["netmiko_send_config"]["result"]
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["failed"] == True
+    assert ret["nrp1"]["ceos1"]["netmiko_send_config"]["changed"] == True
+    assert ret["nrp1"]["ceos2"]["netmiko_send_config"]["changed"] == False

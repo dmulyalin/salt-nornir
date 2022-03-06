@@ -957,7 +957,7 @@ def _form_identity(kwargs, function_name):
     Helper function to form task identity argument, identoty used by nornir
     proxy minion to identify results for tasks submitter to jobs queue.
 
-    :param kwargs: (dict) arguemnts received by Execution Module Function
+    :param kwargs: (dict) arguments received by Execution Module Function
     :param function_name: (str) Execution Module Function name
     :return: difctionary with uuid4, jid, function_name keys
 
@@ -978,15 +978,14 @@ def _form_identity(kwargs, function_name):
 # -----------------------------------------------------------------------------
 
 
-def task(plugin, *args, **kwargs):
+def task(plugin, **kwargs):
     """
     Function to invoke any of supported Nornir task plugins. This function
     performs dynamic import of requested plugin function and executes
     ``nr.run`` using supplied args and kwargs
 
     :param plugin: (str) ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
-    :param args: (list) ignored, not used
-    :param kwargs: (dict) any additional argument to use with specified task plugin
+    :param kwargs: (dict) arguments to use with specified task plugin or common arguments
 
     ``plugin`` attribute can reference file on SALT Master with ``task`` function content,
     that file downloaded from master, compiled and executed. File must contain function
@@ -1030,16 +1029,20 @@ def task(plugin, *args, **kwargs):
     )
 
 
-def cli(*commands, **kwargs):
+def cli(*args, **kwargs):
     """
     Method to retrieve commands output from devices using ``send_command``
     task plugin from either Netmiko or Scrapli library.
 
-    :param commands: (list or str) list of commands or single command
+    :param args: (list or str) list of cli commands as arguments
+    :param commands: (list or str) list of cli commands or single command as key-word argument
     :param filename: (str) path to file with multiline commands string
+    :param plugin: (str) name of send command task plugin to use - ``netmiko`` (default), ``scrapli``,
+        ``napalm`` or ``pyats``
+    :param render: (list) list of arguments to pass through SaltStack rendering system, by default
+        renders content of ``["filename", "commands"]`` arguments.
+    :param use_ps: (bool) if True, uses Netmiko with promptless mode to send commands
     :param kwargs: (dict) any additional arguments to use with specified ``plugin`` send command method
-    :param plugin: (str) name of send command task plugin to use - ``netmiko`` (default) or ``scrapli``
-      or ``napalm`` or ``pyats``
 
     Sample Usage::
 
@@ -1047,6 +1050,11 @@ def cli(*commands, **kwargs):
          salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]"
          salt nrp1 nr.cli "show clock" FO='{"platform__any": ["ios", "nxos_ssh", "cisco_xr"]}'
          salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" plugin=napalm
+         salt nrp1 nr.cli "show clock" use_ps=True cutoff=60 initial_sleep=10
+
+    ``use_ps`` enables to use promptless mode of interaction with device's cli, refer to
+    `netmiko_send_commands_ps <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_command_ps.html>`_
+    Nornir-Salt task plugin for details.
 
     Commands can be templates and rendered using Jinja2 Templating Engine::
 
@@ -1081,7 +1089,7 @@ def cli(*commands, **kwargs):
     plugin = kwargs.pop("plugin", "netmiko")
     kwargs.setdefault("render", ["filename", "commands"])
     # decide on commands to send
-    commands = kwargs.pop("commands", commands)
+    commands = kwargs.pop("commands", args)
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
         kwargs["commands"] = commands
@@ -1109,8 +1117,8 @@ def cli(*commands, **kwargs):
 
 def cfg(*commands, **kwargs):
     """
-    Function to push configuration to devices using ``napalm_configure`` or
-    ``netmiko_send_config`` or Scrapli ``send_config`` task plugin.
+    Function to push configuration to devices using NAPALM, Netmiko, Scrapli or
+    or PyATS task plugin.
 
     :param commands: (list) list of commands or multiline string to send to device
     :param filename: (str) path to file with configuration or template
@@ -1122,7 +1130,7 @@ def cfg(*commands, **kwargs):
         or ``scrapli`` or ``pyats``
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
-        dictionary ``commit`` argument supplied to commit call using ``**commit``
+        if ``commit`` argument is a dictionary it is supplied to commit call as arguments
     :param config: (str) configuration string or template to send to device
 
     .. warning:: ``dry_run`` not supported by ``netmiko`` and ``pyats`` plugins
@@ -1142,7 +1150,7 @@ def cfg(*commands, **kwargs):
         salt nrp1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
         salt nrp1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
         salt nrp1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
-        salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True}'
+        salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True, "confirm_delay": 60}'
         salt nrp1 nr.cfg config="snmp-server location {{ host.location }}"
         salt nrp1 nr.cfg "snmp-server location {{ host.location }}"
 

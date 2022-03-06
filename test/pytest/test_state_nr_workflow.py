@@ -1,12 +1,15 @@
 import logging
 import pprint
 import pytest
+import yaml 
+import time
+
+from utils import fixture_modify_proxy_pillar
 
 log = logging.getLogger(__name__)
 
 try:
     import salt.client
-
     import salt.exceptions
 
     HAS_SALT = True
@@ -18,7 +21,7 @@ if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
 
-
+    
 def test_state_nr_workflow():
     """
     Tests workflow of configuring logging server
@@ -678,6 +681,116 @@ def test_nr_cfg_syslog_and_ntp_state():
             
 # test_nr_cfg_syslog_and_ntp_state()
 
+def test_workflow_no_hosts_matched_by_filters_option():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["nr_workflow_state_3"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for v in ret["nrp1"].values():
+        assert v["changes"] == {}
+        assert v["result"] == False
+        assert v["comment"]
+        
+# test_workflow_no_hosts_matched_by_filters_option()
+    
+@pytest.mark.modify_pillar_target("nrp1")
+@pytest.mark.modify_pillar_pre_add({"nornir_filter_required": True})
+@pytest.mark.modify_pillar_post_remove(["nornir_filter_required"])
+def test_workflow_no_filters_but_filter_required(fixture_modify_proxy_pillar):
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_workflow_no_filters_but_filter_required"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for v in ret["nrp1"].values():
+        assert v["changes"] == {}
+        assert v["result"] == False
+        assert "Traceback" in v["comment"] and "nornir_filter_required" in v["comment"]
+
+
+def test_nr_workflow_hosts_failing_file_download():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_nr_workflow_hosts_failing_file_download"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)    
+    for v in ret["nrp1"].values():
+        assert v["changes"]["summary"]["ceos1"][0]["pre_cpre_check_config_gen"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][0]["pre_cpre_check_config_gen"] == "FAIL"
+        assert v["changes"]["summary"]["ceos1"][1]["apply_config"] == "PASS"
+        assert v["changes"]["summary"]["ceos2"][1]["apply_config"] == "SKIP"    
+    
+    
+def test_nr_workflow_hosts_failing_file_download_single_host():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_nr_workflow_hosts_failing_file_download_single_host"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)    
+    for v in ret["nrp1"].values():
+        assert v["changes"]["summary"]["ceos2"][0]["pre_cpre_check_config_gen"] == "FAIL"
+        assert v["changes"]["summary"]["ceos2"][1]["apply_config"] == "SKIP" 
+        
+        
+def test_nr_workflow_sumtable_report():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_nr_workflow_sumtable_report"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)       
+    for v in ret["nrp1"].values():
+        assert isinstance(v["changes"]["summary"], str)
+        assert "1  ceos1   PASS  SKIP  PASS  PASS  FAIL" in v["changes"]["summary"]
+        assert "2  ceos2   PASS  PASS  PASS  PASS  FAIL" in v["changes"]["summary"]
+        
+ 
+def test_nr_workflow_sumtable_report_grid():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_nr_workflow_sumtable_report_grid"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)       
+    for v in ret["nrp1"].values():
+        assert isinstance(v["changes"]["summary"], str)
+        assert "|  1 | ceos1  | PASS | SKIP | PASS | PASS | FAIL |" in v["changes"]["summary"]
+        assert "|  2 | ceos2  | PASS | PASS | PASS | PASS | FAIL |" in v["changes"]["summary"]
+        
+        
+def test_state_nr_workflow_common_kwargs():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_common_kwargs"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)       
+    for v in ret["nrp1"].values():
+        for item in v["changes"]["details"]:
+            for k, v in item.items():
+                assert k in ["show_current_time", "show_device_version"]
+                assert isinstance(v, str)
+                assert "Traceback" not in v
+        
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
 #     pass

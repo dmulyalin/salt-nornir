@@ -12,3 +12,6 @@ file_roots:
 pillar_roots:
   base:
     - /etc/salt/pillar/
+    
+salt_nornir_runner:
+  files_base_path: "/var/salt-nornir/runner/"

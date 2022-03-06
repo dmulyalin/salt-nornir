@@ -1,4 +1,0 @@
-ipdb
-pytest
-rich
-tabulate

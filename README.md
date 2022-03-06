@@ -45,7 +45,7 @@ Start a [discussion](https://github.com/dmulyalin/salt-nornir/discussions)
 
 # Contributing
 
-Issues, bug reports and feature requests are welcomed.
+Issues, bug reports and feature requests are welcomed. Feedback is a gift and we truly value it.
 
 [logo]: docs/source/_images/SaltNornirLogo.png "salt nornir logo"
 [architecture]: docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"

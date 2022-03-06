@@ -346,6 +346,7 @@ minion_process = psutil.Process(os.getpid())
 # Import third party libs
 try:
     from nornir import InitNornir
+    from nornir.core.task import MultiResult, Result
     from nornir_salt.plugins.functions import (
         FFun,
         ResultSerializer,
@@ -1040,6 +1041,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
         of key names from kwargs to run rendering for
     :param kwargs: (dict) dictionary with data to render
     :param ignore_keys: (list or str) key names to ignore rendering for
+    :return: dictionary of failed hosts
     """
     context = kwargs.pop("context", {})
     saltenv = kwargs.pop("saltenv", "base")
@@ -1049,6 +1051,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     ignore_keys = (
         ignore_keys.split(",") if isinstance(ignore_keys, str) else ignore_keys
     )
+    hosts_failed_prep = {}  # dictionary keyed by host name and error message
 
     def __render(data):
         # do initial data rendering
@@ -1080,17 +1083,33 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
         context.update({"host": host_object})
         host_object.data["__task__"] = {}
         for key in render:
-            if key in ignore_keys:
+            if not kwargs.get(key) or key in ignore_keys:
                 continue
-            if isinstance(kwargs.get(key), str):
-                rendered = __render(kwargs[key])
-            elif isinstance(kwargs.get(key), (list, tuple)):
-                rendered = [__render(item) for item in kwargs[key]]
-            else:
+            try:
+                value = kwargs[key]
+                # if string given use it as is
+                if isinstance(value, str):
+                    rendered = __render(value)
+                # check if list of strings given
+                elif isinstance(value, (list, tuple)):
+                    rendered = [__render(item) for item in value]
+                # check if given dictionary keyed by host names
+                elif isinstance(value, dict):
+                    rendered = __render(value[host_name])
+                else:
+                    raise TypeError(
+                        "Unsupported type for render key '{}': '{}', supported str, list, tuple, dict".format(
+                            key, type(value)
+                        )
+                    )
+            except:
+                tb = traceback.format_exc()
+                hosts_failed_prep[host_name] = tb
                 continue
+
             log.debug(
                 "Nornir-proxy MAIN PID {} worker thread, rendered '{}' '{}' data for '{}' host".format(
-                    os.getpid(), key, type(kwargs[key]), host_name
+                    os.getpid(), key, type(value), host_name
                 )
             )
             host_object.data["__task__"][key] = rendered
@@ -1098,6 +1117,8 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     # clean up kwargs from render keys to force tasks to use hosts's __task__ attribute
     for key in render:
         _ = kwargs.pop(key) if key in kwargs else None
+
+    return hosts_failed_prep
 
 
 @_use_loader_context
@@ -1132,7 +1153,7 @@ def _download_files(download, kwargs):
         )
 
 
-def _add_processors(kwargs, loader, identity, nr):
+def _add_processors(kwargs, loader, identity, nr, worker_id):
     """
     Helper function to exctrat processors arguments and add processors
     to Nornir.
@@ -1140,6 +1161,8 @@ def _add_processors(kwargs, loader, identity, nr):
     :param kwargs: (dict) dictionary with kwargs
     :param loader: (obj) SaltStack loader context
     :param identity: (dict) task identity dictionary for SaltEventProcessor
+    :param worker_id: (int) Nornir worker ID
+    :param nr: (obj) Nornir object to add processors to
     :return: (obj) Nornir object
     """
     processors = []
@@ -1176,6 +1199,7 @@ def _add_processors(kwargs, loader, identity, nr):
                 loader=loader,
                 proxy_id=nornir_data["stats"]["proxy_minion_id"],
                 identity=identity,
+                worker_id=worker_id,
             )
         )
     if dp:
@@ -1426,6 +1450,27 @@ def _update_worker_connections(hosts, wkr_data):
         wkr_data["worker_connections"][host_name]["last_use_timestamp"] = time.time()
 
 
+def _add_hosts_failed_prep_to_result(agg_result, hosts_failed_prep):
+    """
+    Helper function to add hosts that failed prep steps to overall results
+    together with error message.
+
+    :param result: (Obj) Nornir Aggregated result object
+    :param hosts_failed_prep: (dict) dictionary keyed by host name and error message
+    """
+    for host_name, error in hosts_failed_prep.items():
+        agg_result[host_name] = MultiResult(name=None)
+        agg_result[host_name].append(
+            Result(
+                host=None,
+                result=error,
+                exception=error,
+                failed=True,
+                name=agg_result.name.split(".")[-1],  # yields task function name
+            )
+        )
+
+
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
@@ -1437,7 +1482,18 @@ def list_hosts(**kwargs):
 
     :param Fx: filters to filter hosts
     """
-    return InventoryFun(nornir_data["nrs"][0]["nr"], call="list_hosts", **kwargs)
+    # get a list of filtered hosts
+    filtered_hosts, has_filter = FFun(
+        nornir_data["nrs"][0]["nr"], kwargs=kwargs, check_if_has_filter=True
+    )
+
+    # check if nornir_filter_required is True but no filter
+    if nornir_data["nornir_filter_required"] is True and has_filter is False:
+        raise CommandExecutionError(
+            "Nornir-proxy 'nornir_filter_required' setting is True but no filter provided"
+        )
+
+    return InventoryFun(filtered_hosts, call="list_hosts", **kwargs)
 
 
 def run(task, loader, identity, name, nr, wkr_data, **kwargs):
@@ -1467,6 +1523,7 @@ def run(task, loader, identity, name, nr, wkr_data, **kwargs):
     event_failed = kwargs.pop("event_failed", False)  # events
     hcache = kwargs.pop("hcache", False)  # cache task results
     dcache = kwargs.pop("dcache", False)  # cache task results
+    hosts_failed_prep = {}
 
     # set dry_run argument
     nr.data.dry_run = kwargs.get("dry_run", False)
@@ -1480,7 +1537,7 @@ def run(task, loader, identity, name, nr, wkr_data, **kwargs):
 
     # add processors
     nr_with_processors = _add_processors(
-        kwargs, loader=loader, identity=identity, nr=nr
+        kwargs, loader=loader, identity=identity, nr=nr, worker_id=wkr_data["worker_id"]
     )
 
     # Filter hosts to run tasks for
@@ -1496,17 +1553,23 @@ def run(task, loader, identity, name, nr, wkr_data, **kwargs):
 
     # download and render files
     if render:
-        _download_and_render_files(
+        hosts_failed_prep = _download_and_render_files(
             hosts, render, kwargs, ignore_keys=download, loader=loader
         )
 
     # update hosts connections ages
     _update_worker_connections(hosts, wkr_data)
 
+    # exclude hosts that failed prep steps
+    hosts = FFun(hosts, FL=list(hosts_failed_prep.keys()), FN=True)
+
     # run tasks
     result = hosts.run(
         task, name=name, **{k: v for k, v in kwargs.items() if not k.startswith("_")}
     )
+
+    # add back hosts that failed prep but with error message
+    _add_hosts_failed_prep_to_result(result, hosts_failed_prep)
 
     # post clean-up - remove tasks rendered data from hosts inventory
     if render:

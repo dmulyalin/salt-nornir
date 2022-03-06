@@ -1,0 +1,17 @@
+- test: custom
+  function_file: "salt://tests/cust_fun_various_inputs.py"
+  name: test_cust_fun_various_inputs_list_of_result
+  task: 
+    - show clock
+    - show ip int brief
+- test: custom
+  function_file: "salt://tests/cust_fun_various_inputs.py"
+  use_all_tasks: True
+  name: test_cust_fun_various_inputs_multiresult
+  task: 
+    - show clock
+    - show ip int brief
+- test: custom
+  function_file: "salt://tests/cust_fun_various_inputs.py"
+  task: show clock
+  name: test_cust_fun_various_inputs_single_result

@@ -1,7 +1,7 @@
 Overview
 ########
 
-Salt-Nornir is a `SaltStack Proxy Minion <https://saltproject.io/>`_ built for 
+Salt-Nornir is a `SaltStack Proxy Minion <https://saltproject.io/>`_ built for
 Network Automation using `Nornir framework <https://nornir.readthedocs.io/>`_.
 
 .. image:: ./_images/Nornir_proxy_minion_architecture_v2.png
@@ -11,22 +11,22 @@ Why Salt-Nornir?
 
 **SCALING**
 
-Salt-Nornir helps to address scaling issues of interacting with devices at high numbers, 
+Salt-Nornir helps to address scaling issues of interacting with devices at high numbers,
 efficiently using resources without sacrificing execution speed.
 
-Normally, for each network device dedicated proxy-minion process configured 
+Normally, for each network device dedicated proxy-minion process configured
 and once started, each consuming about 100 MByte of RAM.
 
-Contrary, single instance of Salt-Nornir Nornir Proxy Minion capable of managing multiple 
+Contrary, single instance of Salt-Nornir Nornir Proxy Minion capable of managing multiple
 network devices using Nornir.
 
-As a result, the more devices single Salt-Nornir Proxy Minion manages, the more system 
+As a result, the more devices single Salt-Nornir Proxy Minion manages, the more system
 resources saved.
 
-At one extreme, single Salt-Nornir proxy can manage one device only, giving the fastest 
-execution time but consuming the most of resources. 
+At one extreme, single Salt-Nornir proxy can manage one device only, giving the fastest
+execution time but consuming the most of resources.
 
-At another extreme, Salt-Nornir proxy minion can manage 1000 devices, slowly crawling 
+At another extreme, Salt-Nornir proxy minion can manage 1000 devices, slowly crawling
 them over time but saving on resource usage.
 
 Optimal number of devices managed by Salt-Nornir proxy depends on the environment it operates
@@ -36,24 +36,24 @@ in and decided on a case by case basis.
 
 Nornir and SALT both use Python, both are pluggable frameworks and both open-source.
 
-Given that both frameworks has Python API and native support for modules/plugins, extendability 
-is endless. 
+Given that both frameworks has Python API and native support for modules/plugins, extendability
+is endless.
 
 Examples:
 
-(1) Usually Proxy Minion locked in a certain way of interacting with network devices using 
-single library of choice. Salt-Nornir, on the other hand, handles interactions using plugins. 
+(1) Usually Proxy Minion locked in a certain way of interacting with network devices using
+single library of choice. Salt-Nornir, on the other hand, handles interactions using plugins.
 
 As a result, same Salt-Nornir Proxy Minion can manage network devices using several libraries.
-Out of the box Salt-Nornir Proxy Minion comes with support for NAPALAM, Netmiko, Scrapli, Scrapli 
+Out of the box Salt-Nornir Proxy Minion comes with support for NAPALAM, Netmiko, Scrapli, Scrapli
 Netconf, Ncclient, PyGNMI, PyATS and requests libraries to interact with network infrastructure.
 
 (2) SaltStack has CLI utilities, schedulers, returners, REST API, pillar, beacons, event bus, mine,
-templating engines and many other pluggable systems. All of them available for use with Salt-Nornir 
+templating engines and many other pluggable systems. All of them available for use with Salt-Nornir
 Proxy Minion.
 
-(3) In case none of the existing plugins suite the use case, Nornir Tasks plugins together with 
-SaltStack Python API systems can be used to address the problem. 
+(3) In case none of the existing plugins suite the use case, Nornir Tasks plugins together with
+SaltStack Python API systems can be used to address the problem.
 
 How it fits together
 ====================
@@ -87,7 +87,7 @@ task execution and configuration management (Wikipedia)
 How it works
 ============
 
-Wrapping Nornir in Salt Proxy Minion allows to run jobs against multiple devices. Single proxy 
+Wrapping Nornir in Salt Proxy Minion allows to run jobs against multiple devices. Single proxy
 process can apply configuration or retrieve devices' state using Nornir plugins.
 
 Salt-Nornir Proxy Minion controls and enables shared access to network devices resources using
@@ -98,12 +98,12 @@ queues for child and main processes communication.
 Above architecture assumes:
 
 * Double targeting required to narrow down tasks execution to a subset of hosts
-* In addition to knowing how pillar works, one need to know how `Nornir inventory <https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html>`_ 
+* In addition to knowing how pillar works, one need to know how `Nornir inventory <https://nornir.readthedocs.io/en/3.0.0/tutorial/inventory.html>`_
   structured, as Nornir inventory integrated with proxy-minion pillar
 
 To address double targeting, Salt-Nornir comes with filtering functions, refer to Nornir-Salt
-`FFun functions <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ for details. 
-Filter functions use ``Fx`` Salt CLI arguments to filter hosts. 
+`FFun functions <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ for details.
+Filter functions use ``Fx`` Salt CLI arguments to filter hosts.
 
 For example::
 
@@ -161,3 +161,29 @@ be of great benefit regardless.
 5. **Worker thread stops for some reason**. Some tasks might lead to worker thread exit on error,
 that wold stop execution of further submitted tasks. To solve that problem watchdog thread calls
 worker thread's ``is_alive`` method verify its status, restarting it if it stopped.
+
+Working with Large number of devices
+====================================
+
+SaltStack is an asynchronous framework, that allows it to scale fairly well. However, for managing
+several thousands network devices certain details need to be taken into account.
+
+Single salt-nornir proxy minion can manages several thousands of devices, things to take care of:
+
+- SaltStack Event bus has a limit on amount of results data it can transmit for single job, if
+  salt-nornir runs a task for say 1000 devices, it is likely that this limit will be exceeded. To
+  address this one can adjust SaltStack event bus ``max_event_size`` limit in master's configuration,
+  default is ``1048576`` bytes. Another approach could be to save task results to minion's local file
+  system and retrieve then using SaltStack ``cp`` module or via out of band, salt-nornir execution
+  module supports ``dump`` and ``tf`` arguments for that.
+- OS ulimit FD (file descriptor) maximum count value should be increased, as each TCP connections
+  salt-nornir establishes with devices consumes file descriptors, default FD limit usually is 1024.
+- SSH requires encryption, encryption consumes CPU resources, having many SSH connections open off
+  the same salt-nornir instance can become non practical. Two options exist, (1) set proxy minion
+  setting ``proxy_always_alive=False``, to close connection to device as soon as task execution completes
+  or (2) adjust ``connections_idle_timeout`` value to suit your need to close connection to devices only
+  after idle timeout expires.
+- AAA Servers (TACACS, RADIUS) overload with requests from devices establishing connections with
+  salt-nornir proxy minion, adjust RetryRunner ``num_connectors`` threads value to limit the number of
+  simultaneous connections initializations and ``num_workers`` to limit the amount of devices task
+  executed on simultaneously

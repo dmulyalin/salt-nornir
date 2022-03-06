@@ -5,6 +5,8 @@ import time
 import yaml
 import pytest
 
+from utils import fixture_modify_proxy_pillar
+
 log = logging.getLogger(__name__)
 
 try:
@@ -737,7 +739,7 @@ def test_nr_cli_event_progress():
         elif time.time() - start_time > timeout:
             break
         events.append(e)
-    # pprint.pprint(events)
+    pprint.pprint(events)
     assert len(events) == 6, "Got not 6 events, but ()".format(len(events))
     assert any(
         [
@@ -775,6 +777,23 @@ def test_nr_cli_event_progress():
             for e in events
         ]
     ), "Have not found subtask started completed"
+    assert all(
+        [
+            field in e["data"]
+            for e in events
+            for field in [
+                "timestamp",
+                "task_name",
+                "jid",
+                "proxy_id",
+                "task_event",
+                "task_type",
+                "status",
+                "function",
+                "worker_id",
+            ]
+        ]
+    ), "Not all expected fields present in event data"
     
 # test_nr_cli_event_progress()
 
@@ -942,53 +961,12 @@ def test_worker_target_default_ordered_execution():
             assert wkr["worker_jobs_completed"] - workers_stats_before["nrp1"][wkr_name]["worker_jobs_completed"] == 3
     
 # test_worker_target_default_ordered_execution()
+   
 
-
-@pytest.fixture
-def restore_pillar_connections_idle_timeout(request):
-    def restore():
-        # restore pillar settings
-        with open("/etc/salt/pillar/nrp1.sls", "r") as f:
-            pillar_data = yaml.safe_load(f.read())
-        pillar_data["proxy"].pop("connections_idle_timeout", None)
-        with open("/etc/salt/pillar/nrp1.sls", "w") as f:
-            yaml.dump(pillar_data, f, default_flow_style=False)
-        refresh_nrp1_pillar()
-        # verify pillar data loaded
-        proxy_pillar = client.cmd(
-            tgt="nrp1",
-            fun="pillar.raw",
-            arg=[],
-            kwarg={"key": "proxy"},
-            tgt_type="glob",
-            timeout=60,
-        )   
-        print("Restored nrp1 proxy pillar:")
-        pprint.pprint(proxy_pillar)
-        
-    request.addfinalizer(restore)
-    
-
-def test_connections_idle_timeout(restore_pillar_connections_idle_timeout):
-    # first update proxy pillar and refresh it
-    with open("/etc/salt/pillar/nrp1.sls", "r") as f:
-        pillar_data = yaml.safe_load(f.read())
-    pillar_data["proxy"]["connections_idle_timeout"] = 30
-    with open("/etc/salt/pillar/nrp1.sls", "w") as f:
-        yaml.dump(pillar_data, f, default_flow_style=False)
-    refresh_nrp1_pillar()
-    # verify new pillar data loaded
-    proxy_pillar = client.cmd(
-        tgt="nrp1",
-        fun="nr.nornir",
-        arg=["stats"],
-        kwarg={"stat": "hosts_connections_idle_timeout"},
-        tgt_type="glob",
-        timeout=60,
-    )   
-    print("Refreshed nrp1 proxy params:")
-    pprint.pprint(proxy_pillar)
-    assert proxy_pillar["nrp1"]["hosts_connections_idle_timeout"] == 30, "Proxy not refreshed?"
+@pytest.mark.modify_pillar_target("nrp1")
+@pytest.mark.modify_pillar_pre_add({"connections_idle_timeout": 30})
+@pytest.mark.modify_pillar_post_remove(["connections_idle_timeout"])
+def test_connections_idle_timeout(fixture_modify_proxy_pillar):
     # run task on all workers
     client.cmd(
         tgt="nrp1",
@@ -1171,58 +1149,17 @@ def test_connections_via_nonexisting_jumphost(remove_hosts_at_the_end):
     assert "failed connection to jumphost" in cli_cmd_1st["nrp1"]["ceos2-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["exception"]
     
 # test_connections_via_nonexisting_jumphost()
-
-
-@pytest.fixture
-def restore_pillar_proxy_always_alive(request):
-    def restore():
-        # restore pillar settings
-        with open("/etc/salt/pillar/nrp1.sls", "r") as f:
-            pillar_data = yaml.safe_load(f.read())
-        pillar_data["proxy"].pop("proxy_always_alive", None)
-        with open("/etc/salt/pillar/nrp1.sls", "w") as f:
-            yaml.dump(pillar_data, f, default_flow_style=False)
-        refresh_nrp1_pillar()
-        # verify pillar data loaded
-        proxy_pillar = client.cmd(
-            tgt="nrp1",
-            fun="pillar.raw",
-            arg=[],
-            kwarg={"key": "proxy"},
-            tgt_type="glob",
-            timeout=60,
-        )   
-        print("Restored nrp1 proxy pillar:")
-        pprint.pprint(proxy_pillar)
-        
-    request.addfinalizer(restore)
     
-def test_proxy_always_alive_false(restore_pillar_proxy_always_alive, remove_hosts_at_the_end):
+
+@pytest.mark.modify_pillar_target("nrp1")
+@pytest.mark.modify_pillar_pre_add({"proxy_always_alive": False})
+@pytest.mark.modify_pillar_post_remove(["proxy_always_alive"])
+def test_proxy_always_alive_false(fixture_modify_proxy_pillar, remove_hosts_at_the_end):
     """
     To run with printing to screen::
     
         pytest -vv -s test_misc.py::test_proxy_always_alive_false
     """
-    print("Updating proxy pillar.")
-    # first update proxy pillar and refresh it
-    with open("/etc/salt/pillar/nrp1.sls", "r") as f:
-        pillar_data = yaml.safe_load(f.read())
-    pillar_data["proxy"]["proxy_always_alive"] = False
-    with open("/etc/salt/pillar/nrp1.sls", "w") as f:
-        yaml.dump(pillar_data, f, default_flow_style=False)
-    refresh_nrp1_pillar()
-    # verify new pillar data loaded
-    proxy_pillar = client.cmd(
-        tgt="nrp1",
-        fun="pillar.raw",
-        arg=[],
-        kwarg={"key": "proxy"},
-        tgt_type="glob",
-        timeout=60,
-    )   
-    print("Refreshed nrp1 proxy pillar:")
-    pprint.pprint(proxy_pillar)
-    assert proxy_pillar["nrp1"]["proxy_always_alive"] == False, "Proxy pillar not refreshed?"
     # add hosts using docker vm as a jumphost
     add_hosts_via_jumphost(jump_ip="10.0.1.1")  
     # run tasks on all workers and collect connections status
@@ -1253,10 +1190,10 @@ def test_proxy_always_alive_false(restore_pillar_proxy_always_alive, remove_host
     # verify task execution
     for t in tasks:
         for wkr in ["nornir-worker-1", "nornir-worker-2", "nornir-worker-3"]:
-            assert "clock" in t["nrp1"][wkr]["ceos1"]["show clock"].lower(), "Unexpected output from ceos1"
-            assert "clock" in t["nrp1"][wkr]["ceos2"]["show clock"].lower(), "Unexpected output from ceos2"
-            assert "clock" in t["nrp1"][wkr]["ceos1-1"]["show clock"].lower(), "Unexpected output from ceos1-1"
-            assert "clock" in t["nrp1"][wkr]["ceos2-1"]["show clock"].lower(), "Unexpected output from ceos2-1"
+            assert isinstance(t["nrp1"][wkr]["ceos1"]["show clock"], str), "Unexpected output from ceos1"
+            assert isinstance(t["nrp1"][wkr]["ceos2"]["show clock"], str), "Unexpected output from ceos2"
+            assert isinstance(t["nrp1"][wkr]["ceos1-1"]["show clock"], str), "Unexpected output from ceos1-1"
+            assert isinstance(t["nrp1"][wkr]["ceos2-1"]["show clock"], str), "Unexpected output from ceos2-1"
 
             assert "traceback" not in t["nrp1"][wkr]["ceos1"]["show clock"].lower(), "Got traceback output from ceos1"
             assert "traceback" not in t["nrp1"][wkr]["ceos2"]["show clock"].lower(), "Got traceback output from ceos2"
@@ -1322,3 +1259,20 @@ def test_worker_target_tasks_distribution():
     assert stats_after["nrp1"]["nornir-worker-1"]["worker_jobs_completed"] > stats_before["nrp1"]["nornir-worker-1"]["worker_jobs_completed"]
     assert stats_after["nrp1"]["nornir-worker-2"]["worker_jobs_completed"] > stats_before["nrp1"]["nornir-worker-2"]["worker_jobs_completed"]
     assert stats_after["nrp1"]["nornir-worker-3"]["worker_jobs_completed"] > stats_before["nrp1"]["nornir-worker-3"]["worker_jobs_completed"]
+    
+    
+def test_per_host_file_downlod_partially_failed():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=[],
+        kwarg={
+            "filename": "salt://templates/per_host_cfg_snmp_ceos1/{{ host.name }}.txt",
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["salt_cfg_gen"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["salt_cfg_gen"]["failed"] == True    

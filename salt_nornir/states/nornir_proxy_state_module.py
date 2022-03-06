@@ -89,9 +89,14 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-# import salt libs, wrapping it in try/except for docs to generate
+# import salt and nornir libs, wrapping it in try/except for docs to generate
 try:
     from salt.exceptions import CommandExecutionError
+except:
+    log.error("Nornir Proxy Module - failed importing SALT libraries")
+
+try:
+    from nornir_salt.plugins.functions import TabulateFormatter
 except:
     log.error("Nornir Proxy Module - failed importing SALT libraries")
 
@@ -240,6 +245,7 @@ def _run_workflow_step(
     hcache,
     dcache,
     state_name,
+    common_kwargs,
 ):
     """
     Helper function to run single work flow step.
@@ -254,6 +260,7 @@ def _run_workflow_step(
     :param hcache: (bool) if True saves step results in host's data
     :param dcache: (bool) if True saves step results in defaults data
     :param state_name: (str) Name of this state
+    :param common_kwargs: (dict) arguments to supply to each step
     """
     nr_fun = [
         "nr.cli",
@@ -273,6 +280,7 @@ def _run_workflow_step(
 
         # form step kwargs
         step.setdefault("kwargs", {})
+        step["kwargs"] = {**common_kwargs, **step["kwargs"]}
 
         # merge step filters with common filters
         for k, v in common_filters.items():
@@ -524,13 +532,17 @@ def _decide_state_execution_status(options, ret, steps_failed, steps_passed):
 
 def workflow(*args, **kwargs):
     """
-    State function to execute work flow steps using SALT Execution modules functions.
+    State function to execute work flow steps using SatlStack Execution modules functions.
 
     **State Global Options**
 
     State Global Options defined under ``options`` key.
 
     :param report_all: (bool) if True (default) adds skipped steps in summary report
+    :param sumtable: (bool or str) default is False, if True uses text table for summary
+        report, ``report_all`` always set to True if ``sumtable`` is True. If ``sumtable`` is
+        string, it is must correspond to one of the `python-tabulate <https://pypi.org/project/tabulate/>`_
+        module's table format names e.g. ``grid, simple, jira, html``
     :param fail_if_any_host_fail_any_step: (list) steps to decide if state execution failed
     :param fail_if_any_host_fail_all_step: (list) steps to decide if state execution failed
     :param fail_if_all_host_fail_any_step: (list) steps to decide if state execution failed
@@ -539,11 +551,18 @@ def workflow(*args, **kwargs):
         filters have higher priority. If no ``Fx`` filters provided, state steps run
         without any filters, depending on proxy ``nornir_filter_required`` setting,
         steps might fail (if ``nornir_filter_required`` is True) or run for all hosts
-        (if ``nornir_filter_required`` is False).
+        (if ``nornir_filter_required`` is False).  If no hosts matched by filters, state
+        execution stops with appropriate comment included in report.
     :param hcache: (bool) if True (default) saves step's per-host results in host's data under
         step's name key so that other steps can use it
     :param dcache: (bool) if True (default) saves step's full results in defaults data under
         step's name key so that other steps can use it
+    :param kwargs: (dict) common arguments to merge with each step kwargs, step kwargs
+        more specific and overwrite common kwargs
+
+    .. warning:: If proxy minion ``nornir_filter_required`` paramaeter set to True,
+       workflow options ``filters`` must not be empty, but provided to limit overall
+       execution scope.
 
     **Individual Step Arguments**
 
@@ -603,6 +622,8 @@ def workflow(*args, **kwargs):
                 filters: {"FB": "*"}
                 hcache: True
                 dcache: False
+                sumtable: False
+                kwargs: {"event_progress": True}
             # define pre-check steps
             - pre_check:
                 - name: pre_check_if_ntp_ip_is_configured_csr1kv
@@ -727,17 +748,55 @@ def workflow(*args, **kwargs):
                                 ----------
                                 apply_logging_config:
                                     PASS
+
+    If ``sumtable`` set to True in workflow's options, summary report section
+    formatted as text table::
+
+        summary:
+            Headers:
+            (1) collect_clock
+            (2) collect_version
+            (3) sleep_1_second
+            (4) collect_clock
+
+                host    1     2     3     4
+            --  ------  ----  ----  ----  ----
+             0  ceos1   PASS  PASS  PASS  PASS
+             1  ceos2   PASS  PASS  PASS  PASS
+
+    Or, if ``sumtable`` value set to ``jira`` string::
+
+        summary:
+            Headers:
+            (1) collect_clock
+            (2) collect_version
+            (3) sleep_1_second
+            (4) collect_clock
+
+            ||    || host   || 1    || 2    || 3    || 4    ||
+            |  0 | ceos1  | PASS | PASS | PASS | PASS |
+            |  1 | ceos2  | PASS | PASS | PASS | PASS |
     """
     steps_failed, steps_passed = {}, {}
     options = kwargs.pop("options", {})
-    report_all = options.get("report_all", True)
+    state_name = kwargs.pop("name")
     common_filters = options.get("filters", {})
+    common_kwargs = options.get("kwargs", {})
     hcache = options.get("hcache", True)
     dcache = options.get("dcache", True)
-    state_name = kwargs.pop("name")
+    sumtable = options.get("sumtable", None)
+    report_all = options.get("report_all", True) if not sumtable else True
 
-    # get all hosts names
     all_hosts = __salt__["nr.nornir"]("hosts", **common_filters)
+
+    # check if no hosts matched by common filters, exit if so
+    if common_filters and not all_hosts:
+        return {
+            "name": state_name,
+            "changes": {},
+            "result": False,
+            "comment": "No hosts matched by filters '{}'".format(dict(common_filters)),
+        }
 
     # form report and ret strutures
     report = {"details": [], "summary": {h: [] for h in all_hosts}}
@@ -761,6 +820,7 @@ def workflow(*args, **kwargs):
                 hcache,
                 dcache,
                 state_name,
+                common_kwargs,
             )
 
     # clean up cached data
@@ -773,5 +833,36 @@ def workflow(*args, **kwargs):
 
     # decide if this state failed
     ret = _decide_state_execution_status(options, ret, steps_failed, steps_passed)
+
+    # form summary table out of summary report data
+    if sumtable:
+        table_data = []  # list of row dictonaries
+        headers = {}  # dictionary of step index to step name mapping
+        for host_name, host_results in report["summary"].items():
+            row = {"host": host_name}
+            for i, host_result in enumerate(host_results, 1):
+                (step_name, step_result), *_ = host_result.items()
+                row[i] = step_result
+                headers[i] = step_name
+            table_data.append(row)
+        # form table string
+        table_string = TabulateFormatter(
+            table_data,
+            tabulate={
+                "tablefmt": sumtable if isinstance(sumtable, str) else "simple",
+                "showindex": range(1, len(table_data) + 1),
+                "headers": ["host", *headers.keys()],
+            },
+        )
+        # form summary table report
+        report["summary"] = "Headers:\n{headers_map}\n\n{table_string}".format(
+            headers_map="\n".join(
+                [
+                    "({}) {}".format(indx, step_name)
+                    for indx, step_name in headers.items()
+                ]
+            ),
+            table_string=table_string,
+        )
 
     return ret
