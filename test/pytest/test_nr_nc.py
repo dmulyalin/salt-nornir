@@ -994,3 +994,40 @@ def test_scrapli_transaction_edit_config_nxos_always_on():
         assert "commit" in data["transaction"][3] and "<ok/>" in data["transaction"][3]["commit"]
         
 # test_scrapli_transaction_edit_config_nxos_always_on()
+
+
+def test_scrapli_server_capabilities_glob_filter():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nc",
+        arg=["server_capabilities"],
+        kwarg={
+            "capab_filter": "*capability*",
+            "plugin": "scrapli",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for i in ret["nrp1"]["ceos1"]["server_capabilities"]:
+        assert "capability" in i
+    for i in ret["nrp1"]["ceos2"]["server_capabilities"]:
+        assert "capability" in i
+        
+def test_ncclient_server_capabilities_glob_filter():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nc",
+        arg=["server_capabilities"],
+        kwarg={
+            "capab_filter": "*capability*",
+            "plugin": "ncclient",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for i in ret["nrp1"]["ceos1"]["server_capabilities"]:
+        assert "capability" in i
+    for i in ret["nrp1"]["ceos2"]["server_capabilities"]:
+        assert "capability" in i

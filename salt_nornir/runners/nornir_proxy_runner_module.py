@@ -619,7 +619,6 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
                     ):
                         stop_events_loop.set()
                         break
-                time.sleep(0.2)
                 edata = e["data"]
                 jid = edata["jid"]
                 task_type = edata["task_type"]

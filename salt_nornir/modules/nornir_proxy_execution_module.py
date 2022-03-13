@@ -2329,9 +2329,13 @@ def nornir_fun(fun, *args, **kwargs):
     * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx``
       arguments to return only hosts matched by filter
     * ``connections`` - list hosts' active connections for all workers, accepts ``Fx`` arguments to filter hosts to list,
-      by default returns connections data for all Nornir workers
+      by default returns connections data for all Nornir workers, uses ``nornir_salt.plugins.tasks.connections`` ``ls`` call
     * ``disconnect`` - close host connections, accepts ``Fx`` arguments to filter hosts and ``conn_name``
-      of connection to close, by default closes all connections for all Nornir workers
+      of connection to close, by default closes all connections from all Nornir workers, uses
+      ``nornir_salt.plugins.tasks.connections`` ``close`` call
+    * ``connect`` - initiate connection to devices, arguments: ``conn_name, hostname, username, password, port,``
+      ``platoform, extras, default_to_host_attributes, close_open``, uses ``nornir_salt.plugins.tasks.connections``
+      ``open`` call
     * ``clear_hcache`` - clear task results cache from hosts' data, accepts ``cache_keys`` list argument
       of key names to remove, if no ``cache_keys`` argument provided removes all cached data, by default targets all Nornir workers
     * ``clear_dcache`` - clear task results cache from defaults data, accepts ``cache_keys`` list argument
@@ -2353,6 +2357,8 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir clear_hcache cache_keys='["key1", "key2]'
         salt nrp1 nr.nornir clear_dcache cache_keys='["key1", "key2]'
         salt nrp1 nr.nornir workers stats
+        salt nrp1 nr.nornir connect conn_name=netmiko username=cisco password=cisco platform=cisco_ios
+        salt nrp1 nr.nornir connect scrapli port=2022 close_open=True
 
     Sample Python API usage from Salt-Master::
 
@@ -2377,6 +2383,7 @@ def nornir_fun(fun, *args, **kwargs):
         "refresh",
         "connections",
         "disconnect",
+        "connect",
         "clear_hcache",
         "clear_dcache",
         "workers",
@@ -2420,6 +2427,14 @@ def nornir_fun(fun, *args, **kwargs):
             plugin="nornir_salt.plugins.tasks.connections",
             call="close",
             identity=_form_identity(kwargs, "nornir.disconnect"),
+            **kwargs,
+        )
+    elif fun == "connect":
+        kwargs["conn_name"] = args[0] if args else kwargs["conn_name"]
+        return task(
+            plugin="nornir_salt.plugins.tasks.connections",
+            call="open",
+            identity=_form_identity(kwargs, "nornir.connect"),
             **kwargs,
         )
     elif fun == "clear_hcache":

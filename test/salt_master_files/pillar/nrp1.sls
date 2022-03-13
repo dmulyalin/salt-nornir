@@ -1,138 +1,172 @@
-proxy:
-  proxytype: nornir
-  multiprocessing: True
-
+groups:
+  eos_params:
+    connection_options:
+      ConnectionsPool:
+        extras:
+          max: 2
+      http:
+        extras:
+          base_url: restconf/data
+          headers:
+            Accept: application/yang-data+json
+            Content-Type: application/yang-data+json
+          transport: https
+          verify: false
+        port: 6020
+      napalm:
+        extras:
+          optional_args:
+            port: 80
+            transport: http
+        platform: eos
+      ncclient:
+        extras:
+          allow_agent: false
+          hostkey_verify: false
+        port: 830
+      pygnmi:
+        extras:
+          insecure: true
+        port: 6030
+      scrapli:
+        extras:
+          auth_strict_key: false
+          ssh_config_file: false
+        platform: arista_eos
+      scrapli_netconf:
+        extras:
+          auth_strict_key: false
+          ssh_config_file: true
+          transport: paramiko
+          transport_options:
+            netconf_force_pty: false
+        port: 830
+  lab:
+    data:
+      ntp_servers:
+      - 3.3.3.3
+      - 3.3.3.4
+      syslog_servers:
+      - 1.2.3.4
+      - 4.3.2.1
+    password: nornir
+    username: nornir
 hosts:
   ceos1:
-    hostname: 10.0.1.4
-    platform: arista_eos
-    groups: [lab, eos_params]
-    data:
-      syslog: ["1.1.1.1", "2.2.2.2"]
-      location: "North West Hall DC1"
     connection_options:
       pyats:
         extras:
           devices:
             ceos1:
-              os: eos
-              credentials:
-                default:
-                  username: nornir
-                  password: nornir
               connections:
                 default:
-                  protocol: ssh
                   ip: 10.0.1.4
                   port: 22
-                vty_1:
                   protocol: ssh
+                vty_1:
                   ip: 10.0.1.4
                   pool: 3
-              
-  ceos2:
-    hostname: 10.0.1.5
-    platform: arista_eos
-    groups: [lab, eos_params]
+                  protocol: ssh
+              credentials:
+                default:
+                  password: nornir
+                  username: nornir
+              os: eos
     data:
-      syslog: ["1.1.1.2", "2.2.2.1"]
-      location: "East City Warehouse"
+      location: North West Hall DC1
+      syslog:
+      - 1.1.1.1
+      - 2.2.2.2
+    groups:
+    - lab
+    - eos_params
+    hostname: 10.0.1.4
+    platform: arista_eos
+  ceos2:
     connection_options:
       pyats:
-        platform: eos
         extras:
           devices:
             ceos2: {}
-            
-groups: 
-  lab:
-    username: nornir
-    password: nornir
-    data:
-      ntp_servers: ["3.3.3.3", "3.3.3.4"]
-      syslog_servers: ["1.2.3.4", "4.3.2.1"]
-  eos_params:
-    connection_options:
-      scrapli:
-        platform: arista_eos
-        extras:
-          auth_strict_key: False
-          ssh_config_file: False
-      scrapli_netconf:
-        port: 830
-        extras:
-          ssh_config_file: True
-          auth_strict_key: False
-          transport: paramiko
-          transport_options: 
-            # refer to https://github.com/saltstack/salt/issues/59962 for details
-            # on why need netconf_force_pty False
-            netconf_force_pty: False
-      napalm:
         platform: eos
-        extras:
-          optional_args:
-            transport: http
-            port: 80  
-      ncclient:
-        port: 830
-        extras:
-          allow_agent: False
-          hostkey_verify: False
-      http:
-        port: 6020
-        extras:
-          transport: https
-          verify: False
-          base_url: "restconf/data"
-          headers:
-            Content-Type: "application/yang-data+json"
-            Accept: "application/yang-data+json"
-      pygnmi:
-        port: 6030
-        extras:
-          insecure: True
-      ConnectionsPool:
-        extras:
-          max: 2
-                
+    data:
+      location: East City Warehouse
+      syslog:
+      - 1.1.1.2
+      - 2.2.2.1
+    groups:
+    - lab
+    - eos_params
+    hostname: 10.0.1.5
+    platform: arista_eos
 nornir:
   actions:
-    awr: 
-      function: nr.cli
-      args: ["wr"]
-      kwargs: {"FO": {"platform": "arista_eos"}}
-      description: "Save Arista devices configuration"
-    configure_ntp:
-      - function: nr.cfg
-        args: ["ntp server 1.1.1.1"]
-        kwargs: {"FB": "*", "plugin": "netmiko"}
-      - function: nr.cfg
-        args: ["ntp server 1.1.1.2"]
-        kwargs: {"FB": "*", "plugin": "netmiko"}
-      - function: nr.cli
-        args: ["show run | inc ntp"]
-        kwargs: {"FB": "*"}
-    configure_logging:
-      function: nr.cfg
-      args: ["logging host 7.7.7.7"]
-      kwargs: {"plugin": "netmiko"}
-    # nr.learn aliases
     arp:
+      args:
+      - show ip arp
+      description: Learn ARP cache
       function: nr.cli
-      args: ["show ip arp"]
-      description: "Learn ARP cache"  
-    uptime:
+    awr:
+      args:
+      - wr
+      description: Save Arista devices configuration
       function: nr.cli
-      args: ["show uptime"]
-      description: "Learn uptime info"      
+      kwargs:
+        FO:
+          platform: arista_eos
+    configure_logging:
+      args:
+      - logging host 7.7.7.7
+      function: nr.cfg
+      kwargs:
+        plugin: netmiko
+    configure_ntp:
+    - args:
+      - ntp server 1.1.1.1
+      function: nr.cfg
+      kwargs:
+        FB: '*'
+        plugin: netmiko
+    - args:
+      - ntp server 1.1.1.2
+      function: nr.cfg
+      kwargs:
+        FB: '*'
+        plugin: netmiko
+    - args:
+      - show run | inc ntp
+      function: nr.cli
+      kwargs:
+        FB: '*'
     facts:
+      args:
+      - show version
+      description: Learn device facts
       function: nr.cli
-      args: ["show version"]
-      kwargs: {"run_ttp": "salt://ttp/ceos_show_version.txt"}
-      description: "Learn device facts"  
+      kwargs:
+        run_ttp: salt://ttp/ceos_show_version.txt
     interfaces:
+      args:
+      - show run
+      description: Learn device interfaces
       function: nr.cli
-      args: ["show run"]
-      kwargs: {"run_ttp": "salt://ttp/ceos_interface.txt", "enable": True}
-      description: "Learn device interfaces"  
+      kwargs:
+        enable: true
+        run_ttp: salt://ttp/ceos_interface.txt
+    uptime:
+      args:
+      - show uptime
+      description: Learn uptime info
+      function: nr.cli
+proxy:
+  multiprocessing: true
+  proxytype: nornir
+defaults:
+  data:
+    credentials:
+      deprecated_creds:
+        username: cisco
+        password: cisco
+      local_account: 
+        username: nornir
+        password: nornir        

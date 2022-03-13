@@ -316,10 +316,11 @@ def test_nr_cli_netmiko_from_file():
         tgt="nrp1",
         fun="nr.cli",
         arg=[],
-        kwarg={"filename": "salt://cli/show_cmd_1.txt"},
+        kwarg={"filename": "salt://cli/show_cmd_1.txt", "enable": True},
         tgt_type="glob",
         timeout=60,
     )
+    pprint.pprint(ret)
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
     for host_name, data in ret["nrp1"].items():
@@ -1033,3 +1034,140 @@ def test_nr_cli_pyats_plugin_parse_nrp2_iosxe():
     assert ret["nrp2"]["csr1000v-1"]["show version"]["failed"] == False
     
 # test_nr_cli_pyats_plugin_parse_nrp2_iosxe()
+
+def test_nr_cli_netmiko_repeat_3():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "netmiko", "repeat": 3},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 6, f"Expected 6 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 6, f"Expected 6 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos1 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos2 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+
+
+def test_nr_cli_netmiko_repeat_3_stop_pattern():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "netmiko", "repeat": 3, "stop_pattern": "*local*"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 2, f"Expected 6 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 2, f"Expected 6 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0] == "1", f"{cmd} - ceos1 command does not start with 1"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0] == "1", f"{cmd} - ceos2 command does not start with 1"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+
+
+def test_nr_cli_scrapli_repeat_3():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "scrapli", "repeat": 3},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 6, f"Expected 6 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 6, f"Expected 6 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos1 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos2 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+        
+
+def test_nr_cli_scrapli_repeat_3_stop_pattern():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "scrapli", "repeat": 3, "stop_pattern": "*local*"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 2, f"Expected 6 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 2, f"Expected 6 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0] == "1", f"{cmd} - ceos1 command does not start with 1"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0] == "1", f"{cmd} - ceos2 command does not start with 1"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+        
+def test_nr_cli_netmiko_repeat_3_ret_last_2():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "netmiko", "repeat": 3, "return_last": 2},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 4, f"Expected 4 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 4, f"Expected 4 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos1 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos2 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+        
+def test_nr_cli_netmiko_repeat_3_ret_last_2_stop_pattern():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show version"],
+        kwarg={"plugin": "netmiko", "repeat": 3, "return_last": 2, "stop_pattern": "*local*"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 2, f"Expected 2 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 2, f"Expected 2 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos1 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos2 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+        
+        
+def test_nr_cli_netmiko_repeat_2_ret_last_20():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"plugin": "netmiko", "repeat": 2, "return_last": 20},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]["ceos1"]) == 2, f"Expected 2 commands back"
+    assert len(ret["nrp1"]["ceos2"]) == 2, f"Expected 2 commands back"
+    for cmd, res in ret["nrp1"]["ceos1"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos1 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"
+    for cmd, res in ret["nrp1"]["ceos2"].items():
+        assert cmd.split(":")[0].isdigit(), f"{cmd} - ceos2 command does not start with digit"
+        assert "Traceback" not in res, f"{cmd} ceo1 return error"

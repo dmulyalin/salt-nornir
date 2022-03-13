@@ -394,6 +394,8 @@ stats_dict = {
     "jobs_failed": 0,
     "jobs_job_queue_size": 0,
     "jobs_res_queue_size": 0,
+    "tasks_completed": 0,
+    "tasks_failed": 0,
     "nornir_workers": 0,
     "hosts_count": 0,
     "hosts_connections_active": 0,
@@ -487,6 +489,8 @@ def init(opts, loader=None):
                 "worker_jobs_started": 0,
                 "worker_jobs_completed": 0,
                 "worker_jobs_failed": 0,
+                "worker_tasks_completed": 0,
+                "worker_tasks_failed": 0,
                 "worker_hosts_tasks_failed": 0,
                 "worker_connections": {},
                 "worker_id": i + 1,
@@ -751,9 +755,10 @@ def _watchdog(loader):
             if mem_usage > nornir_data["memory_threshold_mbyte"]:
                 if nornir_data["memory_threshold_action"] == "log":
                     log.warning(
-                        "Nornir-proxy {} MAIN PID {} watchdog, memory_threshold_mbyte exceeded, memory usage {}MByte".format(
+                        "Nornir-proxy {} MAIN PID {} watchdog, '{}' memory_threshold_mbyte exceeded, memory usage {}MByte".format(
                             nornir_data["stats"]["proxy_minion_id"],
                             os.getpid(),
+                            nornir_data["memory_threshold_mbyte"],
                             mem_usage,
                         )
                     )
@@ -976,9 +981,6 @@ def _worker(wkr_data, loader):
                     wkr_data=wkr_data,
                     **job["kwargs"],
                 )
-            wkr_data["worker_hosts_tasks_failed"] += len(
-                wkr_data["nr"].data.failed_hosts
-            )
             wkr_data["worker_jobs_completed"] += 1
         except queue.Empty:
             continue
@@ -1455,7 +1457,7 @@ def _add_hosts_failed_prep_to_result(agg_result, hosts_failed_prep):
     Helper function to add hosts that failed prep steps to overall results
     together with error message.
 
-    :param result: (Obj) Nornir Aggregated result object
+    :param result: (Obj) Nornir AggregatedResult object
     :param hosts_failed_prep: (dict) dictionary keyed by host name and error message
     """
     for host_name, error in hosts_failed_prep.items():
@@ -1469,6 +1471,28 @@ def _add_hosts_failed_prep_to_result(agg_result, hosts_failed_prep):
                 name=agg_result.name.split(".")[-1],  # yields task function name
             )
         )
+
+
+def _update_nornir_worker_stats(wkr_data, nr_results):
+    """
+    Helper function to calculate tasks stats.
+
+    :param wkr_data: (dict) Nornir worker dictionary
+    :param nr_results: (obj) Nornir AggregatedResult object
+    """
+    wkr_data["worker_hosts_tasks_failed"] += len(wkr_data["nr"].data.failed_hosts)
+    for hostname, results in nr_results.items():
+        for i in results:
+            if i.exception or i.failed:
+                wkr_data["worker_tasks_failed"] += 1
+            elif (
+                isinstance(i.result, str)
+                and "Traceback (most recent call last)" in i.result
+            ):
+                wkr_data["worker_tasks_failed"] += 1
+            # dont count tasks with skip_results flag
+            elif not (hasattr(i, "skip_results") and i.skip_results is True):
+                wkr_data["worker_tasks_completed"] += 1
 
 
 # -----------------------------------------------------------------------------
@@ -1578,6 +1602,9 @@ def run(task, loader, identity, name, nr, wkr_data, **kwargs):
     # fire events for failed tasks if requested to do so
     if event_failed:
         _fire_events(result, loader=loader)
+
+    # calculate task stats
+    _update_nornir_worker_stats(wkr_data, result)
 
     # form return results
     if table:
@@ -1739,9 +1766,11 @@ def stats(*args, **kwargs):
     * ``jobs_failed``  - int, overall number of jobs failed
     * ``jobs_job_queue_size`` - int, size of jobs queue, indicating number of jobs waiting to start
     * ``jobs_res_queue_size`` - int, size of results queue, indicating number of results waiting to be collected by child process
+    * ``tasks_completed`` - overall number of completed Nornir tasks (including subtasks)
+    * ``tasks_failed`` - overall number of failed Nornir tasks (including subtasks)
     * ``hosts_count`` - int, number of hosts/devices managed by this proxy minion
     * ``hosts_connections_active`` - int, overall number of connection active to devices
-    * ``hosts_tasks_failed`` - int, overall number of tasks failed for hosts
+    * ``hosts_tasks_failed`` - overall number of hosts that failed all tasks within single job
     * ``timestamp`` - ``time.ctime()`` timestamp of ``stats`` function run
     * ``watchdog_runs`` - int, overall number of watchdog thread runs
     * ``watchdog_child_processes_killed`` - int, number of stale child processes killed by watchdog
@@ -1785,6 +1814,10 @@ def stats(*args, **kwargs):
             "jobs_completed": sum(
                 [w["worker_jobs_completed"] for w in nornir_data["nrs"]]
             ),
+            "tasks_completed": sum(
+                [w["worker_tasks_completed"] for w in nornir_data["nrs"]]
+            ),
+            "tasks_failed": sum([w["worker_tasks_failed"] for w in nornir_data["nrs"]]),
             "jobs_failed": sum([w["worker_jobs_failed"] for w in nornir_data["nrs"]]),
             "hosts_tasks_failed": sum(
                 [w["worker_hosts_tasks_failed"] for w in nornir_data["nrs"]]
@@ -1940,6 +1973,8 @@ def workers_utils(call):
                 "is_busy": w["is_busy"].is_set(),
                 "worker_jobs_completed": w["worker_jobs_completed"],
                 "worker_jobs_failed": w["worker_jobs_failed"],
+                "worker_tasks_completed": w["worker_tasks_completed"],
+                "worker_tasks_failed": w["worker_tasks_failed"],
                 "worker_connections": worker_connections,
                 "worker_jobs_queue": w["worker_jobs_queue"].qsize(),
                 "worker_hosts_tasks_failed": w["worker_hosts_tasks_failed"],
