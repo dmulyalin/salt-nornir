@@ -160,6 +160,8 @@ All supported processors executed in this order::
      - Filters text output using Nornir-Salt DataProcessor match function
    * - `ntfsm`_
      - Parse nr.cli output using TextFSM ntc-templates
+   * - `RetryRunner parameters`_
+     - Task parameters to influence RetryRunner execution logic
    * - `render`_
      - Renders arguments content using Salt renderer system
    * - `run_ttp`_
@@ -549,6 +551,39 @@ Sample usage::
 
     salt nrp1 nr.cli "show version" ntfsm=True
     salt nrp1 nr.cli "show version" dp=ntfsm
+
+RetryRunner parameters
+++++++++++++++++++++++
+
+A number of Nornir-Salt Proxy Minion execution module funtions support RetryRunner
+`parameters <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-task-parameters>`_
+to influence task execution logic.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi, nr.test``
+
+CLI Arguments:
+
+* ``run_connect_retry`` - number of connection attempts
+* ``run_task_retry`` - number of attempts to run task
+* ``run_creds_retry`` - list of connection credentials and parameters to retry while connecting to device
+* ``run_num_workers`` - number of threads for tasks execution
+* ``run_num_connectors`` - number of threads for device connections
+
+Sample usage - retry various connection parameters::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" run_creds_retry='["local_creds", "dev_creds"]'
+
+Sample usage - disable task and connection retries::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" run_connect_retry=0 run_task_retry=0
+
+Sample usage - run tasks sequentially on hosts one by one::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" run_num_workers=1
+
+Sample usage - set rate of device's connections to 5 per-second::
+
+    salt nrp1 nr.cfg filename="salt://templates/logging_config.txt" run_num_connectors=5
 
 render
 ++++++

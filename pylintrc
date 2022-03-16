@@ -1,0 +1,51 @@
+# example pylintrc file - https://github.com/PyCQA/pylint/blob/main/pylintrc
+
+[MESSAGES CONTROL]
+
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifiers separated by comma (,) or put this
+# option multiple times (only on the command line, not in the configuration
+# file where it should appear only once).You can also use "--disable=all" to
+# disable everything first and then reenable specific checks. For example, if
+# you want to run only the similarities checker, you can use "--disable=all
+# --enable=similarities". If you want to run only the classes checker, but have
+# no Warning level messages displayed, use"--disable=all --enable=classes
+# --disable=W"
+
+disable=all
+#    duplicate-code,
+#    line-too-long,
+#    logging-format-interpolation,
+#    broad-except,
+#    invalid-name,
+#    bare-except,
+#    too-many-locals,
+#    too-many-arguments,
+#    raise-missing-from,
+#    # done by black
+#    format,
+#    missing-module-docstring,
+#    undefined-variable,
+
+enable=wrong-spelling-in-docstring
+
+[DESIGN]
+
+# Maximum number of arguments for function / method
+max-args=50
+
+# Maximum number of locals for function / method body
+max-locals=50
+
+# Maximum number of return / yield for function / method body
+max-returns=20
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=50
+
+[SPELLING]
+# need - pip install pyenchant
+spelling-dict=en_US
+
+# List of comma separated words that should not be checked.
+spelling-ignore-words=nornir,autofunction,hostname,netmiko,http,json,Ncclient,netconfig,ncclient,jumphosts,Unicon,CLI,tesbed,pyats,eos,ip,cli,pygnmi,filegroup,strftime,FFun,Nornir's,FB,FC,FG,FN,ios,NornirObj,hostnames,DNS,pprint,yaml,kwargs,bool,boolean,paramiko,scrapli,iosxr,prepend,stderr,stdout,TabulateFormatter,sortby,autoclass,CSV,TTP,namespace,xpath,unflatten,jmespath,ntfsm,iplkp,xmltodict,usecase,StackOverflow,ASN,vrfs,vrf,Namespace,namespaces,https,expr,kwarg,etree,multiline,lxml,subtask,arp,IOS,lookups,csv,xml,dp,fromfile,difflib,tofile,dunder,jid,NTP,config,ntp,BGP,eval,MTU,Eval,len,splitlines,Syslog,globals,MultiResult,ret,elif,tf,jumphost,Netmiko,Jumphosts,backoff,arg,url,startswith,loopback,RPC,rpc,promptless,Promptless,nowait,conection,excpt,api,iosxe,testbed's,sendline,openconfig,Loopback,Scrapli,Netconf,netconf,TCP,tcp,datastore,huawei,bma,specidfied,LOD,struct,params,pre,untrusted,docstring,Dialogs,bgp,unicast,mtu,NTC,subform,un,XR,devops,MBytes,syslog,proxytype,dcache,Fx,uptime,PID,subtasks,fd,localhost,async,EET,Tacacs,ntc,nc,cfg,cmd,Traceback,txt,hcache,templating,gnmi,tping,args,py,LocalClient,Templating,saltenv,snmp,subtree,xmlns,ns,shellutil,filepath,slsutil,renderers,filegroups,filesystem,idempotency,endif,sumtable,CSR,sls,func,tgt,fromdir,fromdict,ceos

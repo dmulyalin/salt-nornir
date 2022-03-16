@@ -119,6 +119,7 @@ Nornir proxy-minion pillar example:
             task_splay: 100
             reconnect_on_fail: True
             task_timeout: 600
+            creds_retry: ["local_creds"]
       inventory:
          plugin: DictInventory
 
@@ -142,9 +143,14 @@ Nornir proxy-minion pillar example:
           napalm:
             optional_args: {dest_file_system: "system:"}
 
-    defaults: {}
+    defaults:
+      data:
+        credentials:
+          local_creds:
+            username: admin
+            password: admin
 
-In case if want to use other type of inventory or runner plugin can define their settings
+To use other type of inventory or runner plugins define their settings
 in pillar configuration:
 
 .. code-block:: yaml
@@ -164,7 +170,7 @@ in pillar configuration:
 Nornir runners
 --------------
 
-Runners in Nornir define how to run tasks against hosts. If no ``runner``
+Nornir Runner plugins define how to run tasks against hosts. If no ``runner``
 dictionary provided in proxy-minion pillar, Nornir initialized using Nornir Salt
 `RetryRunner plugin <https://nornir-salt.readthedocs.io/en/latest/Runners/RetryRunner.html#retryrunner-plugin>`_
 with these default settings::
@@ -181,7 +187,8 @@ with these default settings::
             "task_backoff": 1000,
             "task_splay": 100,
             "reconnect_on_fail": True,
-            "task_timeout": 600
+            "task_timeout": 600,
+            "creds_retry": [{"username": "admin", "password": "admin", "port": 2022}]
         },
     }
 

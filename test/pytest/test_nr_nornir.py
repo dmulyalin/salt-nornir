@@ -841,3 +841,39 @@ def test_nr_nornir_connect_scrapli_use_inventory():
     assert "kwargs" in ret["nrp1"]["ceos1"]['connections:open:scrapli']["result"]
     assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
     assert "kwargs" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
+    
+    
+def test_nr_nornir_connect_napalm_reconnect_several_good_creds():
+    _ = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "napalm"],
+        kwarg={
+            "add_details": True, 
+            "username": "wrong", 
+            "password": "wrong", 
+            "reconnect": [
+                {
+                    "username": "nornir",
+                    "password": "nornir",
+                },
+                "local_account",
+            ]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)
+    # verify result contain message: "Connected with reconnect index '1'"
+    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:napalm']["result"]
+    assert "index '0'" in ret["nrp1"]["ceos1"]['connections:open:napalm']["result"]
+    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:napalm']["result"]
+    assert "index '0'" in ret["nrp1"]["ceos2"]['connections:open:napalm']["result"]

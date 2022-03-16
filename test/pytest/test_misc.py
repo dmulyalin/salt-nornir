@@ -1329,3 +1329,444 @@ def test_nr_nornir_stats_tasks():
         workers_stats_after["nrp1"]["nornir-worker-1"]["worker_tasks_completed"] -
         workers_stats_before["nrp1"]["nornir-worker-1"]["worker_tasks_completed"]
     ) == 2
+    
+    
+def test_RetryRunner_with_run_creds_retry():  
+    print("Adding ceos1-1 hosts with wrong credentials")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+            "username": "wrong",
+            "password": "wrong",       
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret_add_ceos1_1)
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock")
+    ret1_cli_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": [
+                "deprecated_creds",
+                "local_account",
+            ],
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1)
+    
+    print("ceos1-1 running show clock again")
+    ret2_cli_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"FB": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret2_cli_ceos1_1)
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(remove_ceos1_1)
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify command output
+    assert isinstance(ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"]
+    assert isinstance(ret2_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret2_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"]
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not removed ceos1-1 ?"
+        
+        
+def test_RetryRunner_with_run_creds_retry_all_failed():
+    print("Adding ceos1-1 hosts with wrong credentials")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+            "username": "wrong",
+            "password": "wrong",       
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret_add_ceos1_1)
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock")
+    ret1_cli_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": [
+                {
+                    "username": "wrong_too",
+                    "password": "wrong_too",
+                },
+            ],
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1)
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(remove_ceos1_1)
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify command output
+    assert isinstance(ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"], str)
+    assert "Traceback" in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
+    assert "AuthenticationException" in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not removed ceos1-1 ?"
+
+    
+def test_RetryRunner_with_num_connectors():
+    disconnect_call = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"]
+    )
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"run_num_connectors", 1},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert "Traceback" not in ret["nrp1"]["ceos1"]["show clock"]
+    assert "Traceback" not in ret["nrp1"]["ceos2"]["show clock"]
+
+def test_RetryRunner_with_num_workers():
+    """
+    Task task_test_num_workers sleeps for 2 seconds and return timestamp,
+    using that timestamp we can verify time diference between when we have 
+    1 and 2 workers doing th etask
+    """
+    ret_1_worker = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "salt://tasks/task_test_num_workers.py",
+            "run_num_workers": 1,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    ret_2_workers = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "salt://tasks/task_test_num_workers.py",
+            "run_num_workers": 2,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    print("ret_1_worker: ")
+    pprint.pprint(ret_1_worker)
+    print("ret_2_workers: ")
+    pprint.pprint(ret_2_workers)
+    assert (
+        abs(
+            float(ret_1_worker["nrp1"]["ceos2"]["salt://tasks/task_test_num_workers.py"]) - 
+            float(ret_1_worker["nrp1"]["ceos1"]["salt://tasks/task_test_num_workers.py"])
+        ) >= 2
+    )
+    assert (
+        abs(
+            float(ret_2_workers["nrp1"]["ceos2"]["salt://tasks/task_test_num_workers.py"]) - 
+            float(ret_2_workers["nrp1"]["ceos1"]["salt://tasks/task_test_num_workers.py"])
+        ) <= 1
+    )
+    
+def test_RetryRunner_with_run_task_retry():
+    ret_task_retry_0 = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "nornir_salt.plugins.tasks.nr_test", 
+            "excpt": True, 
+            "run_task_retry": 0,
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_task_retry_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "nornir_salt.plugins.tasks.nr_test", 
+            "excpt": True, 
+            "run_task_retry": 1,
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_task_retry_5 = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "nornir_salt.plugins.tasks.nr_test", 
+            "excpt": True, 
+            "run_task_retry": 5,
+            "run_connect_retry": 5,
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    print("ret_task_retry_0: ")
+    pprint.pprint(ret_task_retry_0)
+    print("ret_task_retry_1: ")
+    pprint.pprint(ret_task_retry_1)
+    print("ret_task_retry_5: ")
+    pprint.pprint(ret_task_retry_5)
+    assert ret_task_retry_0["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.nr_test"]["task_retry"] == 0
+    assert ret_task_retry_1["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.nr_test"]["task_retry"] == 1
+    assert ret_task_retry_5["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.nr_test"]["task_retry"] == 5
+
+    
+def test_RetryRunner_with_run_connect_retry():
+    print("Adding ceos1-1 hosts with wrong credentials")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+            "username": "wrong",
+            "password": "wrong",       
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret_add_ceos1_1)
+    ret_connect_retry_0 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_connect_retry": 0,
+            "add_details": True,
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_connect_retry_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_connect_retry": 1,
+            "add_details": True,
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    ret_connect_retry_5 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_connect_retry": 5,
+            "add_details": True,
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(remove_ceos1_1)
+    print("ret_connect_retry_0: ")
+    pprint.pprint(ret_connect_retry_0)
+    print("ret_connect_retry_1: ")
+    pprint.pprint(ret_connect_retry_1)
+    print("ret_connect_retry_5: ")
+    pprint.pprint(ret_connect_retry_5)
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify connection retry attempts
+    assert ret_connect_retry_0["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 0
+    assert ret_connect_retry_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 1
+    assert ret_connect_retry_5["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 5
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not removed ceos1-1 ?"
+
+
+def test_RetryRunner_different_subtask_connection_plugin():
+    """
+    Test to test RetryRunner connection_name handling for subtasks
+    that uses different connection plugins
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "salt://tasks/task_subtasks_with_different_connections.py", 
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["netmiko_send_command"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["scrapli_send_command"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["netmiko_send_command"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["scrapli_send_command"]["failed"] == False
+    assert "Clock source" in ret["nrp1"]["ceos1"]["scrapli_send_command"]["result"]
+    assert "Clock source" in ret["nrp1"]["ceos2"]["scrapli_send_command"]["result"]
+    assert "Clock source" in ret["nrp1"]["ceos1"]["netmiko_send_command"]["result"]
+    assert "Clock source" in ret["nrp1"]["ceos2"]["netmiko_send_command"]["result"]
+
+
+def test_RetryRunner_with_run_creds_retry_via_jumphost():
+    print("Adding ceos1-1 with wrong username/password, via jumphost")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "username": "wrong",
+            "password": "wrong",
+            "groups": ["lab", "eos_params"],
+            "data": {
+                "jumphost": {
+                    "hostname": "10.0.1.1", 
+                    "username": "nornir", 
+                    "password": "nornir",
+                }
+            }        
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    pprint.pprint(ret_add_ceos1_1)
+    print("Running cli task to verify connection fails")
+    ret_fail = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"FB": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )  
+    pprint.pprint(ret_fail)
+    print("Running cli task with run_retry_creds")
+    ret_pass = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_account"],
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret_pass)
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(remove_ceos1_1) 
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify command output
+    assert "Authentication to device failed." in ret_fail["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
+    assert "Clock source" in ret_pass["nrp1"]["ceos1-1"]["show clock"]
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not removed ceos1-1 ?"
+        
+def test_RetryRunner_with_connectors_and_workers_0():
+    ret_fail_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"FB": "ceos1", "run_num_connectors": 0},
+        tgt_type="glob",
+        timeout=60,
+    )  
+    ret_fail_2 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={"FB": "ceos1", "run_num_workers": 0},
+        tgt_type="glob",
+        timeout=60,
+    )  
+    pprint.pprint(ret_fail_1)
+    pprint.pprint(ret_fail_2)
+    assert "RuntimeError" in ret_fail_1["nrp1"]
+    assert "RuntimeError" in ret_fail_2["nrp1"]

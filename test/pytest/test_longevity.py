@@ -127,4 +127,4 @@ def run_for_tasks_count():
     job_results_report.write("\nWorkers Stats after:\n{}\n".format(pprint.pformat(worker_stats_after)))
     job_results_report.close()
 
-run_for_tasks_count()
+# run_for_tasks_count()
