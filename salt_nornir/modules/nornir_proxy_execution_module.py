@@ -275,9 +275,12 @@ Last example will call ``xml_flatten`` function first following with ``key_filte
 download
 ++++++++
 
-SaltStack has `cp module <https://docs.saltproject.io/en/latest/ref/renderers/index.html#renderers>`_,
+SaltStack has `cp module <https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.cp.html>`_,
 allowing to download files from Salt Master, ``donwload`` keyword can be used to indicate
 arguments that should download content for.
+
+Supported URL schemes are: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local
+filesystem).
 
 Keys listed in ``download`` argument ignored by `render`_ argument even if same key contained
 with ``render`` argument. Arguments names listed in ``donwload`` are not rendered, only loaded
@@ -591,6 +594,10 @@ render
 SaltStack has `renderers system <https://docs.saltproject.io/en/latest/ref/renderers/index.html#renderers>`_,
 that system allows to render text files content while having access to all Salt Execution Module
 Functions and inventory data.
+
+If redner argument value points to one of supported URL schemes are: salt://, http://, https://, ftp://,
+s3://, swift:// and file:// (local filesystem). File content downloaded from specified URL prior to
+rendering.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
 
@@ -947,10 +954,13 @@ nr.tping
 
 # Import python libs
 import logging
+import os
 import traceback
 import fnmatch
 import uuid
 import time
+
+from salt_nornir.utils import _is_url
 
 log = logging.getLogger(__name__)
 
@@ -1022,10 +1032,12 @@ def task(plugin, **kwargs):
     :param plugin: (str) ``path.to.plugin.task_fun`` to run ``from path.to.plugin import task_fun``
     :param kwargs: (dict) arguments to use with specified task plugin or common arguments
 
-    ``plugin`` attribute can reference file on SALT Master with ``task`` function content,
-    that file downloaded from master, compiled and executed. File must contain function
-    named ``task`` accepting Nornir task object as a first positional argument, for
-    instance::
+    ``plugin`` attribute can refer to a file on one of remote locations, supported URL schemes
+    are: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local filesystem).
+    File downloaded, compiled and executed.
+
+    File must contain function named ``task`` accepting Nornir task object as a first positional
+    argument, for example::
 
         # define connection name for RetryRunner to properly detect it
         CONNECTION_NAME = "netmiko"
@@ -1059,7 +1071,7 @@ def task(plugin, **kwargs):
             kwarg={"commands": ["show ip arp"]},
         )
     """
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun=plugin, kwargs=kwargs, identity=_form_identity(kwargs, "task")
     )
 
@@ -1095,8 +1107,9 @@ def cli(*args, **kwargs):
 
          salt nrp1 nr.cli "ping 1.1.1.1 source {{ host.lo0 }}"
 
-    Commands to run on devices can be sourced from text file on Salt Master, that text file can also be a
-    template and rendered using SaltStack rendering system::
+    Commands to run on devices can be sourced from text file on a Salt Master or any other location
+    with supported URL schemes: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local
+    filesystem), that text file can also be a template, it is rendered using SaltStack rendering system::
 
          salt nrp1 nr.cli filename="salt://device_show_commands.txt"
 
@@ -1119,7 +1132,7 @@ def cli(*args, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")  # noqa:F821
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "netmiko")
     kwargs.setdefault("render", ["filename", "commands"])
@@ -1144,7 +1157,7 @@ def cli(*args, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run commands task
-    result = __proxy__["nornir.execute_job"](  # noqa:F821
+    result = __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cli")
     )
     return result
@@ -1195,8 +1208,9 @@ def cfg(*commands, **kwargs):
 
     In that case filename rendered to form path string, after that, path string used to download file
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
-    That behavior supported only for filenames that start with ``salt://``. This feature allows to
-    specify per-host configuration files for applying to devices.
+    That behavior supported for URL schemes: salt://, http://, https://, ftp://, s3://, swift:// and
+    file:// (local filesystem). This feature allows to specify per-host configuration files for applying
+    to devices.
 
     Sample Python API usage from Salt-Master::
 
@@ -1211,7 +1225,7 @@ def cfg(*commands, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")  # noqa:F821
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "napalm")
     kwargs.setdefault("add_details", True)
@@ -1236,7 +1250,7 @@ def cfg(*commands, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # work and return results
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cfg")
     )
 
@@ -1280,8 +1294,9 @@ def cfg_gen(*commands, **kwargs):
 
     In that case filename rendered to form path string, after that, path string used to download file
     from master, downloaded file further rendered using specified template engine (Jinja2 by default).
-    That behavior supported only for filenames that start with ``salt://``. This feature allows to
-    specify per-host configuration files for applying to devices.
+    That behavior supported for URL schemes: salt://, http://, https://, ftp://, s3://, swift:// and
+    file:// (local filesystem). This feature allows to specify per-host configuration files for applying
+    to devices.
 
     Sample Python API usage from Salt-Master::
 
@@ -1295,7 +1310,7 @@ def cfg_gen(*commands, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")  # noqa:F821
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
     kwargs = {**default_kwargs, **kwargs}
     kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
@@ -1303,7 +1318,7 @@ def cfg_gen(*commands, **kwargs):
     if any(commands):
         kwargs.setdefault("commands", commands)
     # work and return results
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun="nornir_salt.plugins.tasks.salt_cfg_gen",
         kwargs=kwargs,
         identity=_form_identity(kwargs, "cfg_gen"),
@@ -1343,7 +1358,7 @@ def tping(ports=None, timeout=1, host=None, **kwargs):
     kwargs["timeout"] = timeout
     kwargs["host"] = host
     # work and return results
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun="nornir_salt.plugins.tasks.tcp_ping",
         kwargs=kwargs,
         identity=_form_identity(kwargs, "tping"),
@@ -1468,8 +1483,9 @@ def test(*args, **kwargs):
     Commands output for each item in a suite collected using ``nr.cli`` function, arguments under
     ``cli`` keyword passed on to ``nr.cli`` function.
 
-    List of arguments in a test suite that can reference text file on salt master using
-    ``salt://path/to/file.txt``:
+    List of arguments in a test suite that can refer to a text file to source from one of
+    supported URL schemes: salt://, http://, https://, ftp://, s3://, swift:// and file://
+    (local filesystem), for example ``salt://path/to/file.txt``:
 
     * ``pattern`` - content of the file rendered and used to run the tests together with
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
@@ -1521,13 +1537,13 @@ def test(*args, **kwargs):
     cli_not_command_tasks = ["run_ttp"]
 
     # check if need to download pattern file from salt master
-    if str(pattern).startswith("salt://"):
-        pattern = __salt__["cp.get_file_str"](pattern, saltenv=saltenv)  # noqa:F821
+    if _is_url(pattern):
+        pattern = __salt__["cp.get_url"](pattern, dest=None, saltenv=saltenv)
 
     # if test suite provided, download it from master and render it
     if isinstance(suite, str) and suite.startswith("salt://"):
         suite_name = suite
-        suite = __salt__["slsutil.renderer"](suite)  # noqa:F821
+        suite = __salt__["slsutil.renderer"](suite)
         if not suite:
             raise CommandExecutionError(
                 "Suite file '{}' not on master; path correct?".format(suite_name)
@@ -1564,22 +1580,20 @@ def test(*args, **kwargs):
             continue
 
         # see if item's pattern referring to file
-        if isinstance(item.get("pattern"), str) and item["pattern"].startswith(
-            "salt://"
-        ):
-            item["pattern"] = __salt__["cp.get_file_str"](  # noqa:F821
-                item["pattern"], saltenv=saltenv
+        if _is_url(item.get("pattern")):
+            item["pattern"] = __salt__["cp.get_url"](
+                item["pattern"], dest=None, saltenv=saltenv
             )
         # check if cerberus schema referring to file
-        elif item.get("schema", "").startswith("salt://"):
-            item["schema"] = __salt__["cp.get_file_str"](  # noqa:F821
-                item["schema"], saltenv=saltenv
+        elif _is_url(item.get("schema")):
+            item["schema"] = __salt__["cp.get_url"](
+                item["schema"], dest=None, saltenv=saltenv
             )
-            item["schema"] = __salt__["slsutil.renderer"](item["schema"])  # noqa:F821
+            item["schema"] = __salt__["slsutil.renderer"](item["schema"])
         # check if function file given
-        elif "function_file" in item:
-            item["function_text"] = __salt__["cp.get_file_str"](  # noqa:F821
-                item.pop("function_file"), saltenv=saltenv
+        elif _is_url(item.get("function_file")):
+            item["function_text"] = __salt__["cp.get_url"](
+                item.pop("function_file"), dest=None, saltenv=saltenv
             )
 
         # use pattern content otherwise
@@ -1658,16 +1672,16 @@ def test(*args, **kwargs):
 
     if dump and isinstance(dump, str):
         try:
-            nr_data = __proxy__["nornir.nr_data"](  # noqa:F821
+            nr_data = __proxy__["nornir.nr_data"](
                 ["files_base_path", "files_max_count"]
             )
             DumpResults(
                 results=test_results,
                 filegroup=dump,
                 base_url=nr_data["files_base_path"],
-                index=__opts__["id"],  # noqa:F821
+                index=__opts__["id"],
                 max_files=nr_data["files_max_count"],
-                proxy_id=__opts__["id"],  # noqa:F821
+                proxy_id=__opts__["id"],
             )
         except:
             tb = traceback.format_exc()
@@ -1758,7 +1772,7 @@ def nc(*args, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")  # noqa:F821
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")
     args = list(args)
     kwargs["call"] = args.pop(0) if args else kwargs.pop("call")
     kwargs = {**default_kwargs, **kwargs}
@@ -1773,7 +1787,7 @@ def nc(*args, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run task
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "nc")
     )
 
@@ -1826,8 +1840,9 @@ def do(*args, **kwargs):
     .. note:: if ``filepath`` argument provided, actions defined in other places are ignored; file
         loaded using SaltStack ``slsutil.renderer`` execution module function, as a result
         file can contain any of supported SaltStack renderer content and can be located
-        at any url supported by ``cp.get_url`` execution module function. File content must
-        render to a dictionary keyed by actions names.
+        at any url supported by ``cp.get_url`` execution module function - supported URL schemes
+        are: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local filesystem).
+        File content must render to a dictionary keyed by actions' names.
 
     Sample actions steps definition using proxy minion pillar::
 
@@ -1909,7 +1924,7 @@ def do(*args, **kwargs):
 
     # load file if filepath provided
     if filepath:
-        file_content_dict = __salt__["slsutil.renderer"](  # noqa:F821
+        file_content_dict = __salt__["slsutil.renderer"](
             path=filepath, default_renderer=default_renderer
         )
         if not file_content_dict:
@@ -1921,7 +1936,7 @@ def do(*args, **kwargs):
     if "dir" in args or "dir_list" in args:
         pattern = args[1] if len(args) == 2 else None
         actions_config = (
-            __salt__["config.get"](key="nornir:actions", merge="recurse")  # noqa:F821
+            __salt__["config.get"](key="nornir:actions", merge="recurse")
             if not filepath
             else file_content_dict
         )
@@ -1952,7 +1967,7 @@ def do(*args, **kwargs):
             if filepath:
                 action_config = file_content_dict.get(action_name)
             else:
-                action_config = __salt__["config.get"](  # noqa:F821
+                action_config = __salt__["config.get"](
                     key="nornir:actions:{}".format(action_name), merge="recurse"
                 )
             if not action_config:
@@ -2039,7 +2054,7 @@ def http(*args, **kwargs):
     task_fun = "nornir_salt.plugins.tasks.http_call"
     kwargs["connection_name"] = "http"
     # run task
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "http")
     )
 
@@ -2126,8 +2141,8 @@ def file(*args, **kwargs):
 
     return task(
         plugin="nornir_salt.plugins.tasks.files",
-        base_url=__proxy__["nornir.nr_data"]("files_base_path"),  # noqa:F821
-        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],  # noqa:F821
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
         render=[],
         **kwargs,
     )
@@ -2262,8 +2277,8 @@ def find(*args, **kwargs):
         plugin="nornir_salt.plugins.tasks.files",
         call="read",
         filegroup=list(set(args)),
-        base_url=__proxy__["nornir.nr_data"]("files_base_path"),  # noqa:F821
-        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],  # noqa:F821
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
         render=[],  # do not render anything
         last=kwargs.pop("last", 1),
         table=kwargs.pop("table", "extend"),
@@ -2433,21 +2448,21 @@ def nornir_fun(fun, *args, **kwargs):
             kwargs.setdefault("worker", "all")
         return task(plugin="inventory", **kwargs)
     elif fun == "stats":
-        return __proxy__["nornir.stats"](*args, **kwargs)  # noqa:F821
+        return __proxy__["nornir.stats"](*args, **kwargs)
     elif fun == "version":
-        return __proxy__["nornir.nr_version"]()  # noqa:F821
+        return __proxy__["nornir.nr_version"]()
     elif fun == "shutdown":
         return task(plugin="shutdown")
     elif fun == "initialized":
-        return __proxy__["nornir.initialized"]()  # noqa:F821
+        return __proxy__["nornir.initialized"]()
     elif fun == "kill":
-        return __proxy__["nornir.kill_nornir"]()  # noqa:F821
+        return __proxy__["nornir.kill_nornir"]()
     elif fun == "refresh":
         return task(plugin="refresh", identity=_form_identity(kwargs, "nornir.refresh"))
     elif fun == "test":
         return task(plugin="test", identity=_form_identity(kwargs, "nornir.test"))
     elif fun == "hosts":
-        return __proxy__["nornir.list_hosts"](**kwargs)  # noqa:F821
+        return __proxy__["nornir.list_hosts"](**kwargs)
     elif fun == "connections":
         kwargs.setdefault("worker", "all")
         return task(
@@ -2490,11 +2505,11 @@ def nornir_fun(fun, *args, **kwargs):
         )
     elif fun in ["workers", "worker"]:
         kwargs["call"] = args[0] if len(args) == 1 else kwargs["call"]
-        return __proxy__["nornir.workers_utils"](**kwargs)  # noqa:F821
+        return __proxy__["nornir.workers_utils"](**kwargs)
     elif fun == "dir":
         return {"Supported functions": sorted(supported_functions)}
     elif fun == "results_queue_dump":
-        return __proxy__["nornir.queues_utils"](call="results_queue_dump")  # noqa:F821
+        return __proxy__["nornir.queues_utils"](call="results_queue_dump")
     else:
         return "Uncknown function '{}', call 'dir' to list supported functions".format(
             fun
@@ -2619,7 +2634,7 @@ def gnmi(call, *args, **kwargs):
     # render filename argument
     if "filename" in kwargs:
         filename = kwargs.pop("filename")
-        content = __salt__["slsutil.renderer"](filename)  # noqa:F821
+        content = __salt__["slsutil.renderer"](filename)
         if not content:
             raise CommandExecutionError(
                 "Filename '{}' not on master; path correct?".format(filename)
@@ -2638,6 +2653,6 @@ def gnmi(call, *args, **kwargs):
         return "Unsupported plugin name: {}".format(plugin)
 
     # run task
-    return __proxy__["nornir.execute_job"](  # noqa:F821
+    return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "gnmi")
     )
