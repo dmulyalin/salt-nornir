@@ -12,7 +12,7 @@ Arista cEOS
 Below inventory can be used with Arista cEOS and contains parameters for these connection plugins:
 
 - Netmiko - uses SSH and platform ``arista_eos`` under base arguments definition
-- NAPALM - uses Arista eAPI over HTTP poer 80 and platform ``eos`` as specified in eos_params group's ``connection_options``
+- NAPALM - uses Arista eAPI over HTTP port 80 and platform ``eos`` as specified in eos_params group's ``connection_options``
 - Ncclient - as specified in eos_params group's ``connection_options`` uses port 830 with default device type
 - PyATS - for ceos1 has multiple connections defined, including a pool of 3 connections for ``vty_1`` connection.
   For ceos2 parameters sourced from base arguments.
@@ -112,7 +112,7 @@ Below inventory can be used with Arista cEOS and contains parameters for these c
 Cisco IOS-XE
 ============
 
-Below inventory can be used with Cisoc IOSXE based devices and contains parameters for these connection plugins:
+Below inventory can be used with Cisco IOSXE based devices and contains parameters for these connection plugins:
 
 - Netmiko - uses SSH and platform ``cisco_ios`` under base arguments definition
 - PyATS - uses ``iosxe`` platform with SSH protocol on port 22 as specified in ``connection_options``

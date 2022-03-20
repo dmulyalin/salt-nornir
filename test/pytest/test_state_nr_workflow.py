@@ -1,7 +1,7 @@
 import logging
 import pprint
 import pytest
-import yaml 
+import yaml
 import time
 
 from utils import fixture_modify_proxy_pillar

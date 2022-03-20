@@ -1,6 +1,10 @@
-[![Downloads](https://pepy.tech/badge/salt-nornir)](https://pepy.tech/project/salt-nornir)
-[![PyPI versions](https://img.shields.io/pypi/pyversions/salt-nornir.svg)](https://pypi.python.org/pypi/salt-nornir/)
-[![Documentation status](https://readthedocs.org/projects/salt-nornir/badge/?version=latest)](http://salt-nornir.readthedocs.io/?badge=latest)
+[![Downloads][pepy-downloads-badge]][pepy-downloads-link]
+[![PyPI][pypi-latest-release-badge]][pypi-latest-release-link]
+[![PyPI versions][pypi-versions-badge]][pypi-versions-link]
+[![GitHub Discussion][github-discussions-badge]][github-discussions-link]
+[![Code style: black][black-badge]][black-link]
+[![Documentation status][readthedocs-badge]][readthedocs-link]
+[![Tests][github-tests-badge]][github-tests-link]
 
 ![logo][logo]
 
@@ -29,7 +33,7 @@ Nornir Proxy acts as a bridge between SaltStack and a wide set of network automa
 
 Some notable benefits:
 
-- Well tested - overall 496 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.10.0
+- Well tested - overall 500 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.10.0
 - Brings together SaltStack and a wealth of open-source libraries - Nornir, Netmiko, NAPALM, Scrapli, Scrapli-Netconf, Ncclient, Genie&PyATS (free, not open-source), PyGNMI, NTC-Templates, TTP, Jmespath, lxml, xmltodict, requests
 - Capable of addressing overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
 - Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
@@ -47,5 +51,19 @@ Start a [discussion](https://github.com/dmulyalin/salt-nornir/discussions)
 
 Issues, bug reports and feature requests are welcomed. Feedback is a gift and we truly value it.
 
-[logo]: docs/source/_images/SaltNornirLogo.png "salt nornir logo"
-[architecture]: docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
+[logo]:                        docs/source/_images/SaltNornirLogo.png "salt nornir logo"
+[architecture]:                docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
+[pepy-downloads-badge]:        https://pepy.tech/badge/salt-nornir
+[pepy-downloads-link]:         https://pepy.tech/project/salt-nornir
+[pypi-versions-badge]:         https://img.shields.io/pypi/pyversions/salt-nornir.svg
+[pypi-versions-link]:          https://pypi.python.org/pypi/salt-nornir/
+[readthedocs-badge]:           https://readthedocs.org/projects/salt-nornir/badge/?version=latest
+[readthedocs-link]:            http://salt-nornir.readthedocs.io/?badge=latest
+[pypi-latest-release-badge]:   https://img.shields.io/pypi/v/salt-nornir.svg
+[pypi-latest-release-link]:    https://pypi.python.org/pypi/salt-nornir
+[github-discussions-link]:     https://github.com/dmulyalin/salt-nornir/discussions
+[github-discussions-badge]:    https://img.shields.io/static/v1?label=Discussions&message=Ask&color=blue&logo=github
+[black-badge]:                 https://img.shields.io/badge/code%20style-black-000000.svg
+[black-link]:                  https://github.com/psf/black
+[github-tests-badge]:          https://github.com/dmulyalin/salt-nornir/actions/workflows/main.yml/badge.svg
+[github-tests-link]:           https://github.com/dmulyalin/salt-nornir/actions

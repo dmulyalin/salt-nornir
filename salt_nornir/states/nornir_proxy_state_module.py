@@ -128,14 +128,16 @@ def _form_identity(function_name):
     it also used by SaltEventProcessor to add function name details to events.
 
     :param function_name: (str) Execution Module Function name
-    :return: difctionary with uuid4, jid, function_name keys
+    :return: dictionary with uuid4, jid, function_name keys
 
-    If identity already present in kawargs, use it as is.
+    If identity already present in kwargs, use it as is.
     """
+    uuid_jid = str(uuid.uuid4()).replace("-", "")
     return {
-        "uuid4": str(uuid.uuid4()),
-        "jid": "state.nr.{}".format(function_name),
-        "function_name": "state.nr.{}".format(function_name),
+        "uuid4": uuid_jid,
+        "jid": uuid_jid[-20:],
+        "function": "state.nr.{}".format(function_name),
+        "user": __opts__.get("user"),
     }
 
 
@@ -150,7 +152,7 @@ def cfg(*args, **kwargs):
 
     :param commands: list of commands to send to device
     :param filename: path to file with configuration
-    :param template_engine: template engine to render configuration, default is jinja
+    :param template_engine: template engine to render configuration, default is jinja2
     :param saltenv: name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
@@ -189,7 +191,11 @@ def cfg(*args, **kwargs):
             ),
         }
     else:
-        result = __salt__["nr.cfg"](*args, **kwargs)
+        result = __salt__["nr.cfg"](
+            identity=_form_identity("cfg"),
+            *args, 
+            **kwargs
+        )
         ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
@@ -229,7 +235,11 @@ def task(*args, **kwargs):
             ),
         }
     else:
-        result = __salt__["nr.task"](*args, **kwargs)
+        result = __salt__["nr.task"](
+            identity=_form_identity("task"),
+            *args, 
+            **kwargs
+        )
         ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
@@ -348,7 +358,7 @@ def _run_workflow_step(
             step["kwargs"]["FL"] = list(FL)
 
         # get list of hosts matched by this step
-        matched_hosts = __salt__["nr.nornir"]("hosts", **step["kwargs"])
+        matched_hosts = __salt__["nr.nornir"]("hosts", **step["kwargs"], identity=_form_identity("workflow"))
 
         # handle when have no hosts to run step against
         if not matched_hosts and report_all:
@@ -560,7 +570,7 @@ def workflow(*args, **kwargs):
     :param kwargs: (dict) common arguments to merge with each step kwargs, step kwargs
         more specific and overwrite common kwargs
 
-    .. warning:: If proxy minion ``nornir_filter_required`` paramaeter set to True,
+    .. warning:: If proxy minion ``nornir_filter_required`` parameter set to True,
        workflow options ``filters`` must not be empty, but provided to limit overall
        execution scope.
 
@@ -787,7 +797,11 @@ def workflow(*args, **kwargs):
     sumtable = options.get("sumtable", None)
     report_all = options.get("report_all", True) if not sumtable else True
 
-    all_hosts = __salt__["nr.nornir"]("hosts", **common_filters)
+    all_hosts = __salt__["nr.nornir"](
+        "hosts", 
+        **common_filters,
+        identity=_form_identity("workflow")
+    )
 
     # check if no hosts matched by common filters, exit if so
     if common_filters and not all_hosts:
@@ -825,10 +839,18 @@ def workflow(*args, **kwargs):
 
     # clean up cached data
     if hcache:
-        _ = __salt__["nr.nornir"]("clear_hcache", cache_keys=steps_names)
+        _ = __salt__["nr.nornir"](
+            "clear_hcache", 
+            cache_keys=steps_names, 
+            identity=_form_identity("workflow"),
+        )
         log.info("state:nr.workflow: cleaned steps' hcache")
     if dcache:
-        _ = __salt__["nr.nornir"]("clear_dcache", cache_keys=steps_names)
+        _ = __salt__["nr.nornir"](
+            "clear_dcache", 
+            cache_keys=steps_names,
+            identity=_form_identity("workflow"),
+        )
         log.info("state:nr.workflow: cleaned steps' dcache")
 
     # decide if this state failed

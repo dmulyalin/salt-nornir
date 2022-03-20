@@ -1654,7 +1654,7 @@ def test_RetryRunner_with_run_connect_retry():
         assert v == True, "Worker did not removed ceos1-1 ?"
 
 
-def test_RetryRunner_different_subtask_connection_plugin():
+def test_RetryRunner_2_different_subtask_connection_plugins():
     """
     Test to test RetryRunner connection_name handling for subtasks
     that uses different connection plugins
@@ -1770,3 +1770,38 @@ def test_RetryRunner_with_connectors_and_workers_0():
     pprint.pprint(ret_fail_2)
     assert "RuntimeError" in ret_fail_1["nrp1"]
     assert "RuntimeError" in ret_fail_2["nrp1"]
+    
+    
+def test_RetryRunner_3_different_subtask_connection_plugins():
+    """
+    Test to test RetryRunner connection_name handling for subtasks
+    that uses different connection plugins, CONNECTION_NAME is a 
+    comma separated string of connections to establish.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={
+            "plugin": "salt://tasks/retryrunner_conn_test.py", 
+            "add_details": True,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret) 
+    assert ret["nrp1"]["ceos1"]["Pull Configuration Using Scrapli Netconf"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["Pull Configuration using Netmiko"]["failed"] == False
+    assert ret["nrp1"]["ceos1"]["Pull Configuration using Scrapli"]["failed"] == False
+    
+    assert ret["nrp1"]["ceos2"]["Pull Configuration Using Scrapli Netconf"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["Pull Configuration using Netmiko"]["failed"] == False
+    assert ret["nrp1"]["ceos2"]["Pull Configuration using Scrapli"]["failed"] == False
+    
+    assert "Traceback" not in ret["nrp1"]["ceos1"]["Pull Configuration Using Scrapli Netconf"]["result"]
+    assert "Traceback" not in ret["nrp1"]["ceos1"]["Pull Configuration using Netmiko"]["result"] 
+    assert "Traceback" not in ret["nrp1"]["ceos1"]["Pull Configuration using Scrapli"]["result"] 
+    
+    assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration Using Scrapli Netconf"]["result"]
+    assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration using Netmiko"]["result"] 
+    assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration using Scrapli"]["result"] 

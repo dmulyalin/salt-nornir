@@ -150,7 +150,7 @@ timing out on device end due to inactivity.
 limited number of file descriptors created, usually around 1000, because Nornir proxy
 minion uses multiprocessing queues for inter-process communications, effectively creating
 pipes on a lower level, each such a pipe consume file descriptor. But after child
-processes destroyed, not all fds deleted for some reason, fd leaking after reaching OS limit
+processes destroyed, not all file descriptors deleted, fd leaking, after reaching OS limit,
 prevents proxy minion process from running tasks. Watchdog on each run creates and destroys
 test pipes, restarting Nornir proxy minion process on failure to do so. Nornir proxy minion
 process restart leads to clearing of all previously created pipes and release of file descriptors.

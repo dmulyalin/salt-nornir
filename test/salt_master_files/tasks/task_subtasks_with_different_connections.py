@@ -3,6 +3,7 @@ from nornir.core.task import Result, Task
 from nornir_netmiko.tasks import netmiko_send_command
 from nornir_scrapli.tasks import send_command as scrapli_send_command
 
+CONNECTION_NAME="netmiko, scrapli"
 
 def task(task):
     task.run(

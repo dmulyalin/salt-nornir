@@ -57,7 +57,7 @@ Below parameters can be specified in Proxy Minion Pillar.
 - ``child_process_max_age`` - int, default is 660s, seconds to wait before forcefully kill child process
 - ``watchdog_interval`` - int, default is 30s, interval in seconds between watchdog runs
 - ``proxy_always_alive`` - boolean, default is True, keep connections with devices alive or tear them down
-  immidiately after each job
+  immediately after each job
 - ``connections_idle_timeout`` - int, seconds, default is 1 equivalent to ``proxy_always_alive`` set to True, if
   value equals 0 renders same behavior as if ``proxy_always_alive`` is False, if value above 1 - all host's
   device connections torn down after it was not in use for longer then idle timeout value even if
@@ -67,7 +67,7 @@ Below parameters can be specified in Proxy Minion Pillar.
 - ``memory_threshold_action`` - str, default is ``log``, action to implement if ``memory_threshold_mbyte`` exceeded,
   possible actions: ``log`` - send syslog message, ``restart`` - shuts down proxy minion process.
 - ``nornir_workers`` - number of Nornir instances to create, each instance has worker thread associated with it
-  allowing to run multiple tasks against hosts, as each worker deque tasks from jobs queue, default is 3
+  allowing to run multiple tasks against hosts, as each worker dequeue tasks from jobs queue, default is 3
 - ``files_base_path`` - str, default is ``/var/salt-nornir/{proxy_id}/files/``, OS path to folder where to save files
   on a per-host basis using `ToFileProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/ToFileProcessor.html>_`,
 - ``files_max_count`` - int, default is 5, maximum number of file version for ``tf`` argument used by
@@ -731,7 +731,7 @@ def _get_or_import_task_fun(plugin):
 
 def _watchdog(loader):
     """
-    Thread worker to maintain nornir proxy process and it's children liveability.
+    Thread worker to maintain nornir proxy process and it's children livability.
     """
     child_processes = {}
     while nornir_data["initialized"]:
@@ -904,7 +904,7 @@ def _worker(wkr_data, loader):
     Target function for worker thread to run jobs from
     jobs_queue submitted by execution module processes
 
-    :param wkr_data: (dict) dictionaru that contain nornir instance and other parameters
+    :param wkr_data: (dict) dictionary that contain nornir instance and other parameters
     :param loader: (obj or None) SaltStack loader context object
     """
     worker_id = wkr_data["worker_id"]  # get worker ID integer
@@ -1164,7 +1164,7 @@ def _download_files(download, kwargs):
 
 def _add_processors(kwargs, loader, identity, nr, worker_id):
     """
-    Helper function to exctrat processors arguments and add processors
+    Helper function to extract processors arguments and add processors
     to Nornir.
 
     :param kwargs: (dict) dictionary with kwargs
@@ -1399,11 +1399,11 @@ def _clear_dcache(nr, cache_keys=None):
 @_use_loader_context
 def _refresh_nornir(loader_):
     """
-    Function to re-initialise Nornir proxy with latest pillar data.
+    Function to re-initialize Nornir proxy with latest pillar data.
 
     This function calls ``shutdown`` function, gets latest modules and pillar
-    from master and calls ``init`` function to reinstantiate Nornir object,
-    worker&watchod threads and queus.
+    from master and calls ``init`` function to re-instantiate Nornir object,
+    worker and watchdog threads and queues.
 
     It takes about a minute to finish refresh process.
 
@@ -1653,7 +1653,7 @@ def execute_job(task_fun, kwargs, identity):
 
     :param task_fun: (str) name of nornir task function/plugin to import and run
     :param kwargs: (dict) any arguments to submit to Nornir task ``**kwargs``
-    :param identity: (dict) dictionary of uuid4, jid, funtion_name keys
+    :param identity: (dict) dictionary of uuid4, jid, function_name keys
 
     ``identity`` parameter used to identify job results in results queue and
     must be unique for each submitted job.
@@ -1904,7 +1904,7 @@ def nr_version():
 def nr_data(key):
     """
     Helper function to return values from nornir_data dictionary,
-    used by ``nr.cli``, ``nr.cfg`` anf ``nr.nc`` execution module functions to
+    used by ``nr.cli``, ``nr.cfg`` and ``nr.nc`` execution module functions to
     retrieve default kwargs values from respective proxy settings' attributes.
 
     :param key: (str or list) if string return value for single key, if list
@@ -2002,7 +2002,7 @@ def queues_utils(call):
 
     :param call: (str) utility to invoke - ``results_queue_dump``
 
-    Suppoted calls:
+    Supported calls:
 
     * ``results_queue_dump`` - drain items from result queue and return their content,
         put items copies back into the queue afterwards

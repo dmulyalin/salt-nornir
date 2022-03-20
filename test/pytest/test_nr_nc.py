@@ -561,21 +561,24 @@ def test_scrapli_netconf_get_config_call_with_filter_from_file():
             "filter_": "salt://rpc/get_config_filter_ietf_interfaces.xml",
             "source": "running",
             "plugin": "scrapli",
+            "add_details": True,
         },
         tgt_type="glob",
         timeout=60,
     )
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
+    pprint.pprint(ret)
     for host_name, data in ret["nrp1"].items():
         assert "get_config" in data, "No 'get_config' output from '{}'".format(
             host_name
         )
-        assert isinstance(data["get_config"], str)
-        assert len(data["get_config"]) > 0
+        assert isinstance(data["get_config"]["result"], str)
+        assert len(data["get_config"]["result"]) > 0
         assert (
-            "Traceback (most recent " not in data["get_config"]
+            "Traceback (most recent " not in data["get_config"]["result"]
         ), "get_config call returned error"
+        assert data["get_config"]["failed"] == False, "Task failed"
 
 
 def test_scrapli_netconf_edit_config_call():

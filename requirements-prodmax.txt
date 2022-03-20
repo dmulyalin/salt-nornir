@@ -7,7 +7,7 @@ netmiko==3.4.0
 nornir==3.2.0
 nornir-napalm==0.1.2
 nornir-netmiko==0.1.2
-nornir-scrapli==2021.7.30
+nornir-scrapli==2022.1.30a1
 ntc-templates>=1.7.0
 paramiko==2.9.2
 psutil==5.9.0
