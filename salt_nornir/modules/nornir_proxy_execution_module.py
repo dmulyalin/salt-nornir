@@ -947,7 +947,6 @@ nr.tping
 
 # Import python libs
 import logging
-import os
 import traceback
 import fnmatch
 import uuid
@@ -999,13 +998,13 @@ def _form_identity(kwargs, function_name):
     If identity already present in kwargs, use it as is.
     """
     identity = kwargs.pop("identity", {})
-    
+
     # make sure we always have mandatory attributes
     identity.setdefault("jid", kwargs.get("__pub_jid"))
     identity.setdefault("uuid4", str(uuid.uuid4()))
     identity.setdefault("user", kwargs.get("__pub_user"))
     identity.setdefault("function", "exec.nr.{}".format(function_name))
-    
+
     return identity
 
 
@@ -1060,7 +1059,7 @@ def task(plugin, **kwargs):
             kwarg={"commands": ["show ip arp"]},
         )
     """
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=plugin, kwargs=kwargs, identity=_form_identity(kwargs, "task")
     )
 
@@ -1120,7 +1119,7 @@ def cli(*args, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cli")  # noqa:F821
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "netmiko")
     kwargs.setdefault("render", ["filename", "commands"])
@@ -1145,7 +1144,7 @@ def cli(*args, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run commands task
-    result = __proxy__["nornir.execute_job"](
+    result = __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cli")
     )
     return result
@@ -1212,7 +1211,7 @@ def cfg(*commands, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")  # noqa:F821
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "napalm")
     kwargs.setdefault("add_details", True)
@@ -1237,7 +1236,7 @@ def cfg(*commands, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # work and return results
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cfg")
     )
 
@@ -1296,7 +1295,7 @@ def cfg_gen(*commands, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_cfg")  # noqa:F821
     kwargs = {**default_kwargs, **kwargs}
     kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
@@ -1304,7 +1303,7 @@ def cfg_gen(*commands, **kwargs):
     if any(commands):
         kwargs.setdefault("commands", commands)
     # work and return results
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun="nornir_salt.plugins.tasks.salt_cfg_gen",
         kwargs=kwargs,
         identity=_form_identity(kwargs, "cfg_gen"),
@@ -1344,7 +1343,7 @@ def tping(ports=None, timeout=1, host=None, **kwargs):
     kwargs["timeout"] = timeout
     kwargs["host"] = host
     # work and return results
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun="nornir_salt.plugins.tasks.tcp_ping",
         kwargs=kwargs,
         identity=_form_identity(kwargs, "tping"),
@@ -1523,12 +1522,12 @@ def test(*args, **kwargs):
 
     # check if need to download pattern file from salt master
     if str(pattern).startswith("salt://"):
-        pattern = __salt__["cp.get_file_str"](pattern, saltenv=saltenv)
+        pattern = __salt__["cp.get_file_str"](pattern, saltenv=saltenv)  # noqa:F821
 
     # if test suite provided, download it from master and render it
     if isinstance(suite, str) and suite.startswith("salt://"):
         suite_name = suite
-        suite = __salt__["slsutil.renderer"](suite)
+        suite = __salt__["slsutil.renderer"](suite)  # noqa:F821
         if not suite:
             raise CommandExecutionError(
                 "Suite file '{}' not on master; path correct?".format(suite_name)
@@ -1568,18 +1567,18 @@ def test(*args, **kwargs):
         if isinstance(item.get("pattern"), str) and item["pattern"].startswith(
             "salt://"
         ):
-            item["pattern"] = __salt__["cp.get_file_str"](
+            item["pattern"] = __salt__["cp.get_file_str"](  # noqa:F821
                 item["pattern"], saltenv=saltenv
             )
         # check if cerberus schema referring to file
         elif item.get("schema", "").startswith("salt://"):
-            item["schema"] = __salt__["cp.get_file_str"](
+            item["schema"] = __salt__["cp.get_file_str"](  # noqa:F821
                 item["schema"], saltenv=saltenv
             )
-            item["schema"] = __salt__["slsutil.renderer"](item["schema"])
+            item["schema"] = __salt__["slsutil.renderer"](item["schema"])  # noqa:F821
         # check if function file given
         elif "function_file" in item:
-            item["function_text"] = __salt__["cp.get_file_str"](
+            item["function_text"] = __salt__["cp.get_file_str"](  # noqa:F821
                 item.pop("function_file"), saltenv=saltenv
             )
 
@@ -1659,16 +1658,16 @@ def test(*args, **kwargs):
 
     if dump and isinstance(dump, str):
         try:
-            nr_data = __proxy__["nornir.nr_data"](
+            nr_data = __proxy__["nornir.nr_data"](  # noqa:F821
                 ["files_base_path", "files_max_count"]
             )
             DumpResults(
                 results=test_results,
                 filegroup=dump,
                 base_url=nr_data["files_base_path"],
-                index=__opts__["id"],
+                index=__opts__["id"],  # noqa:F821
                 max_files=nr_data["files_max_count"],
-                proxy_id=__opts__["id"],
+                proxy_id=__opts__["id"],  # noqa:F821
             )
         except:
             tb = traceback.format_exc()
@@ -1759,7 +1758,7 @@ def nc(*args, **kwargs):
         )
     """
     # get arguments
-    default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")
+    default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")  # noqa:F821
     args = list(args)
     kwargs["call"] = args.pop(0) if args else kwargs.pop("call")
     kwargs = {**default_kwargs, **kwargs}
@@ -1774,7 +1773,7 @@ def nc(*args, **kwargs):
     else:
         return "Unsupported plugin name: {}".format(plugin)
     # run task
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "nc")
     )
 
@@ -1910,7 +1909,7 @@ def do(*args, **kwargs):
 
     # load file if filepath provided
     if filepath:
-        file_content_dict = __salt__["slsutil.renderer"](
+        file_content_dict = __salt__["slsutil.renderer"](  # noqa:F821
             path=filepath, default_renderer=default_renderer
         )
         if not file_content_dict:
@@ -1922,7 +1921,7 @@ def do(*args, **kwargs):
     if "dir" in args or "dir_list" in args:
         pattern = args[1] if len(args) == 2 else None
         actions_config = (
-            __salt__["config.get"](key="nornir:actions", merge="recurse")
+            __salt__["config.get"](key="nornir:actions", merge="recurse")  # noqa:F821
             if not filepath
             else file_content_dict
         )
@@ -1953,7 +1952,7 @@ def do(*args, **kwargs):
             if filepath:
                 action_config = file_content_dict.get(action_name)
             else:
-                action_config = __salt__["config.get"](
+                action_config = __salt__["config.get"](  # noqa:F821
                     key="nornir:actions:{}".format(action_name), merge="recurse"
                 )
             if not action_config:
@@ -2040,7 +2039,7 @@ def http(*args, **kwargs):
     task_fun = "nornir_salt.plugins.tasks.http_call"
     kwargs["connection_name"] = "http"
     # run task
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "http")
     )
 
@@ -2127,8 +2126,8 @@ def file(*args, **kwargs):
 
     return task(
         plugin="nornir_salt.plugins.tasks.files",
-        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
-        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),  # noqa:F821
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],  # noqa:F821
         render=[],
         **kwargs,
     )
@@ -2263,8 +2262,8 @@ def find(*args, **kwargs):
         plugin="nornir_salt.plugins.tasks.files",
         call="read",
         filegroup=list(set(args)),
-        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
-        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
+        base_url=__proxy__["nornir.nr_data"]("files_base_path"),  # noqa:F821
+        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],  # noqa:F821
         render=[],  # do not render anything
         last=kwargs.pop("last", 1),
         table=kwargs.pop("table", "extend"),
@@ -2434,21 +2433,21 @@ def nornir_fun(fun, *args, **kwargs):
             kwargs.setdefault("worker", "all")
         return task(plugin="inventory", **kwargs)
     elif fun == "stats":
-        return __proxy__["nornir.stats"](*args, **kwargs)
+        return __proxy__["nornir.stats"](*args, **kwargs)  # noqa:F821
     elif fun == "version":
-        return __proxy__["nornir.nr_version"]()
+        return __proxy__["nornir.nr_version"]()  # noqa:F821
     elif fun == "shutdown":
         return task(plugin="shutdown")
     elif fun == "initialized":
-        return __proxy__["nornir.initialized"]()
+        return __proxy__["nornir.initialized"]()  # noqa:F821
     elif fun == "kill":
-        return __proxy__["nornir.kill_nornir"]()
+        return __proxy__["nornir.kill_nornir"]()  # noqa:F821
     elif fun == "refresh":
         return task(plugin="refresh", identity=_form_identity(kwargs, "nornir.refresh"))
     elif fun == "test":
         return task(plugin="test", identity=_form_identity(kwargs, "nornir.test"))
     elif fun == "hosts":
-        return __proxy__["nornir.list_hosts"](**kwargs)
+        return __proxy__["nornir.list_hosts"](**kwargs)  # noqa:F821
     elif fun == "connections":
         kwargs.setdefault("worker", "all")
         return task(
@@ -2491,11 +2490,11 @@ def nornir_fun(fun, *args, **kwargs):
         )
     elif fun in ["workers", "worker"]:
         kwargs["call"] = args[0] if len(args) == 1 else kwargs["call"]
-        return __proxy__["nornir.workers_utils"](**kwargs)
+        return __proxy__["nornir.workers_utils"](**kwargs)  # noqa:F821
     elif fun == "dir":
         return {"Supported functions": sorted(supported_functions)}
     elif fun == "results_queue_dump":
-        return __proxy__["nornir.queues_utils"](call="results_queue_dump")
+        return __proxy__["nornir.queues_utils"](call="results_queue_dump")  # noqa:F821
     else:
         return "Uncknown function '{}', call 'dir' to list supported functions".format(
             fun
@@ -2620,7 +2619,7 @@ def gnmi(call, *args, **kwargs):
     # render filename argument
     if "filename" in kwargs:
         filename = kwargs.pop("filename")
-        content = __salt__["slsutil.renderer"](filename)
+        content = __salt__["slsutil.renderer"](filename)  # noqa:F821
         if not content:
             raise CommandExecutionError(
                 "Filename '{}' not on master; path correct?".format(filename)
@@ -2639,6 +2638,6 @@ def gnmi(call, *args, **kwargs):
         return "Unsupported plugin name: {}".format(plugin)
 
     # run task
-    return __proxy__["nornir.execute_job"](
+    return __proxy__["nornir.execute_job"](  # noqa:F821
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "gnmi")
     )

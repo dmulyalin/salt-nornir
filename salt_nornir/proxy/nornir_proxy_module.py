@@ -547,7 +547,7 @@ def init(opts, loader=None):
         loader = loader
     # salt >3003 requires loader context to call __salt__ within threads
     elif HAS_LOADER_CONTEXT:
-        loader = __salt__.loader()
+        loader = __salt__.loader()  # noqa:F821
     # salt <3003 does not use loader context
     else:
         loader = None
@@ -706,7 +706,7 @@ def _get_or_import_task_fun(plugin):
     # check if plugin referring to file on master, download and compile it if so
     elif plugin.startswith("salt://"):
         function_text = None
-        function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")
+        function_text = __salt__["cp.get_file_str"](plugin, saltenv="base")  # noqa:F821
         if not function_text:
             raise CommandExecutionError(
                 "Nornir-proxy PID {}, failed download task function file: {}".format(
@@ -1027,7 +1027,7 @@ def _fire_events(result):
     results_list = ResultSerializer(result, to_dict=False, add_details=True)
     for res in results_list:
         if res.get("failed") is True or res.get("success") is False:
-            __salt__["event.send"](
+            __salt__["event.send"](  # noqa:F821
                 tag="nornir-proxy/{proxy_id}/{host}/task/failed/{name}".format(
                     proxy_id=nornir_data["stats"]["proxy_minion_id"],
                     host=res["host"],
@@ -1064,7 +1064,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
 
     def __render(data):
         # do initial data rendering
-        ret = __salt__["file.apply_template_on_contents"](
+        ret = __salt__["file.apply_template_on_contents"](  # noqa:F821
             contents=data,
             template=template_engine,
             context=context,
@@ -1073,13 +1073,13 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
         )
         # check if per-host data was provided, e.g. filename=salt://path/to/{{ host.name }}_cfg.txt
         if ret.startswith("salt://"):
-            content = __salt__["cp.get_file_str"](ret, saltenv=saltenv)
+            content = __salt__["cp.get_file_str"](ret, saltenv=saltenv)  # noqa:F821
             if not content:
                 raise CommandExecutionError(
                     "Failed to get '{}' file content".format(ret)
                 )
             # render final file
-            ret = __salt__["file.apply_template_on_contents"](
+            ret = __salt__["file.apply_template_on_contents"](  # noqa:F821
                 contents=content,
                 template=template_engine,
                 context=context,
@@ -1150,7 +1150,7 @@ def _download_files(download, kwargs):
             continue
 
         # download data
-        content = __salt__["cp.get_file_str"](kwargs[key], saltenv=saltenv)
+        content = __salt__["cp.get_file_str"](kwargs[key], saltenv=saltenv)  # noqa:F821
         if not content:
             raise CommandExecutionError("Failed to get '{}' file content".format(key))
         kwargs[key] = content
@@ -1204,7 +1204,7 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
     if event_progress:
         processors.append(
             SaltEventProcessor(
-                __salt__=__salt__,
+                __salt__=__salt__,  # noqa:F821
                 loader=loader,
                 proxy_id=nornir_data["stats"]["proxy_minion_id"],
                 identity=identity,
@@ -1412,26 +1412,26 @@ def _refresh_nornir(loader_):
     log.info("Nornir-proxy MAIN PID {}, refreshing".format(os.getpid()))
     if shutdown():
         # refresh all modules
-        __salt__["saltutil.sync_all"]()
+        __salt__["saltutil.sync_all"]()  # noqa:F821
         # refresh in memory pillar
-        __salt__["saltutil.refresh_pillar"]()
+        __salt__["saltutil.refresh_pillar"]()  # noqa:F821
         # get latest pillar data from master
-        __opts__["pillar"] = __salt__["pillar.items"]()
-        __opts__["proxy"] = __opts__["pillar"]["proxy"]
+        __opts__["pillar"] = __salt__["pillar.items"]()  # noqa:F821
+        __opts__["proxy"] = __opts__["pillar"]["proxy"]  # noqa:F821
         log.debug(
             "Nornir-proxy MAIN PID {}, refreshing, new proxy data: {}".format(
-                os.getpid(), __opts__["proxy"]
+                os.getpid(), __opts__["proxy"]  # noqa:F821
             )
         )
         log.debug(
             "Nornir-proxy MAIN PID {}, refreshing, new pillar data: {}".format(
-                os.getpid(), __opts__["pillar"]
+                os.getpid(), __opts__["pillar"]  # noqa:F821
             )
         )
         # re-init proxy module
-        init(__opts__, loader_)
+        init(__opts__, loader_)  # noqa:F821
         # refresh in memory pillar one more time for salt to ead updated data
-        __salt__["saltutil.refresh_pillar"]()
+        __salt__["saltutil.refresh_pillar"]()  # noqa:F821
         log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
         return True
     return False

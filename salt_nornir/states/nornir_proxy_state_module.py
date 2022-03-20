@@ -191,11 +191,7 @@ def cfg(*args, **kwargs):
             ),
         }
     else:
-        result = __salt__["nr.cfg"](
-            identity=_form_identity("cfg"),
-            *args, 
-            **kwargs
-        )
+        result = __salt__["nr.cfg"](identity=_form_identity("cfg"), *args, **kwargs)
         ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
@@ -235,11 +231,7 @@ def task(*args, **kwargs):
             ),
         }
     else:
-        result = __salt__["nr.task"](
-            identity=_form_identity("task"),
-            *args, 
-            **kwargs
-        )
+        result = __salt__["nr.task"](identity=_form_identity("task"), *args, **kwargs)
         ret = {"name": state_name, "changes": result, "result": True, "comment": ""}
     return ret
 
@@ -358,7 +350,9 @@ def _run_workflow_step(
             step["kwargs"]["FL"] = list(FL)
 
         # get list of hosts matched by this step
-        matched_hosts = __salt__["nr.nornir"]("hosts", **step["kwargs"], identity=_form_identity("workflow"))
+        matched_hosts = __salt__["nr.nornir"](
+            "hosts", **step["kwargs"], identity=_form_identity("workflow")
+        )
 
         # handle when have no hosts to run step against
         if not matched_hosts and report_all:
@@ -798,9 +792,7 @@ def workflow(*args, **kwargs):
     report_all = options.get("report_all", True) if not sumtable else True
 
     all_hosts = __salt__["nr.nornir"](
-        "hosts", 
-        **common_filters,
-        identity=_form_identity("workflow")
+        "hosts", **common_filters, identity=_form_identity("workflow")
     )
 
     # check if no hosts matched by common filters, exit if so
@@ -840,16 +832,12 @@ def workflow(*args, **kwargs):
     # clean up cached data
     if hcache:
         _ = __salt__["nr.nornir"](
-            "clear_hcache", 
-            cache_keys=steps_names, 
-            identity=_form_identity("workflow"),
+            "clear_hcache", cache_keys=steps_names, identity=_form_identity("workflow")
         )
         log.info("state:nr.workflow: cleaned steps' hcache")
     if dcache:
         _ = __salt__["nr.nornir"](
-            "clear_dcache", 
-            cache_keys=steps_names,
-            identity=_form_identity("workflow"),
+            "clear_dcache", cache_keys=steps_names, identity=_form_identity("workflow")
         )
         log.info("state:nr.workflow: cleaned steps' dcache")
 

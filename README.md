@@ -4,7 +4,6 @@
 [![GitHub Discussion][github-discussions-badge]][github-discussions-link]
 [![Code style: black][black-badge]][black-link]
 [![Documentation status][readthedocs-badge]][readthedocs-link]
-[![Tests][github-tests-badge]][github-tests-link]
 
 ![logo][logo]
 
