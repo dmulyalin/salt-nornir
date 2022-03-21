@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 __author__ = "Denis Mulyalin <d.mulyalin@gmail.com>"
 
 with open("README.md", "r") as f:
@@ -29,7 +29,6 @@ setup(
     url="https://github.com/dmulyalin/salt-nornir",
     packages=find_packages(),
     include_package_data=True,
-    data_files=[("", ["LICENSE"])],
     keywords=["salt-extension"],
     extras_require={
         "dev": REQUIREMENTS_DEV + REQUIREMENTS_PRODMAX,
@@ -54,4 +53,5 @@ setup(
     states_dirs=salt_nornir.loader:states_dirs
     runner_dirs=salt_nornir.loader:runner_dirs
     """,
+    data_files=[('', ['LICENSE', 'requirements.txt', 'requirements-dev.txt', 'requirements-prodmax.txt', 'requirements-prodmin.txt'])]
 )
