@@ -9,11 +9,11 @@ Python 2 is not supported, recommended version is Python 3.6 and higher.
 
 Install from PyPi::
 
-    pip install salt-nornir
+    pip install salt-nornir[prodmin]
 
 Or explicitly specifying Python version::
 
-    python3 -m pip install salt-nornir
+    python3 -m pip install salt-nornir[prodmin]
 
 Or install GIT and run installation of latest source code from GitHub master brunch::
 
@@ -25,6 +25,42 @@ module, ``salt-nornir`` should be installed on Salt Master machine as well.
 For installation of SaltStack master and minion/proxy-minion modules
 refer to `official documentation <https://repo.saltproject.io/>`_.
 
+Installation extras
+===================
+
+Salt-Nornir comes with these installation extras.
+
+.. list-table:: Salt-Nornir extras packages
+   :widths: 15 85
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - ``dev``
+     - Installs libraries required for development e.g. pytest, black, pre-commit etc.
+   * - ``prodmin``
+     - Production ready minimum set. Installs Netmiko, Ncclient and requests libraries 
+       to provide support for managing devices over SSH, NETCONF and RESTCONF. In addition, 
+       installs libraries to extended Salt-Nornir functionality such as Tabulate, Rich, TTP 
+       etc. All libraries have versions fixed to produce tested and working environment.
+   * - ``prodmax``
+     - Production ready maximum set. Installs all ``prodmin`` libraries together with 
+       additional modules required to support complete Salt-Nornir feature set such as 
+       PyGNMI, PyATS, Scrapli, NAPALM etc. All libraries have versions fixed to produce 
+       tested and working environment.
+
+To install Salt-Nornir only, without any additional plugins::
+
+    pip install salt-nornir
+
+To install minimum production set::
+
+    pip install salt-nornir[prodmin]
+
+To install maximum production set::
+
+    pip install salt-nornir[prodmax]
+    
 SaltStack versions tested
 =========================
 
@@ -44,11 +80,11 @@ must be of the same major and minor versions as ``salt-nornir`` package.
 
 Compatible versions
 
-+---------------+-------+-------+-------+-------+-------+-------+-------+
-| salt-nornir   | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
-+---------------+-------+-------+-------+-------+-------+-------+-------+
-| nornir-salt   | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
-+---------------+-------+-------+-------+-------+-------+-------+-------+
++---------------+--------+-------+-------+-------+-------+-------+-------+-------+
+| salt-nornir   | 0.10.* | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
++---------------+--------+-------+-------+-------+-------+-------+-------+-------+
+| nornir-salt   | 0.10.* | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
++---------------+--------+-------+-------+-------+-------+-------+-------+-------+
 
 Upgrade Procedure
 =================

@@ -22,11 +22,11 @@ Install Nornir
 
 From PyPi::
 
-    python3 -m pip install salt_nornir
+    python3 -m pip install salt_nornir[prodmax]
 
 If it fails due to PyYAML incompatibility try running this command::
 
-    python3 -m pip install salt_nornir --ignore-installed PyYAML
+    python3 -m pip install salt_nornir[prodmax] --ignore-installed PyYAML
 
 Configure SALT Master
 =====================

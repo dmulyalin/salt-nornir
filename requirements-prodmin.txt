@@ -3,7 +3,6 @@ netmiko==3.4.0
 nornir==3.2.0
 nornir-netmiko==0.1.2
 paramiko==2.9.2
-psutil==5.9.0
 requests==2.27.1
 rich==11.2.0
 tabulate==0.8.9

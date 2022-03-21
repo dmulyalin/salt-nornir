@@ -595,7 +595,7 @@ SaltStack has `renderers system <https://docs.saltproject.io/en/latest/ref/rende
 that system allows to render text files content while having access to all Salt Execution Module
 Functions and inventory data.
 
-If redner argument value points to one of supported URL schemes are: salt://, http://, https://, ftp://,
+If render argument value points to one of supported URL schemes are: salt://, http://, https://, ftp://,
 s3://, swift:// and file:// (local filesystem). File content downloaded from specified URL prior to
 rendering.
 

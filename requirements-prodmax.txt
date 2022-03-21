@@ -10,7 +10,6 @@ nornir-netmiko==0.1.2
 nornir-scrapli==2022.1.30a1
 ntc-templates>=1.7.0
 paramiko==2.9.2
-psutil==5.9.0
 pyats==22.1
 pygnmi==0.6.8
 pyyaml==6.0
