@@ -53,5 +53,16 @@ setup(
     states_dirs=salt_nornir.loader:states_dirs
     runner_dirs=salt_nornir.loader:runner_dirs
     """,
-    data_files=[('', ['LICENSE', 'requirements.txt', 'requirements-dev.txt', 'requirements-prodmax.txt', 'requirements-prodmin.txt'])]
+    data_files=[
+        (
+            "",
+            [
+                "LICENSE",
+                "requirements.txt",
+                "requirements-dev.txt",
+                "requirements-prodmax.txt",
+                "requirements-prodmin.txt",
+            ],
+        )
+    ],
 )

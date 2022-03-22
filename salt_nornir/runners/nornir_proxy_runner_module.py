@@ -21,16 +21,16 @@ Nornir Runner module functions
    * - Name
      - Description
    * - `nr.call`_
-     - 
+     - Method to call any Nornir Proxy Minion Execution Module function against minions
    * - `nr.cfg`_
-     - 
+     - Runner that uses Salt-Nornir execution module function ``nr.cfg`` to configure devices over CLI
    * - `nr.event`_
-     - 
+     - Listen to events emitted by Nornir Proxy Minions and log progress to terminal screen
    * - `nr.inventory`_
-     - 
+     - Function to return brief inventory data for certain hosts in a table format
    * - `nr.make_plugin`_
-     - 
-     
+     - Function to generate boilerplate code for Salt-Nornir plugins
+
 nr.call
 +++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.call
@@ -133,6 +133,7 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 # Private functions
 # -----------------------------------------------------------------------------
+
 
 def _run_job(
     tgt,
@@ -585,7 +586,7 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
 
     ``bars`` and ``tree`` progress display modes use Rich library, to properly display various
     symbols and characters need to make sure to use utf-8 encoding for your environment for example
-    by running these commandss::
+    by running these commands::
 
         [root@salt-master ~]# PYTHONIOENCODING=utf-8
         [root@salt-master ~]# export PYTHONIOENCODING
@@ -797,7 +798,7 @@ def cfg(
     # start rich console
     if HAS_RICH:
         globals()["console"] = Console()
-        
+
     ret = _check_ret_struct(ret_struct)
     fromdict = fromdict or {}
 
