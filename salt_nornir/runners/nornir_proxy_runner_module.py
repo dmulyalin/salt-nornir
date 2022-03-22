@@ -14,10 +14,41 @@ Nornir-runner module runs on SALT Master and allows to interact with devices beh
 Nornir Runner module functions
 ------------------------------
 
+.. list-table:: Runner Functions Summary
+   :widths: 15 85
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - `nr.call`_
+     - 
+   * - `nr.cfg`_
+     - 
+   * - `nr.event`_
+     - 
+   * - `nr.inventory`_
+     - 
+   * - `nr.make_plugin`_
+     - 
+     
+nr.call
++++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.call
+
+nr.cfg
+++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.cfg
+
+nr.event
+++++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.event
+
+nr.inventory
+++++++++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.inventory
+
+nr.make_plugin
+++++++++++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.make_plugin
 """
 # Import python libs
@@ -102,22 +133,6 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 # Private functions
 # -----------------------------------------------------------------------------
-
-
-def _start_rich(func):
-    """
-    Decorator function to initiate rich
-
-    :param func: (obj) function to wrap
-    """
-    if HAS_RICH:
-        globals()["console"] = Console()
-
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper
-
 
 def _run_job(
     tgt,
@@ -729,7 +744,6 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
             print(msg.format(**edata))
 
 
-@_start_rich
 def cfg(
     host_batch=0,
     first_batch=1,
@@ -780,6 +794,10 @@ def cfg(
         salt-run nr.cfg fromdir="salt://templates/config_xyz/" host_batch=5 first_batch=10 add_details=False
 
     """
+    # start rich console
+    if HAS_RICH:
+        globals()["console"] = Console()
+        
     ret = _check_ret_struct(ret_struct)
     fromdict = fromdict or {}
 

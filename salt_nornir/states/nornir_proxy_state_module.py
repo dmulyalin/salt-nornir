@@ -63,23 +63,23 @@ Nornir State Module Functions
 
    * - Name
      - Description
-   * - `cfg`_
+   * - `nr.cfg`_
      - Configure devices using Nornir execution module ``nr.cfg`` function
-   * - `task`_
+   * - `nr.task`_
      - Interact with devices using ``nr.task`` Execution Module function.
-   * - `workflow`_
+   * - `nr.workflow`_
      - Executes work flow steps using any SaltStack Execution modules functions
 
-cfg
-+++
+nr.cfg
+++++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.cfg
 
-task
-++++
+nr.task
++++++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.task
 
-workflow
-++++++++
+nr.workflow
++++++++++++
 .. autofunction:: salt_nornir.states.nornir_proxy_state_module.workflow
 """
 # Import python libs
