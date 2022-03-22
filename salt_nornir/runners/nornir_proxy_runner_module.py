@@ -14,9 +14,11 @@ Nornir-runner module runs on SALT Master and allows to interact with devices beh
 Nornir Runner module functions
 ------------------------------
 
-.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.inventory
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.call
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.cfg
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.event
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.inventory
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.make_plugin
 """
 # Import python libs
 import logging
@@ -566,12 +568,12 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
     :param stop_signal: (obj) thread Event object, stops listening to events if ``stop_signal.is_set()``,
         if ``stop_signal is None``, listens and print events until keyboard interrupt hit - ``ctrl+c``
 
-	``bars`` and ``tree`` progress display modes use Rich library, to properly display various
-	symbols and characters need to make sure to use utf-8 encoding for your environment,
-	to ensure that issue these commands in your terminal::
+    ``bars`` and ``tree`` progress display modes use Rich library, to properly display various
+    symbols and characters need to make sure to use utf-8 encoding for your environment for example
+    by running these commandss::
 
-		[root@salt-master ~]# PYTHONIOENCODING=utf-8
-		[root@salt-master ~]# export PYTHONIOENCODING
+        [root@salt-master ~]# PYTHONIOENCODING=utf-8
+        [root@salt-master ~]# export PYTHONIOENCODING
     """
     stop_signal = stop_signal or Event()
     events_queue = queue.Queue()
