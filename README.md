@@ -50,6 +50,13 @@ Start a [discussion](https://github.com/dmulyalin/salt-nornir/discussions)
 
 Issues, bug reports and feature requests are welcomed. Feedback is a gift and we truly value it.
 
+# Authors Guidelines
+
+- if it is not in the docs it does not exist
+- if it is not tested it is broken
+- done is better than perfect
+- keep it stupid simple
+
 [logo]:                        docs/source/_images/SaltNornirLogo.png "salt nornir logo"
 [architecture]:                docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
 [pepy-downloads-badge]:        https://pepy.tech/badge/salt-nornir

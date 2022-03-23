@@ -571,6 +571,7 @@ CLI Arguments:
 * ``run_creds_retry`` - list of connection credentials and parameters to retry while connecting to device
 * ``run_num_workers`` - number of threads for tasks execution
 * ``run_num_connectors`` - number of threads for device connections
+* ``run_reconnect_on_fail`` - if True, re-establish connection on task failure
 
 Sample usage - retry various connection parameters::
 
