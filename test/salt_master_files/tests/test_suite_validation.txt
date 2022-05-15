@@ -1,0 +1,4 @@
+- task: "show version"
+  test: _doesnotexist_
+  pattern: "cEOS"
+  name: check ceos version

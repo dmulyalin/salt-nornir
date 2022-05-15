@@ -21,4 +21,4 @@ def _is_url(path):
 
     path = str(path)
 
-    return any([path.startswith(s) for s in schemes])
+    return any(path.startswith(s) for s in schemes)

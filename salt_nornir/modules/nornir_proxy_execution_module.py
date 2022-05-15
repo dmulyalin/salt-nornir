@@ -130,6 +130,8 @@ All supported processors executed in this order::
 
    * - Name
      - Description
+   * - `add_details`_
+     - Add task execution details to results
    * - `Fx`_
      - Filters to target subset of devices using FFun Nornir-Salt function
    * - `context`
@@ -184,6 +186,28 @@ All supported processors executed in this order::
      - Uses Nornir-Salt DataProcessor ``xpath`` function to filter XML output
    * - `worker`_
      - Worker to use for task, supported values ``all`` or number from ``1`` to ``nornir_workers`` Proxy Minion parameter of default value 3
+
+add_detals
+++++++++++
+
+Controls Nornir-Salt
+`ResultSerializer function <https://nornir-salt.readthedocs.io/en/latest/Functions/ResultSerializer.html#resultserializer>`_
+to form task results with or without task execution details.
+
+`add_detals` by default is False for most of the functions, but can be adjusted
+accordingly to produce desired results structure.
+
+Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
+
+CLI Arguments:
+
+* ``add_details`` - boolean, if True will add task execution details to the results
+
+Sample usage::
+
+    salt nrp1 nr.cli "show clock" add_detals=True
+    salt nrp1 nr.cli "show clock" add_detals=True to_dict=False
+    salt nrp1 nr.cli "show clock" add_detals=True to_dict=True
 
 Fx
 ++
@@ -678,7 +702,7 @@ Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.test, nr.nc, nr.d
 
 CLI Arguments:
 
-* ``table`` - boolean or table type indicator, supported values: True, ``brief``, ``extend``
+* ``table`` - boolean or table type indicator, supported values: True, ``brief``, ``extend``, ``terse``
 * ``headers`` - list of table headers to form table for
 * ``headers_exclude`` - list of table headers to exclude from final table results
 * ``sortby`` - name of the header to sort table by, default is ``host``
@@ -955,13 +979,29 @@ nr.tping
 
 # Import python libs
 import logging
-import os
 import traceback
 import fnmatch
 import uuid
 import time
 
 from salt_nornir.utils import _is_url
+from salt_nornir.pydantic_models import (
+    model_exec_nr_cli,
+    model_exec_nr_task,
+    model_exec_nr_cfg,
+    model_exec_nr_tping,
+    model_exec_nr_test,
+    model_exec_nr_nc,
+    model_exec_nr_http,
+    model_exec_nr_do,
+    model_exec_nr_file,
+    model_exec_nr_learn,
+    model_exec_nr_find,
+    model_exec_nr_diff,
+    model_exec_nr_nornir_fun,
+    model_exec_nr_gnmi,
+    model_exec_nr_do_action,
+)
 
 log = logging.getLogger(__name__)
 
@@ -974,7 +1014,13 @@ except:
 
 # import nornir libs
 try:
-    from nornir_salt.plugins.functions import TabulateFormatter, DumpResults
+    from nornir_salt.plugins.functions import (
+        TabulateFormatter,
+        DumpResults,
+        FFun_functions,
+    )
+    from nornir_salt.utils.yangdantic import ValidateFuncArgs
+    from nornir_salt.utils.pydantic_models import modelTestsProcessorSuite
 
     HAS_NORNIR = True
 except ImportError:
@@ -1024,6 +1070,7 @@ def _form_identity(kwargs, function_name):
 # -----------------------------------------------------------------------------
 
 
+@ValidateFuncArgs(model_exec_nr_task)
 def task(plugin, **kwargs):
     """
     Function to invoke any of supported Nornir task plugins. This function
@@ -1056,7 +1103,6 @@ def task(plugin, **kwargs):
         salt nrp1 nr.task "nornir_napalm.plugins.tasks.napalm_cli" commands='["show ip arp"]' FB="IOL1"
         salt nrp1 nr.task "nornir_netmiko.tasks.netmiko_save_config" add_details=False
         salt nrp1 nr.task "nornir_netmiko.tasks.netmiko_send_command" command_string="show clock"
-        salt nrp1 nr.task nr_test a=b c=d add_details=False
         salt nrp1 nr.task "salt://path/to/task.txt"
         salt nrp1 nr.task plugin="salt://path/to/task.py"
 
@@ -1077,6 +1123,7 @@ def task(plugin, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_cli)
 def cli(*args, **kwargs):
     """
     Method to retrieve commands output from devices using ``send_command``
@@ -1155,8 +1202,6 @@ def cli(*args, **kwargs):
     elif plugin.lower() == "pyats":
         task_fun = "nornir_salt.plugins.tasks.pyats_send_commands"
         kwargs["connection_name"] = "pyats"
-    else:
-        return "Unsupported plugin name: {}".format(plugin)
     # run commands task
     result = __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cli")
@@ -1164,6 +1209,7 @@ def cli(*args, **kwargs):
     return result
 
 
+@ValidateFuncArgs(model_exec_nr_cfg)
 def cfg(*commands, **kwargs):
     """
     Function to push configuration to devices using NAPALM, Netmiko, Scrapli or
@@ -1180,7 +1226,8 @@ def cfg(*commands, **kwargs):
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
         if ``commit`` argument is a dictionary it is supplied to commit call as arguments
-    :param config: (str) configuration string or template to send to device
+    :param config: (str) configuration string or reference to configuration template or
+        dictionary keyed by host name with value set to configuration string or template
 
     .. warning:: ``dry_run`` not supported by ``netmiko`` and ``pyats`` plugins
 
@@ -1201,6 +1248,7 @@ def cfg(*commands, **kwargs):
         salt nrp1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
         salt nrp1 nr.cfg filename=salt://template/cfg.j2 FB="XR-1" commit='{"confirm": True, "confirm_delay": 60}'
         salt nrp1 nr.cfg config="snmp-server location {{ host.location }}"
+        salt nrp1 nr.cfg config='{"ceos1": "snmp-server location {{ host.location }}", "ceos2": "ntp server 1.2.3.4"}'
         salt nrp1 nr.cfg "snmp-server location {{ host.location }}"
 
     Filename argument can be a template string, for instance::
@@ -1248,14 +1296,13 @@ def cfg(*commands, **kwargs):
     elif plugin.lower() == "pyats":
         task_fun = "nornir_salt.plugins.tasks.pyats_send_config"
         kwargs["connection_name"] = "pyats"
-    else:
-        return "Unsupported plugin name: {}".format(plugin)
     # work and return results
     return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "cfg")
     )
 
 
+@ValidateFuncArgs(model_exec_nr_cfg)
 def cfg_gen(*commands, **kwargs):
     """
     Function to render configuration from template file. No configuration pushed
@@ -1269,7 +1316,8 @@ def cfg_gen(*commands, **kwargs):
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param config: (str) configuration string or template to send to device
+    :param config: (str) configuration string or reference to configuration template or
+        dictionary keyed by host name with value set to configuration string or template
 
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -1281,6 +1329,7 @@ def cfg_gen(*commands, **kwargs):
         salt nrp1 nr.cfg_gen filename=salt://templates/template.j2 FB="R[12]"
         salt nrp1 nr.cfg_gen config="snmp-server location {{ host.location }}"
         salt nrp1 nr.cfg_gen "snmp-server location {{ host.location }}"
+        salt nrp1 nr.cfg_gen config='{"ceos1": "snmp-server location {{ host.location }}", "ceos2": "ntp server 1.2.3.4"}'
 
     Sample template.j2 content::
 
@@ -1326,6 +1375,7 @@ def cfg_gen(*commands, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_tping)
 def tping(ports=None, timeout=1, host=None, **kwargs):
     """
     Tests connection to TCP port(s) by trying to establish a three way
@@ -1366,6 +1416,7 @@ def tping(ports=None, timeout=1, host=None, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_test)
 def test(*args, **kwargs):
     """
     Function to perform tests for certain criteria against show commands output
@@ -1607,6 +1658,9 @@ def test(*args, **kwargs):
 
         filtered_suite.append(item)
 
+    # validate tests suite
+    _ = modelTestsProcessorSuite(tests=filtered_suite)
+
     # run test items in a suite
     for test_item in filtered_suite:
         wait_timeout = int(test_item.get("wait_timeout", 0))
@@ -1643,23 +1697,30 @@ def test(*args, **kwargs):
             while (time.time() - stime) < wait_timeout:
                 res = cli(**cli_kwargs)
                 test_run_attempts += 1
-                if all([i.get("success", False) for i in res]):
-                    test_results.extend(res)
+                if all(i.get("success", False) for i in res):
+                    if isinstance(res, list):
+                        test_results.extend(res)
+                    else:
+                        test_results.append(res)
                     break
                 time.sleep(wait_interval)
             else:
                 for i in res:
-                    i[
-                        "exception"
-                    ] = "{}s wait timeout expired; test run attempts {}\n{}".format(
-                        wait_timeout, test_run_attempts, str(i.get("exception", ""))
+                    excpt = str(i.get("exception", ""))
+                    i["exception"] = (
+                        f"{wait_timeout}s wait timeout expired,"
+                        f"test run attempts {test_run_attempts}\n{excpt}"
                     )
                     i["failed"] = True
                     i["success"] = False
                 test_results.extend(res)
         else:
             log.debug("nr.test running nr.cli -'{}'".format(cli_kwargs))
-            test_results.extend(cli(**cli_kwargs))
+            res = cli(**cli_kwargs)
+            if isinstance(res, list):
+                test_results.extend(res)
+            else:
+                test_results.append(res)
 
     # format results to table if requested to do so
     if table:
@@ -1691,6 +1752,7 @@ def test(*args, **kwargs):
     return test_results
 
 
+@ValidateFuncArgs(model_exec_nr_nc)
 def nc(*args, **kwargs):
     """
     Function to interact with devices using NETCONF protocol utilizing
@@ -1785,32 +1847,24 @@ def nc(*args, **kwargs):
     elif plugin.lower() == "scrapli":
         task_fun = "nornir_salt.plugins.tasks.scrapli_netconf_call"
         kwargs["connection_name"] = "scrapli_netconf"
-    else:
-        return "Unsupported plugin name: {}".format(plugin)
     # run task
     return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "nc")
     )
 
 
+@ValidateFuncArgs(model_exec_nr_do)
 def do(*args, **kwargs):
     """
     Function to perform steps defined under ``nornir:actions`` configuration
-    section at:
-
-    * Minion's configuration
-    * Minion's grains
-    * Minion's pillar data
-    * Master configuration (requires ``pillar_opts`` to be set to True in Minion
-      config file in order to work)
-    * File on master file system
+    section at either minion's pillar data or file on master file system.
 
     To retrieve actions content Salt ``nr.do`` uses ``config.get`` execution module
-    function with ``merge`` key set to ``True``.
+    function with ``merge`` key set to ``recurse``.
 
     Each step definition requires these keywords to be defined:
 
-    * ``function`` - mandatory, name of any execution module function to run
+    * ``function`` - mandatory, name of any Salt-Nornir execution module function to run
     * ``args`` - optional, any arguments to use with function
     * ``kwargs`` - optional, any keyword arguments to use with function
     * ``description`` - optional, used by ``dir`` to list action description
@@ -1819,7 +1873,8 @@ def do(*args, **kwargs):
 
     :param stop_on_error: (bool) if True (default) stops execution on error in step,
         continue execution in error if False
-    :param filepath: (str) path to file with actions steps
+    :param filepath: (str) URL to file with actions steps supporting any of ``cp.get_url``
+        URIs: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local filesystem)
     :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`,
         default ``jinja|yaml``
     :param describe: (bool) if True, returns action content without executing it, default is False
@@ -1841,7 +1896,7 @@ def do(*args, **kwargs):
     .. note:: if ``filepath`` argument provided, actions defined in other places are ignored; file
         loaded using SaltStack ``slsutil.renderer`` execution module function, as a result
         file can contain any of supported SaltStack renderer content and can be located
-        at any url supported by ``cp.get_url`` execution module function - supported URL schemes
+        at any URL supported by ``cp.get_url`` execution module function - supported URL schemes
         are: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local filesystem).
         File content must render to a dictionary keyed by actions' names.
 
@@ -1937,7 +1992,13 @@ def do(*args, **kwargs):
     if "dir" in args or "dir_list" in args:
         pattern = args[1] if len(args) == 2 else None
         actions_config = (
-            __salt__["config.get"](key="nornir:actions", merge="recurse")
+            __salt__["config.get"](
+                key="nornir:actions",
+                merge="recurse",
+                omit_opts=True,
+                omit_master=True,
+                omit_grains=True,
+            )
             if not filepath
             else file_content_dict
         )
@@ -1969,7 +2030,11 @@ def do(*args, **kwargs):
                 action_config = file_content_dict.get(action_name)
             else:
                 action_config = __salt__["config.get"](
-                    key="nornir:actions:{}".format(action_name), merge="recurse"
+                    key="nornir:actions:{}".format(action_name),
+                    merge="recurse",
+                    omit_opts=True,
+                    omit_master=True,
+                    omit_grains=True,
                 )
             if not action_config:
                 raise CommandExecutionError(
@@ -1982,6 +2047,9 @@ def do(*args, **kwargs):
                 continue
             elif isinstance(action_config, dict):
                 action_config = [action_config]
+
+            # validate steps content
+            _ = model_exec_nr_do_action(action=action_config)
 
             # run steps
             for step in action_config:
@@ -2020,6 +2088,7 @@ def do(*args, **kwargs):
     return ret
 
 
+@ValidateFuncArgs(model_exec_nr_http)
 def http(*args, **kwargs):
     """
     HTTP requests related functions
@@ -2060,6 +2129,7 @@ def http(*args, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_file)
 def file(*args, **kwargs):
     """
     Function to manage Nornir-salt files.
@@ -2125,7 +2195,7 @@ def file(*args, **kwargs):
     kwargs["filegroup"] = kwargs.pop(
         "filegroup", list(args[1:]) if len(args) >= 2 else None
     )
-    if kwargs["call"] in ["ls", "rm"]:
+    if kwargs["call"] in ["ls", "rm", "list"]:
         kwargs.setdefault("table", "extend")
         kwargs.setdefault(
             "headers",
@@ -2149,6 +2219,7 @@ def file(*args, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_learn)
 def learn(*args, **kwargs):
     """
     Store task execution results to local filesystem on the minion using
@@ -2189,28 +2260,17 @@ def learn(*args, **kwargs):
             kwarg={"FB": "CORE-*"},
         )
     """
-    supported_functions = ["cli", "do", "http", "nc"]
     fun = kwargs.pop("fun", "do")
     kwargs["tf"] = True if fun == "do" else kwargs.get("tf")
     kwargs.setdefault("tf_skip_failed", True)  # do not learn failed tasks
     kwargs["identity"] = _form_identity(
         kwargs, "learn.{}".format(".".join(args) if fun == "do" else fun)
     )
-
-    # run sanity checks
-    if fun not in supported_functions:
-        raise RuntimeError(
-            "salt-nornir:learn unsupported function '{}', supported '{}'".format(
-                fun, supported_functions
-            )
-        )
-    if not kwargs.get("tf"):
-        raise RuntimeError("salt-nornir:learn no tf attribute provided")
-
     # run command with added ToFileProcessor argument
     return globals()[fun](*args, **kwargs)
 
 
+@ValidateFuncArgs(model_exec_nr_find)
 def find(*args, **kwargs):
     """
     Search for information stored in Proxy Minion files.
@@ -2256,22 +2316,10 @@ def find(*args, **kwargs):
             kwarg={"ip": "1.1.*"},
         )
     """
-    # do sanity check
-    if not args:
-        raise CommandExecutionError(
-            "No filegroup  to search in provided - args: '{}', kwargs: '{}'".format(
-                args, kwargs
-            )
-        )
-
     # form kwargs content
     identity = _form_identity(kwargs, "find")
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
-    Fx = {
-        k: kwargs.pop(k)
-        for k in list(kwargs.keys())
-        if k.startswith("F") and len(k) == 2
-    }
+    Fx = {k: kwargs.pop(k) for k in list(kwargs.keys()) if k in FFun_functions}
 
     # read files content running file_read task and filter it using find function
     return task(
@@ -2304,6 +2352,7 @@ def find(*args, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_diff)
 def diff(*args, **kwargs):
     """
     Provide difference between current and previously learned information or
@@ -2312,9 +2361,9 @@ def diff(*args, **kwargs):
     :param diff: (str) ``ToFileProcessor`` filegroup name
     :param last: (int or list or str) filegroup file indexes to diff, default is 1
     :param kwargs: (dict) any additional kwargs to use with ``nr.file diff``
-        call or ``DiffProcessor``
+        call or with ``DiffProcessor``
 
-    ``diff`` attribute mandatory.
+    ``diff`` or ``args`` attributes are mandatory.
 
     If last is a single digit e.g. 1, diff uses ``nr.do`` function to execute
     action named same as ``filegroup`` attribute and uses results to produce diff
@@ -2356,6 +2405,7 @@ def diff(*args, **kwargs):
         return do(last=last, *args, **kwargs)
 
 
+@ValidateFuncArgs(model_exec_nr_nornir_fun)
 def nornir_fun(fun, *args, **kwargs):
     """
     Function to call various Nornir utility functions.
@@ -2379,8 +2429,9 @@ def nornir_fun(fun, *args, **kwargs):
     * ``initialized`` - returns Nornir Proxy Minion initialized status - True or False
     * ``hosts`` - returns a list of hosts managed by this Nornir Proxy Minion, accepts ``Fx``
       arguments to return only hosts matched by filter
-    * ``connections`` - list hosts' active connections for all workers, accepts ``Fx`` arguments to filter hosts to list,
-      by default returns connections data for all Nornir workers, uses ``nornir_salt.plugins.tasks.connections`` ``ls`` call
+    * ``connections`` - list hosts' active connections for all workers, accepts ``Fx`` arguments to
+      filter hosts to list, by default returns connections data for all Nornir workers, uses
+      ``nornir_salt.plugins.tasks.connections`` ``ls`` call, accept ``conn_name`` parameter
     * ``disconnect`` - close host connections, accepts ``Fx`` arguments to filter hosts and ``conn_name``
       of connection to close, by default closes all connections from all Nornir workers, uses
       ``nornir_salt.plugins.tasks.connections`` ``close`` call
@@ -2410,6 +2461,8 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir workers stats
         salt nrp1 nr.nornir connect conn_name=netmiko username=cisco password=cisco platform=cisco_ios
         salt nrp1 nr.nornir connect scrapli port=2022 close_open=True
+        salt nrp1 nr.nornir connections conn_name=netmiko
+        salt nrp1 nr.nornir disconnect conn_name=ncclient
 
     Sample Python API usage from Salt-Master::
 
@@ -2422,25 +2475,6 @@ def nornir_fun(fun, *args, **kwargs):
             arg=["stats"],
         )
     """
-    supported_functions = [
-        "dir",
-        "test",
-        "inventory",
-        "stats",
-        "version",
-        "shutdown",
-        "initialized",
-        "kill",
-        "refresh",
-        "connections",
-        "disconnect",
-        "connect",
-        "clear_hcache",
-        "clear_dcache",
-        "workers",
-        "worker",
-        "results_queue_dump",
-    ]
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     if fun == "inventory":
         kwargs.setdefault("call", args[0] if args else "read_inventory")
@@ -2511,12 +2545,9 @@ def nornir_fun(fun, *args, **kwargs):
         return {"Supported functions": sorted(supported_functions)}
     elif fun == "results_queue_dump":
         return __proxy__["nornir.queues_utils"](call="results_queue_dump")
-    else:
-        return "Uncknown function '{}', call 'dir' to list supported functions".format(
-            fun
-        )
 
 
+@ValidateFuncArgs(model_exec_nr_gnmi)
 def gnmi(call, *args, **kwargs):
     """
     Function to interact with devices using gNMI protocol utilizing one of supported plugins.
@@ -2650,8 +2681,6 @@ def gnmi(call, *args, **kwargs):
     if plugin.lower() == "pygnmi":
         task_fun = "nornir_salt.plugins.tasks.pygnmi_call"
         kwargs["connection_name"] = "pygnmi"
-    else:
-        return "Unsupported plugin name: {}".format(plugin)
 
     # run task
     return __proxy__["nornir.execute_job"](

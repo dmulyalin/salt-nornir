@@ -40,3 +40,28 @@ def test_http_get_call_absolute_url():
     assert len(ret["nrp1"]["ceos1"]["get"]) > 500
     
 # test_http_get_call()
+
+
+def test_http_pydantic_model_wrong_method():
+    ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.http", 
+        arg=[], 
+        kwarg={"url": "http://10.0.1.4", "FB": "ceos1", "method": "gett"}, 
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert "ValidationError" in ret["nrp1"]
+    
+def test_http_pydantic_model_wrong_method_arg():
+    ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.http", 
+        arg=["gett"], 
+        kwarg={"url": "http://10.0.1.4", "FB": "ceos1"}, 
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert "ValidationError" in ret["nrp1"]

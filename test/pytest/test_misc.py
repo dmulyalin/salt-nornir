@@ -4,6 +4,7 @@ import json
 import time
 import yaml
 import pytest
+import threading
 
 from utils import fixture_modify_proxy_pillar
 
@@ -1805,3 +1806,23 @@ def test_RetryRunner_3_different_subtask_connection_plugins():
     assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration Using Scrapli Netconf"]["result"]
     assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration using Netmiko"]["result"] 
     assert "Traceback" not in ret["nrp1"]["ceos2"]["Pull Configuration using Scrapli"]["result"] 
+    
+     
+    
+def test_simeltenious_download():
+    """
+    Test to test Norninr workers simelteniously running task that require 
+    download file from master. That is to test fix for GitHub issue #9.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=[],
+        kwarg={"filename": "salt://templates/ntp_config.txt", "worker": "all"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for wkr_id, res in ret["nrp1"].items():
+        for hostname, hostres in res.items():
+            assert "Traceback" not in hostres["salt_cfg_gen"], "wkr {}, host {} returned traceback".format(wkr_id, hostname)

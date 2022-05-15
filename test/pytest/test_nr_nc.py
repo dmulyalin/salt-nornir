@@ -1034,3 +1034,17 @@ def test_ncclient_server_capabilities_glob_filter():
         assert "capability" in i
     for i in ret["nrp1"]["ceos2"]["server_capabilities"]:
         assert "capability" in i
+        
+def test_pydantic_model_wrong_plugin():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nc",
+        arg=["server_capabilities"],
+        kwarg={
+            "plugin": "foo",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert "ValidationError" in ret["nrp1"]

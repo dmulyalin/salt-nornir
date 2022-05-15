@@ -111,7 +111,7 @@ def test_custom_task_call_fail():
     )
     assert (
         "salt.exceptions.CommandExecutionError" in ret["nrp1"]
-        and "failed download task function file" in ret["nrp1"]
+        and "file download failed" in ret["nrp1"]
     )
 
     

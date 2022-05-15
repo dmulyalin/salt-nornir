@@ -1,0 +1,18 @@
+FROM rockylinux:8.5
+
+# install misc libs
+RUN python3 -m pip install pip setuptools wheel --upgrade
+
+# copy proxy-minion configuration across
+COPY salt_nornir/test/proxy /etc/salt/proxy
+
+# install python libs
+RUN python3 -m pip install salt salt-nornir[prodmax] Jinja2==3.0.3
+
+# run Salt Nornir libs installation from local files
+COPY salt_nornir/ /tmp/salt_nornir/
+COPY nornir_salt/ /tmp/nornir_salt/
+RUN python3 -m pip install /tmp/nornir_salt/ --upgrade
+RUN python3 -m pip install /tmp/salt_nornir/ --upgrade
+
+ENTRYPOINT salt-proxy --proxyid=$PROXY_ID -l debug

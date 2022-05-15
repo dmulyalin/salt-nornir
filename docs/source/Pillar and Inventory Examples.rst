@@ -293,3 +293,53 @@ Below inventory can be used with Cisco NXOS based devices and contains parameter
               auth_strict_key: False
               transport_options:
                 netconf_force_pty: False
+
+Juniper Junos
+=============
+
+Below inventory can be used with Juniper Junos based devices (tested with vMX) and contains parameters
+for these connection plugins:
+
+- Netmiko - uses SSH and platform ``juniper_junos`` under base arguments definition
+- Ncclient - uses port 830 with platform name ``junos`` as specified in ``connection_options.extras.device_params``
+- Scrapli-Netconf - uses port 830 platform ``juniper_junos`` as specified in ``connection_options``
+- Scrapli - uses SSH and platform ``juniper_junos`` without verifying SSH keys as specified in ``connection_options``
+- NAPALM - uses platform ``junos`` as specified in ``connection_options`` with additional Junos driver parameters in ``connection_options.extras.optional_args``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: nornir
+
+    hosts:
+      vmx1:
+        hostname: 192.168.217.150
+        platform: juniper_junos
+        username: nornir
+        password: nornir
+        connection_options:
+          ncclient:
+            port: 830
+            extras:
+              hostkey_verify: false
+              device_params:
+                name: junos
+          scrapli_netconf:
+            port: 830
+            extras:
+              transport: system # or paramiko, ssh2
+              ssh_config_file: True
+              auth_strict_key: False
+          scrapli:
+            platform: juniper_junos
+            port: 22
+            extras:
+              transport: system # or asyncssh, ssh2, paramiko
+              auth_strict_key: false
+              ssh_config_file: false
+          napalm:
+            platform: junos
+            extras:
+              optional_args:
+                auto_probe: 0
+                config_private: False

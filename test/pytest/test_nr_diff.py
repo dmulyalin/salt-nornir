@@ -34,7 +34,7 @@ def _generate_files():
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"tf": "clock"},
+        kwarg={"tf": "clock", "tf_skip_failed": True},
         tgt_type="glob",
         timeout=60,
     )
@@ -42,7 +42,7 @@ def _generate_files():
         tgt="nrp1",
         fun="nr.do",
         arg=["interfaces", "uptime"],
-        kwarg={"tf": True},
+        kwarg={"tf": True, "tf_skip_failed": True},
         tgt_type="glob",
         timeout=60,
     ) 

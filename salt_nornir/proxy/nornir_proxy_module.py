@@ -317,6 +317,7 @@ import traceback
 import signal
 import psutil
 import copy
+import sys
 
 from salt_nornir.utils import _is_url
 
@@ -484,6 +485,7 @@ def init(opts, loader=None):
             },
         },
     )
+    nornir_data["salt_download_lock"] = multiprocessing.Lock()
     nornir_data["nornir_workers"] = opts["proxy"].get("nornir_workers", 3)
     for i in range(nornir_data["nornir_workers"]):
         nornir_data["nrs"].append(
@@ -695,6 +697,25 @@ def _load_custom_task_fun_from_text(function_text, function_name):
     return data[function_name]
 
 
+def _file_download(url, saltenv="base"):
+    """
+    Helper function to download files from salt master or other locations.
+
+    :param url: string url to file location
+    :param saltenv: saltenv name to download files from
+    """
+    with nornir_data["salt_download_lock"]:
+        file_path = __salt__["cp.get_url"](url, dest="", saltenv=saltenv)
+        if file_path is False:
+            raise CommandExecutionError(
+                "Salt-Nornir proxy pid {}, '{}' file download failed, saltenv '{}'".format(
+                    nornir_data["stats"]["main_process_pid"], url, saltenv
+                )
+            )
+    with open(file_path, mode="r", encoding="utf-8") as f:
+        return f.read()
+
+
 @_use_loader_context
 def _get_or_import_task_fun(plugin):
     """
@@ -708,13 +729,7 @@ def _get_or_import_task_fun(plugin):
     # check if plugin referring to file on master, download and compile it if so
     elif _is_url(plugin):
         function_text = None
-        function_text = __salt__["cp.get_url"](plugin, dest=None, saltenv="base")
-        if not function_text:
-            raise CommandExecutionError(
-                "Nornir-proxy PID {}, failed download task function file: {}".format(
-                    os.getpid(), plugin
-                )
-            )
+        function_text = _file_download(plugin)
         task_function = _load_custom_task_fun_from_text(function_text, "task")
     else:
         log.debug(
@@ -1075,11 +1090,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
         )
         # check if per-host data was provided, e.g. filename=salt://path/to/{{ host.name }}_cfg.txt
         if _is_url(ret):
-            content = __salt__["cp.get_url"](ret, dest=None, saltenv=saltenv)
-            if not content:
-                raise CommandExecutionError(
-                    "Failed to get '{}' file content".format(ret)
-                )
+            content = _file_download(ret, saltenv)
             # render final file
             ret = __salt__["file.apply_template_on_contents"](
                 contents=content,
@@ -1150,9 +1161,7 @@ def _download_files(download, kwargs):
             continue
 
         # download data
-        content = __salt__["cp.get_url"](kwargs[key], dest=None, saltenv=saltenv)
-        if not content:
-            raise CommandExecutionError("Failed to get '{}' file content".format(key))
+        content = _file_download(kwargs[key], saltenv)
         kwargs[key] = content
 
         log.debug(
@@ -1894,6 +1903,8 @@ def nr_version():
         "pyats": "",
         "cerberus": "",
         "genie": "",
+        "pydantic": "",
+        "python": sys.version.split(" ")[0],
     }
 
     # get version of packages installed

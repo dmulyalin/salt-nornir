@@ -1,0 +1,133 @@
+services:
+  salt-master:
+    container_name: salt-master
+    hostname: 'salt-master'
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.rocky.py39.master
+    networks:
+      net0:
+        ipv4_address: 10.0.0.2
+    volumes:
+      # bind folder with tests to salt-master container
+      - type: bind
+        source: ./test/pytest/
+        target: /tmp/pytest/
+      # bind folder with salt-master configuration to salt-master container
+      - type: bind
+        source: ./test/salt_master_files/
+        target: /etc/salt/
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.9/site-packages/salt_nornir/
+      - type: bind
+        source: ../nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.9/site-packages/nornir_salt/
+      # bind local folder to salt-master in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+
+  salt-minion-nrp1:
+    container_name: salt-minion-nrp1
+    hostname: 'salt-minion-nrp1'
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.rocky.py39.minion
+    environment:
+      PROXY_ID: "nrp1"
+    networks:
+      net0:
+        ipv4_address: 10.0.0.3
+      net1:
+        ipv4_address: 10.0.1.3
+    depends_on:
+      - salt-master
+    volumes:
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.9/site-packages/salt_nornir/
+      - type: bind
+        source: ../nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.9/site-packages/nornir_salt/
+      # bind local folder to salt-minion in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+
+  salt-minion-nrp2:
+    container_name: salt-minion-nrp2
+    hostname: 'salt-minion-nrp2'
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.minion
+    environment:
+      PROXY_ID: "nrp2"
+    networks:
+      net0:
+        ipv4_address: 10.0.0.6
+      net1:
+        ipv4_address: 10.0.1.6
+    depends_on:
+      - salt-master
+    volumes:
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.9/site-packages/salt_nornir/
+      - type: bind
+        source: ../nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.9/site-packages/nornir_salt/
+      # bind local folder to salt-minion in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+
+  ceos1:
+    container_name: ceos1
+    hostname: 'ceos1'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos1
+    networks:
+      # need ceos-dummy as its assigned to linux OS so that
+      # second network assigned to cEOS instance
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.4
+
+  ceos2:
+    container_name: ceos2
+    hostname: 'ceos2'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos2
+    networks:
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.5
+
+networks:
+  net0:
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+          gateway: 10.0.0.1
+  net1:
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+  ceos-dummy: {}

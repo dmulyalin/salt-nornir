@@ -153,10 +153,11 @@ def test_nr_cli_match():
         tgt="nrp1",
         fun="nr.cli",
         arg=["show version"],
-        kwarg={"match": "Uptime"},
+        kwarg={"match": "Uptime", "enable": True},
         tgt_type="glob",
         timeout=60,
     )
+    pprint.pprint(ret)
     assert "nrp1" in ret
     assert len(ret["nrp1"]) == 2
     for host_name, data in ret["nrp1"].items():
@@ -164,7 +165,7 @@ def test_nr_cli_match():
             host_name
         )
         assert isinstance(data["show version"], str)
-        assert len(data["show version"].splitlines()) == 1
+        assert len(data["show version"].strip().splitlines()) == 1
 
 
 def test_nr_cli_match_with_before():
@@ -192,7 +193,7 @@ def test_nr_cli_match_with_before():
         tgt="nrp1",
         fun="nr.cli",
         arg=["show version"],
-        kwarg={"match": "Uptime", "before": 2},
+        kwarg={"match": "Uptime", "before": 2, "enable": True},
         tgt_type="glob",
         timeout=60,
     )
@@ -204,7 +205,7 @@ def test_nr_cli_match_with_before():
         )
         assert isinstance(data["show version"], str)
         assert (
-            len(data["show version"].splitlines()) == 4
+            len(data["show version"].strip().splitlines()) == 4
         ), "Not 4 lines fron '{}' show version output: '{}'".format(host_name, data)
 
 
@@ -651,8 +652,8 @@ def test_nr_cli_br_netmiko():
     # pprint.pprint(ret)
     assert "show hostname" in ret["nrp1"]["ceos1"]
     assert "show hostname" in ret["nrp1"]["ceos2"]
-    assert len(ret["nrp1"]["ceos1"]["show hostname"].splitlines()) == 2
-    assert len(ret["nrp1"]["ceos2"]["show hostname"].splitlines()) == 2
+    assert len(ret["nrp1"]["ceos1"]["show hostname"].strip().splitlines()) == 2
+    assert len(ret["nrp1"]["ceos2"]["show hostname"].strip().splitlines()) == 2
     
 # test_nr_cli_br_netmiko()
 

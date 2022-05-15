@@ -99,6 +99,7 @@ hosts:
     - eos_params
     hostname: 10.0.1.5
     platform: arista_eos
+
 nornir:
   actions:
     arp:

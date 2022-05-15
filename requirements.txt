@@ -1,3 +1,0 @@
-nornir==3.*
-nornir_salt==0.10.*
-psutil>=5.8.*, <=5.9.*

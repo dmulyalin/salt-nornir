@@ -465,10 +465,9 @@ def test_nr_test_inline_contains_failure():
         tgt_type="glob",
         timeout=60,
     )
-    assert len(ret["nrp1"]) == 2
-    for host_name, res in ret["nrp1"].items():
-        assert "nornir-salt:TestsProcessor task_instance_completed error" in res
-        assert "Traceback" in res["nornir-salt:TestsProcessor task_instance_completed error"]
+    assert "Traceback (most recent call last)" in ret["nrp1"]
+    assert "value is not a valid" in ret["nrp1"]
+
         
 def test_nr_test_dump():
     import random
@@ -663,3 +662,18 @@ def test_nr_test_test_has_no_results_to_tes():
     assert ret["nrp1"]["ceos1"]["test2"]["failed"] == True
     assert ret["nrp1"]["ceos2"]["test2"]["result"] == "ERROR"
     assert ret["nrp1"]["ceos2"]["test2"]["failed"] == True
+    
+def test_nr_test_validate_suite():
+    """Test to run test suite with wrong test name"""
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_validation.txt"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert "ValidationError" in ret["nrp1"]

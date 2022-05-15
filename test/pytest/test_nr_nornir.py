@@ -584,7 +584,7 @@ def test_nr_nornir_connect_netmiko_use_kwargs():
         tgt="nrp1",
         fun="nr.nornir",
         arg=["connect", "netmiko"],
-        kwarg={"add_details": True, "username": "nornir", "password": "nornir", "port": "22"},
+        kwarg={"add_details": True, "username": "nornir", "password": "nornir", "port": 22},
         tgt_type="glob",
         timeout=60,
     )      

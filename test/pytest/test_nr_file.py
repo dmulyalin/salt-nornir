@@ -187,10 +187,10 @@ def test_nr_file_read_no_filegroup_provided():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
 
-    assert "bad filegroup" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
-    assert "bad filegroup" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "none is not an allowed value" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "none is not an allowed value" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
     
 # test_nr_file_read_no_filegroup_provided()
 

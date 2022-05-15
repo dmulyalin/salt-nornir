@@ -53,15 +53,12 @@ nr.make_plugin
 """
 # Import python libs
 import logging
-import traceback
-import fnmatch
 import time
 import os
 import pprint
 import queue
 
 from threading import Thread, Event
-from typing import Union
 
 log = logging.getLogger(__name__)
 
@@ -89,27 +86,16 @@ except ImportError:
     HAS_NORNIR = False
 
 try:
+    from rich import print as rich_print
     from rich.tree import Tree
-    from rich.live import Live
-    from rich.progress import (
-        track,
-        Progress,
-        SpinnerColumn,
-        BarColumn,
-        TextColumn,
-        TimeRemainingColumn,
-        TimeElapsedColumn,
-    )
-    from rich.console import Group
-    from rich.panel import Panel
-    from rich.table import Table
+    from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
     from rich.prompt import Prompt
     from rich.console import Console
     from rich.pretty import pprint
 
     HAS_RICH = True
 except ImportError:
-    log.debug("Nornir-proxy - failed importing rich library")
+    log.warning("Nornir-proxy - failed importing rich library")
     HAS_RICH = False
 
 __virtualname__ = "nr"
@@ -412,6 +398,45 @@ def _get_salt_nornir_event(stop_signal, tag, events_queue):
         events_queue.put(e)
 
 
+def _built_inventory_tree(inventory_data, nodes_data):
+    """
+    Helper function to form inventory tree representation
+
+    :param inventory_data: 'nr.nornir inventory' call dictionary results
+    :param nodes_data: 'grains.item node-name' call dictionary results
+    """
+    inventory_tree = Tree("[bold cyan]Salt-Master")
+    tree_data = {}
+    # recursively from tree structure
+    for minion_id in sorted(inventory_data.keys()):
+        hosts_data = inventory_data[minion_id].get("ret", {}).get("hosts", {})
+        # skip if no hosts matched for this minion
+        if not hosts_data:
+            continue
+        # create tree for minion_host if not created already
+        minion_host = nodes_data[minion_id]["ret"]["nodename"]
+        tree_data.setdefault(
+            minion_host, inventory_tree.add("[bold blue]{} node".format(minion_host))
+        )
+        # form minion tree object
+        minion_tree = tree_data[minion_host].add(
+            f"[bold green]{minion_id} proxy-minion"
+        )
+        # add hosts to the tree
+        for host_name, host_data in hosts_data.items():
+            minion_tree.add(
+                "[bold purple]{name}[/] {ip}; platform: {platform}; groups: {groups}".format(
+                    name=host_data["name"],
+                    ip=host_data["hostname"],
+                    platform=host_data["platform"],
+                    groups=", ".join(host_data["groups"] or ["None"]),
+                )
+            )
+
+    rich_print(inventory_tree)
+    return ""
+
+
 # -----------------------------------------------------------------------------
 # callable module function
 # -----------------------------------------------------------------------------
@@ -419,13 +444,13 @@ def _get_salt_nornir_event(stop_signal, tag, events_queue):
 
 def inventory(*args, **kwargs):
     """
-    Function to return brief inventory data for certain hosts in a table format.
+    Function to query inventory data for Nornir hosts and present it in various formats.
 
     :param FB: glob pattern matching hostnames of devices behind Nornir
     :param Fx: additional filters to filter hosts, e.g. FG, FP, FL etc.
     :param tgt: nornir proxy minion target, by default targets all - "proxy:proxytype:nornir"
     :param tgt_type: SALT targeting type to use, by default "pillar"
-    :param verbose: boolean, returns ``nr.cli`` output as is if True, flattens to dictionary
+    :param verbose: boolean, returns ``nr.nornir inventory`` output as is if True, flattens to dictionary
         keyed by devices hostnames if False, default False
     :param job_retry: how many times to retry command if no return from minions, default 0
     :param job_timeout: seconds to wait for return from minions, overrides
@@ -435,22 +460,24 @@ def inventory(*args, **kwargs):
     :param headers: (list) headers list, default ``["minion", "host", "ip", "platform", "groups"]``
     :param reverse: (bool) reverse table order if True, default is False
     :param sortby: (str) header to sort table by, default is ``host``
-
+    :param tree: (bool) display inventory in tree format instead of table
 
     Sample Usage::
 
-        salt-run nr.inventory host_name_id
+        salt-run nr.inventory ceos1
         salt-run nr.inventory FB="host_name_id" FP="10.1.2.0/24"
+        salt-run nr.inventory "*" tree=True
+        salt-run nr.inventory "ceos2" verbose=True
 
     If it takes too long to get output because of non-responding/unreachable minions,
     specify ``--timeout`` or ``job_timeout`` option to shorten waiting time, ``job_timeout``
     overrides ``--timeout``. Alternatively, instead of targeting all nornir based proxy
     minions, ``tgt`` and ``tgt_type`` can be used to target a subset of them::
 
-        salt-run nr.inventory host_name_id --timeout=10
-        salt-run nr.inventory host_name_id job_timeout=10 tgt="nornir-proxy-id" tgt_type="glob"
+        salt-run nr.inventory core-sw-31 --timeout=10
+        salt-run nr.inventory edge-router-42 job_timeout=10 tgt="nornir-proxy-id" tgt_type="glob"
 
-    Sample output::
+    Sample ``table`` formatted output::
 
         [root@localhost /]# salt-run nr.inventory IOL1
         +---+--------+----------+----------------+----------+--------+
@@ -458,6 +485,19 @@ def inventory(*args, **kwargs):
         +---+--------+----------+----------------+----------+--------+
         | 0 |  nrp1  |   IOL1   | 192.168.217.10 |   ios    |  lab   |
         +---+--------+----------+----------------+----------+--------+
+
+    Sample ``tree`` formatted output::
+
+        Salt-Master
+        ├── salt-minion-nrp1 node
+        │   └── nrp1 proxy-minion
+        │       ├── ceos1 10.0.1.4; platform: arista_eos; groups: lab, eos_params
+        │       └── ceos2 10.0.1.5; platform: arista_eos; groups: lab, eos_params
+        └── salt-minion-nrp2 node
+            └── nrp2 proxy-minion
+                ├── csr1000v-1 sandbox-iosxe-latest-1.cisco.com; platform: cisco_ios; groups: None
+                ├── iosxr1 sandbox-iosxr-1.cisco.com; platform: cisco_xr; groups: None
+                └── nxos1 sandbox-nxos-1.cisco.com; platform: nxos_ssh; groups: None
     """
     ret = []
 
@@ -477,6 +517,7 @@ def inventory(*args, **kwargs):
     verbose = kwargs.pop("verbose", False)
     timeout = kwargs.pop("job_timeout", 300)
     job_retry = kwargs.pop("job_retry", 0)
+    tree = kwargs.pop("tree", False)
 
     # get table formatter arguments
     table = kwargs.pop("table", {"tablefmt": "pretty", "showindex": True})
@@ -485,7 +526,7 @@ def inventory(*args, **kwargs):
     reverse = kwargs.pop("reverse", False)
 
     # send nr.nornir inventory command
-    query_results = _run_job(
+    inventory_data = _run_job(
         tgt=tgt,
         fun="nr.nornir",
         arg=["inventory"],
@@ -497,9 +538,22 @@ def inventory(*args, **kwargs):
 
     # work with results
     if verbose:
-        ret = query_results
+        ret = inventory_data
+    # form tree structure using Rich Tree
+    elif tree:
+        # query hosting nodes information from minions
+        nodes_data = _run_job(
+            tgt=list(inventory_data),
+            fun="grains.item",
+            arg=["nodename"],
+            kwarg={},
+            tgt_type="list",
+            timeout=timeout,
+            job_retry=job_retry,
+        )
+        ret = _built_inventory_tree(inventory_data, nodes_data)
     else:
-        for minion_id, result in query_results.items():
+        for minion_id, result in inventory_data.items():
             for host_name, host_data in result.get("ret", {}).get("hosts", {}).items():
                 ret.append(
                     {
@@ -591,6 +645,9 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
         [root@salt-master ~]# PYTHONIOENCODING=utf-8
         [root@salt-master ~]# export PYTHONIOENCODING
     """
+    # start rich console
+    globals().setdefault("console", Console())
+
     stop_signal = stop_signal or Event()
     events_queue = queue.Queue()
     tag = (
@@ -796,8 +853,7 @@ def cfg(
 
     """
     # start rich console
-    if HAS_RICH:
-        globals()["console"] = Console()
+    globals().setdefault("console", Console())
 
     ret = _check_ret_struct(ret_struct)
     fromdict = fromdict or {}

@@ -1,6 +1,0 @@
-bandit
-black
-flake8
-ipdb
-pre-commit
-pytest
