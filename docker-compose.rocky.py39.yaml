@@ -68,7 +68,7 @@ services:
     hostname: 'salt-minion-nrp2'
     build:
       context: ..
-      dockerfile: salt_nornir/test/Dockerfile.minion
+      dockerfile: salt_nornir/test/Dockerfile.rocky.py39.minion
     environment:
       PROXY_ID: "nrp2"
     networks:
@@ -120,6 +120,26 @@ services:
       net1:
         ipv4_address: 10.0.1.5
 
+  salt-nornir-fakenos:
+    container_name: salt-nornir-fakenos
+    hostname: 'salt-nornir-fakenos'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.centos.py36.fakenos
+    volumes:
+      # bind fakenos inventory
+      - type: bind
+        source: ./test/fakenos_inventory/
+        target: /tmp/fakenos_inventory/
+      # bind FakeNOS packages for the ease of development/debugging
+      - type: bind
+        source: ../fakenos/fakenos/
+        target: /usr/local/lib/python3.6/site-packages/fakenos/
+    networks:
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.10
 networks:
   net0:
     ipam:

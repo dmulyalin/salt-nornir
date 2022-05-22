@@ -486,6 +486,7 @@ def init(opts, loader=None):
         },
     )
     nornir_data["salt_download_lock"] = multiprocessing.Lock()
+    nornir_data["tf_index_lock"] = multiprocessing.Lock()
     nornir_data["nornir_workers"] = opts["proxy"].get("nornir_workers", 3)
     for i in range(nornir_data["nornir_workers"]):
         nornir_data["nrs"].append(
@@ -1285,6 +1286,7 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
                 index=nornir_data["stats"]["proxy_minion_id"],
                 max_files=nornir_data["files_max_count"],
                 skip_failed=tf_skip_failed,
+                tf_index_lock=nornir_data["tf_index_lock"],
             )
         )
 
@@ -1564,6 +1566,10 @@ def run(task, loader, identity, name, nr, wkr_data, **kwargs):
     hcache = kwargs.pop("hcache", False)  # cache task results
     dcache = kwargs.pop("dcache", False)  # cache task results
     hosts_failed_prep = {}
+
+    # add tf_index_lock to control tf index access
+    if "tf_index_lock" in kwargs:
+        kwargs["tf_index_lock"] = nornir_data["tf_index_lock"]
 
     # only RetryRunner supports connection_name
     if nr.config.runner.plugin != "RetryRunner":

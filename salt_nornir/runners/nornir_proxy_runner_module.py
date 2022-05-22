@@ -59,6 +59,13 @@ import pprint
 import queue
 
 from threading import Thread, Event
+from salt_nornir.pydantic_models import (
+    model_runner_nr_inventory,
+    model_runner_nr_call,
+    model_runner_nr_event,
+    model_runner_nr_cfg,
+    SaltNornirMasterModel,
+)
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +86,7 @@ try:
     from nornir_salt.plugins.functions import TabulateFormatter
     from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
     from nornir_salt.utils import MakePlugin
+    from nornir_salt.utils.yangdantic import ValidateFuncArgs
 
     HAS_NORNIR = True
 except ImportError:
@@ -442,11 +450,12 @@ def _built_inventory_tree(inventory_data, nodes_data):
 # -----------------------------------------------------------------------------
 
 
+@ValidateFuncArgs(model_runner_nr_inventory)
 def inventory(*args, **kwargs):
     """
     Function to query inventory data for Nornir hosts and present it in various formats.
 
-    :param FB: glob pattern matching hostnames of devices behind Nornir
+    :param FB: first argument - glob pattern matching hostnames of devices behind Nornir
     :param Fx: additional filters to filter hosts, e.g. FG, FP, FL etc.
     :param tgt: nornir proxy minion target, by default targets all - "proxy:proxytype:nornir"
     :param tgt_type: SALT targeting type to use, by default "pillar"
@@ -504,12 +513,6 @@ def inventory(*args, **kwargs):
     # get hostname target
     if len(args) > 0:
         kwargs["FB"] = args[0]
-    elif not any(F in kwargs for F in FFun_functions):
-        raise CommandExecutionError(
-            "Nornir-runner:inventory - hosts filter not provided, args: '{}', kwargs: '{}'".format(
-                args, kwargs
-            )
-        )
 
     # get other arguments
     tgt = kwargs.pop("tgt", "proxy:proxytype:nornir")
@@ -572,6 +575,7 @@ def inventory(*args, **kwargs):
     return ret
 
 
+@ValidateFuncArgs(model_runner_nr_call)
 def call(*args, **kwargs):
     """
     Method to call any Nornir Proxy Minion Execution Module function against minions. By default this function
@@ -581,7 +585,7 @@ def call(*args, **kwargs):
     :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by default - ``proxy:proxytype:nornir``
     :param tgt_type: (str) SaltStack targeting type to use, default is ``pillar``
     :param job_retry: (int) how many times to retry if no results returned from all minions, default 0
-    :param timeout: (int) seconds to wait for results from minions before retry, default 300s
+    :param job_timeout: (int) seconds to wait for results from minions before retry, default 300s
     :param progress: progress display type to use - bars, raw, log, if False, no progress displayed
     :param ret_struct: results return structure, default is ``dictionary``, also can be ``list``
     :param args: (list) any other arguments to use with call function
@@ -598,7 +602,7 @@ def call(*args, **kwargs):
     fun = args.pop(0) if len(args) >= 1 else kwargs.pop("fun")
     tgt = kwargs.pop("tgt", "proxy:proxytype:nornir")
     tgt_type = kwargs.pop("tgt_type", "pillar")
-    timeout = kwargs.pop("timeout", 300)
+    job_timeout = kwargs.pop("job_timeout", 300)
     job_retry = kwargs.pop("job_retry", 0)
     progress = kwargs.pop("progress", "log")
 
@@ -616,7 +620,7 @@ def call(*args, **kwargs):
             "event_progress": True if progress else False,
         },
         tgt_type="list",
-        timeout=timeout,
+        timeout=job_timeout,
         job_retry=job_retry,
         progress=progress if isinstance(progress, str) else None,
         show_progress=True if progress else False,
@@ -627,6 +631,7 @@ def call(*args, **kwargs):
     return ret
 
 
+@ValidateFuncArgs(model_runner_nr_event)
 def event(jid="all", tag=None, progress="log", stop_signal=None):
     """
     Function to listen to events emitted by Nornir Proxy Minions. Matched
@@ -802,6 +807,7 @@ def event(jid="all", tag=None, progress="log", stop_signal=None):
             print(msg.format(**edata))
 
 
+@ValidateFuncArgs(model_runner_nr_cfg)
 def cfg(
     host_batch=0,
     first_batch=1,
@@ -884,10 +890,6 @@ def cfg(
                 fromdict[hostname] = f.read()
     elif fromdict:
         hosts = list(fromdict.keys())
-    else:
-        raise CommandExecutionError(
-            "nr.cfg runner expect 'fromdict' or 'fromdir' argument"
-        )
 
     # sort the hosts to make sure order is always the same
     hosts = sorted(hosts)
@@ -1008,3 +1010,10 @@ def service(*args, **kwargs):
         salt-run nr.service dry-run Loopback1234
     """
     pass
+
+
+def generate_bash_autocomplete(*args, **kwargs):
+    """
+    Function to generate bash autocompletion for Salt-Nornir functions
+    """
+    pprint(SaltNornirMasterModel.schema())

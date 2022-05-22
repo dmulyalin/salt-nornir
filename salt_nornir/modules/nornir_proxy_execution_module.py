@@ -2209,6 +2209,11 @@ def file(*args, **kwargs):
                 "exception",
             ],
         )
+    if kwargs["call"] in ["remove", "rm", "delete"]:
+        # add tf_index_lock in arguments, proxy module will replace it
+        # with actual multiprocessing Lock object, this is to control
+        # simeltenious access to filegroups index
+        kwargs["tf_index_lock"] = None
 
     return task(
         plugin="nornir_salt.plugins.tasks.files",

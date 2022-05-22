@@ -17,6 +17,7 @@ from pydantic import (
 )
 from typing import Union, Optional, List, Any, Dict
 from nornir_salt.utils.pydantic_models import FilesCallsEnum
+from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
 
 # import salt libs, wrapping it in try/except for docs to generate
 try:
@@ -43,16 +44,24 @@ class EnumExecTTPStructTypes(str, Enum):
 
 
 class ModelExecFxFilters(BaseModel):
-    FO: Optional[Union[Dict, List[Dict]]]
-    FB: Optional[Union[List[StrictStr], StrictStr]]
-    FH: Optional[Union[List[StrictStr], StrictStr]]
-    FC: Optional[Union[List[StrictStr], StrictStr]]
-    FR: Optional[Union[List[StrictStr], StrictStr]]
-    FG: Optional[StrictStr]
-    FP: Optional[Union[List[StrictStr], StrictStr]]
-    FL: Optional[Union[List[StrictStr], StrictStr]]
-    FM: Optional[Union[List[StrictStr], StrictStr]]
-    FN: Optional[StrictBool]
+    FO: Optional[Union[Dict, List[Dict]]] = Field(None, title="Filter Object")
+    FB: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter gloB")
+    FH: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, title="Filter Hostname"
+    )
+    FC: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, title="Filter Contains"
+    )
+    FR: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter Regex")
+    FG: Optional[StrictStr] = Field(None, title="Filter Group")
+    FP: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter Prefix")
+    FL: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter List")
+    FM: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, title="Filter platforM"
+    )
+    FN: Optional[StrictBool] = Field(
+        None, title="Filter Negate", description="Negate the match"
+    )
 
 
 class ModelExecCommonArgs(ModelExecFxFilters):
@@ -147,7 +156,7 @@ class EnumExecNrCfgPlugins(str, Enum):
 class model_exec_nr_cfg(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.cfg function arguments"""
 
-    commands: Union[List[StrictStr], StrictStr]
+    commands: Optional[Union[List[StrictStr], StrictStr]]
     plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
     filename: Optional[StrictStr]
     config: Optional[Union[Dict, StrictStr]]
@@ -463,3 +472,181 @@ class model_exec_nr_gnmi(ModelExecCommonArgs):
         if call == "help" and "method_name" not in values:
             raise CommandExecutionError("'help' need 'method_name' argument")
         return values
+
+
+class StateWorkflowOptions(BaseModel):
+    fail_if_any_host_fail_any_step: Optional[List[StrictStr]]
+    fail_if_any_host_fail_all_step: Optional[List[StrictStr]]
+    fail_if_all_host_fail_any_step: Optional[List[StrictStr]]
+    fail_if_all_host_fail_all_step: Optional[List[StrictStr]]
+    report_all: Optional[StrictBool]
+    filters: Optional[ModelExecFxFilters]
+    hcache: Optional[StrictBool]
+    dcache: Optional[StrictBool]
+    sumtable: Optional[Union[StrictBool, StrictStr]]
+    kwargs: Optional[Dict]
+
+    class Config:
+        extra = "forbid"
+
+
+class StateWorkflowStep(BaseModel):
+    name: StrictStr
+    function: StrictStr
+    kwargs: Optional[Dict]
+    args: Optional[List]
+    report: Optional[StrictBool]
+    run_if_fail_any: Optional[List[StrictStr]]
+    run_if_pass_any: Optional[List[StrictStr]]
+    run_if_fail_all: Optional[List[StrictStr]]
+    run_if_pass_all: Optional[List[StrictStr]]
+
+    class Config:
+        extra = "forbid"
+
+
+class model_state_nr_workflow(BaseModel):
+    """Model for salt_nornir.states.nornir_proxy_state_module.workflow function arguments"""
+
+    state_name: StrictStr
+    options: StateWorkflowOptions
+    steps: Dict[StrictStr, List[StateWorkflowStep]]
+
+    class Config:
+        extra = "forbid"
+
+
+class model_runner_nr_inventory(ModelExecFxFilters):
+    """Model for salt_nornir.states.nornir_proxy_runner_module.inventory function arguments"""
+
+    args: Optional[List[StrictStr]]
+    tgt: Optional[StrictStr]
+    tgt_type: Optional[StrictStr]
+    verbose: Optional[StrictBool]
+    job_retry: Optional[StrictInt]
+    job_timeout: Optional[StrictInt]
+    table: Optional[Union[StrictStr, StrictBool, Dict]]
+    headers: Optional[List[StrictStr]]
+    reverse: Optional[StrictBool]
+    sortby: Optional[StrictStr]
+    tree: Optional[StrictBool]
+
+    class Config:
+        extra = "forbid"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        if not (values.get("args") or any(F in values for F in FFun_functions)):
+            raise CommandExecutionError("No host filter provided")
+        return values
+
+
+class RunnerProgressTypes(str, Enum):
+    bars = "bars"
+    raw = "raw"
+    log = "log"
+    tree = "tree"
+
+
+class RunnerRetStructTypes(str, Enum):
+    struct_dict = "dictionary"
+    struct_list = "list"
+
+
+class model_runner_nr_call(ModelExecFxFilters):
+    """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
+
+    args: Optional[List[StrictStr]]
+    fun: Optional[StrictStr]
+    tgt: Optional[StrictStr]
+    tgt_type: Optional[StrictStr]
+    job_retry: Optional[StrictInt]
+    job_timeout: Optional[StrictInt]
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
+    ret_struct: Optional[RunnerRetStructTypes]
+
+    class Config:
+        extra = "allow"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        if not values.get("args") and "fun" not in values:
+            raise CommandExecutionError("No execution function name provided")
+        return values
+
+
+class model_runner_nr_event(BaseModel):
+    """Model for salt_nornir.states.nornir_proxy_runner_module.event function arguments"""
+
+    tag: Optional[StrictStr]
+    jid: Optional[Union[StrictStr, StrictInt]]
+    stop_signal: Optional[Any]
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
+
+    class Config:
+        extra = "forbid"
+
+
+class model_runner_nr_cfg(ModelExecFxFilters):
+    """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
+
+    host_batch: Optional[StrictInt]
+    first_batch: Optional[StrictInt]
+    fromdir: Optional[StrictStr]
+    fromdict: Optional[Dict[StrictStr, StrictStr]]
+    tgt: Optional[StrictStr]
+    tgt_type: Optional[StrictStr]
+    job_retry: Optional[StrictInt]
+    job_timeout: Optional[StrictInt]
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
+    saltenv: Optional[StrictStr]
+    ret_struct: Optional[RunnerRetStructTypes]
+    interactive: Optional[StrictBool]
+    dry_run: Optional[StrictBool]
+
+    class Config:
+        extra = "allow"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        if not any(i in values for i in ["fromdir", "fromdict"]):
+            raise CommandExecutionError(
+                "nr.cfg runner need 'fromdict' or 'fromdir' argument"
+            )
+        return values
+
+
+class SaltNornirExecutionFunctions(BaseModel):
+    cli: model_exec_nr_cli
+    tas: model_exec_nr_task
+    cfg: model_exec_nr_cfg
+    tping: model_exec_nr_tping
+    test: model_exec_nr_test
+    nc: model_exec_nr_nc
+    http: model_exec_nr_http
+    do: model_exec_nr_do
+    file: model_exec_nr_file
+    learn: model_exec_nr_learn
+    find: model_exec_nr_find
+    diff: model_exec_nr_diff
+    nornir_fun: model_exec_nr_nornir_fun
+    gnmi: model_exec_nr_gnmi
+
+
+class SaltNornirStateFunctions(BaseModel):
+    task: model_exec_nr_task
+    cfg: model_exec_nr_cfg
+    workflow: model_state_nr_workflow
+
+
+class SaltNornirRunnerFunctions(BaseModel):
+    inventory: model_runner_nr_inventory
+    call: model_runner_nr_call
+    event: model_runner_nr_event
+    cfg: model_runner_nr_cfg
+
+
+class SaltNornirMasterModel(BaseModel):
+    execution: SaltNornirExecutionFunctions
+    state: SaltNornirStateFunctions
+    runner: SaltNornirRunnerFunctions

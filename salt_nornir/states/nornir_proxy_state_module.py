@@ -97,8 +97,15 @@ except:
 
 try:
     from nornir_salt.plugins.functions import TabulateFormatter
+    from nornir_salt.utils.yangdantic import ValidateFuncArgs
 except:
     log.error("Nornir Proxy Module - failed importing SALT libraries")
+
+from salt_nornir.pydantic_models import (
+    model_exec_nr_task,
+    model_exec_nr_cfg,
+    model_state_nr_workflow,
+)
 
 # -----------------------------------------------------------------------------
 # globals
@@ -146,6 +153,7 @@ def _form_identity(function_name):
 # -----------------------------------------------------------------------------
 
 
+@ValidateFuncArgs(model_exec_nr_cfg)
 def cfg(*args, **kwargs):
     """
     Configure devices using Nornir execution module ``nr.cfg`` function.
@@ -196,6 +204,7 @@ def cfg(*args, **kwargs):
     return ret
 
 
+@ValidateFuncArgs(model_exec_nr_task)
 def task(*args, **kwargs):
     """
     Interact with devices using ``nr.task`` Execution Module function.
@@ -784,6 +793,10 @@ def workflow(*args, **kwargs):
     steps_failed, steps_passed = {}, {}
     options = kwargs.pop("options", {})
     state_name = kwargs.pop("name")
+
+    # run validation of arguments and options
+    _ = model_state_nr_workflow(state_name=state_name, options=options, steps=kwargs)
+
     common_filters = options.get("filters", {})
     common_kwargs = options.get("kwargs", {})
     hcache = options.get("hcache", True)
