@@ -1015,19 +1015,20 @@ netmiko = ">=3.4.0,<4.0.0"
 
 [[package]]
 name = "nornir-salt"
-version = "0.10.1"
-description = "Nornir plugins used with SALTSTACK"
+version = "0.11.0"
+description = "Nornir plugins used with SaltStack Salt-Nornir Proxy Minion"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.6.5,<3.11"
 
 [package.dependencies]
-nornir = ">=3.0.0,<4.0.0"
+nornir = "3.2.0"
+pydantic = ">=1.9.0,<1.10.0"
 
 [package.extras]
-dev = ["bandit", "black", "flake8", "ipdb", "pre-commit", "pyenchant", "pylint", "pytest", "cerberus (==1.3.4)", "jmespath (==0.10.0)", "napalm (==3.3.1)", "ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir (==3.2.0)", "nornir-napalm (==0.1.2)", "nornir-netmiko (==0.1.2)", "nornir-scrapli (==2021.7.30)", "ntc-templates (>=1.7.0)", "paramiko (==2.9.2)", "pygnmi (==0.6.8)", "pyyaml (==6.0)", "requests (==2.27.1)", "scrapli (==2021.7.30)", "scrapli-community (==2021.7.30)", "scrapli-netconf (==2022.1.30a1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (==0.1.3)", "xmltodict (==0.12.0)", "genie (==22.1)", "pyats (==22.1)"]
-prodmax = ["cerberus (==1.3.4)", "jmespath (==0.10.0)", "napalm (==3.3.1)", "ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir (==3.2.0)", "nornir-napalm (==0.1.2)", "nornir-netmiko (==0.1.2)", "nornir-scrapli (==2021.7.30)", "ntc-templates (>=1.7.0)", "paramiko (==2.9.2)", "pygnmi (==0.6.8)", "pyyaml (==6.0)", "requests (==2.27.1)", "scrapli (==2021.7.30)", "scrapli-community (==2021.7.30)", "scrapli-netconf (==2022.1.30a1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (==0.1.3)", "xmltodict (==0.12.0)", "genie (==22.1)", "pyats (==22.1)"]
-prodmin = ["ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir (==3.2.0)", "nornir-netmiko (==0.1.2)", "paramiko (==2.9.2)", "requests (==2.27.1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (==0.1.3)", "xmltodict (==0.12.0)"]
+prodmax = ["cerberus (==1.3.4)", "genie (==22.1)", "jmespath (==0.10.0)", "napalm (==3.3.1)", "ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir-napalm (==0.1.2)", "nornir-netmiko (==0.1.2)", "nornir-scrapli (==2021.7.30)", "ntc-templates (>=1.7.0,<2.0.0)", "paramiko (==2.9.2)", "pyats (==22.1)", "pygnmi (==0.6.8)", "pyyaml (==6.0)", "requests (==2.27.1)", "scrapli (==2021.7.30)", "scrapli-community (==2021.7.30)", "scrapli-netconf (==2022.1.30a1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (>=0.1.0,<0.2.0)", "xmltodict (==0.12.0)"]
+prodmin = ["ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir-netmiko (==0.1.2)", "paramiko (==2.9.2)", "requests (==2.27.1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (>=0.1.0,<0.2.0)", "xmltodict (==0.12.0)"]
+docs = ["readthedocs-sphinx-search (==0.1.1)", "Sphinx (==4.3.0)", "sphinx_rtd_theme (==1.0.0)", "sphinxcontrib-applehelp (==1.0.1)", "sphinxcontrib-devhelp (==1.0.1)", "sphinxcontrib-htmlhelp (==2.0.0)", "sphinxcontrib-jsmath (==1.0.1)", "sphinxcontrib-napoleon (==0.7)", "sphinxcontrib-qthelp (==1.0.2)", "sphinxcontrib-serializinghtml (==1.1.5)", "sphinxcontrib-spelling (==7.2.1)"]
 
 [[package]]
 name = "nornir-scrapli"
@@ -2319,7 +2320,7 @@ prodmin = ["ncclient", "netmiko", "nornir-netmiko", "paramiko", "requests", "ric
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.6.5,<3.11"
-content-hash = "2a76fffdad3bae50783faab7c446de670c7152daebeeb250736a8c00e38c2e19"
+content-hash = "41792597979becbe14983fa7376a8a7949637236cac4f378b3be99c281313b20"
 
 [metadata.files]
 aiocontextvars = [
@@ -3274,7 +3275,8 @@ nornir-netmiko = [
     {file = "nornir_netmiko-0.1.2.tar.gz", hash = "sha256:19688c6d0f964ffce623d732f3cc1dfa8f944611278209f9be103aacaeb454b5"},
 ]
 nornir-salt = [
-    {file = "nornir_salt-0.10.1.tar.gz", hash = "sha256:d2ff60a844c656ae8b6b0df50a1bd3e59cb5c40a3570a9ba21851538ecb4f776"},
+    {file = "nornir_salt-0.11.0-py3-none-any.whl", hash = "sha256:2aea3472107c60557d6e82da0fcf126de114be576b9527b66033781a71b44744"},
+    {file = "nornir_salt-0.11.0.tar.gz", hash = "sha256:3f8868a565fd62d3b3e9ae54d477fd868882232036ab6f31cf546ef543ad1c28"},
 ]
 nornir-scrapli = [
     {file = "nornir_scrapli-2021.7.30-py3-none-any.whl", hash = "sha256:22cf231631cb113a1b841093e618ae4a029a90a19f5c651b96c0734f2e8d97ba"},

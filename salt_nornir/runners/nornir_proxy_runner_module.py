@@ -899,7 +899,11 @@ def cfg(
     host_batch = len(hosts) if host_batch == 0 else min(host_batch, len(hosts))
     batches_num = len(hosts) / host_batch
     # account for cases like 7 / 3 when one extra batch required
-    batches_num = round(batches_num) if round(batches_num) == batches_num else round(batches_num) + 1
+    batches_num = (
+        round(batches_num)
+        if round(batches_num) == batches_num
+        else round(batches_num) + 1
+    )
     first_batch = min(first_batch, batches_num)
 
     # send config to devices

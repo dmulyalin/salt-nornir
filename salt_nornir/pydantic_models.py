@@ -583,7 +583,7 @@ class model_runner_nr_cfg(ModelExecCommonArgs):
     interactive: Optional[StrictBool]
     dry_run: Optional[StrictBool]
     plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
-        
+
     class Config:
         extra = "allow"
 
@@ -598,13 +598,13 @@ class model_runner_nr_cfg(ModelExecCommonArgs):
 
 class SaltNornirProxyType(str, Enum):
     nornir = "nornir"
-    
-    
+
+
 class SaltNornirProxyMemAction(str, Enum):
     log = "log"
     restart = "restart"
-    
-    
+
+
 class model_nornir_config_proxy(BaseModel):
     """Model for Salt-Nornir Proxy Minion configuration proxy attributes"""
 
@@ -618,7 +618,7 @@ class model_nornir_config_proxy(BaseModel):
     job_wait_timeout: Optional[StrictInt] = 600
     memory_threshold_mbyte: Optional[StrictInt] = 300
     memory_threshold_action: Optional[SaltNornirProxyMemAction] = "log"
-    files_base_path: Optional[StrictStr]  = "/var/salt-nornir/{proxy_id}/files/"
+    files_base_path: Optional[StrictStr] = "/var/salt-nornir/{proxy_id}/files/"
     files_max_count: Optional[StrictInt] = 5
     event_progress_all: Optional[StrictBool] = False
     nr_cli: Optional[Dict] = {}
@@ -629,16 +629,17 @@ class model_nornir_config_proxy(BaseModel):
 
     class Config:
         extra = "allow"
-        
+
+
 class model_nornir_config(BaseModel):
     """Model for Salt-Nornir Proxy Minion configuration attributes"""
-    
+
     proxy: model_nornir_config_proxy
     hosts: Optional[Dict]
     groups: Optional[Dict]
     defaults: Optional[Dict]
-        
-        
+
+
 class SaltNornirExecutionFunctions(BaseModel):
     cli: model_exec_nr_cli
     tas: model_exec_nr_task
@@ -674,4 +675,3 @@ class SaltNornirMasterModel(BaseModel):
     state: SaltNornirStateFunctions
     runner: SaltNornirRunnerFunctions
     config: model_nornir_config
-    

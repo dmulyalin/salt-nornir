@@ -460,7 +460,7 @@ def init(opts, loader=None):
         proxy=opts["proxy"],
         hosts=opts["pillar"].get("hosts"),
         groups=opts["pillar"].get("groups"),
-        defaults=opts["pillar"].get("defaults"),        
+        defaults=opts["pillar"].get("defaults"),
     )
     opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
     opts["process_count_max"] = opts["proxy"].get("process_count_max", -1)
