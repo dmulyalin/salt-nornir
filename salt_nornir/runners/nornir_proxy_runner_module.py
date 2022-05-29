@@ -891,13 +891,15 @@ def cfg(
     elif fromdict:
         hosts = list(fromdict.keys())
 
-    # sort the hosts to make sure order is always the same
-    hosts = sorted(hosts)
-    # get a dictionary keyed by hosts with minions lists
-    hosts_minions = _get_hosts_minions(hosts, tgt, tgt_type)
+    # get a dictionary keyed by filtered hosts with minions lists
+    hosts_minions = _get_hosts_minions({**kwargs, "FL": hosts}, tgt, tgt_type)
+    # sort filtered hosts to make sure order is always the same
+    hosts = sorted(hosts_minions.keys())
     # calculate hosts batch size, number of batches and first batch
     host_batch = len(hosts) if host_batch == 0 else min(host_batch, len(hosts))
-    batches_num = round(len(hosts) / host_batch)
+    batches_num = len(hosts) / host_batch
+    # account for cases like 7 / 3 when one extra batch required
+    batches_num = round(batches_num) if round(batches_num) == batches_num else round(batches_num) + 1
     first_batch = min(first_batch, batches_num)
 
     # send config to devices
@@ -972,6 +974,7 @@ def cfg(
                         console.print(f"[bold green]--- {minion_id} ---[/]")
                         console.print(result["ret"])
         _form_ret_results(ret, job_results, ret_struct)
+    console.rule("Done", style="green")
     return ret
 
 

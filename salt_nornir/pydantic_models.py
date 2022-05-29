@@ -16,7 +16,7 @@ from pydantic import (
     conlist,
 )
 from typing import Union, Optional, List, Any, Dict
-from nornir_salt.utils.pydantic_models import FilesCallsEnum
+from nornir_salt.utils.pydantic_models import FilesCallsEnum, model_ffun_fx_filters
 from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
 
 # import salt libs, wrapping it in try/except for docs to generate
@@ -43,28 +43,7 @@ class EnumExecTTPStructTypes(str, Enum):
     ttp_res_struct_flat_list = "flat_list"
 
 
-class ModelExecFxFilters(BaseModel):
-    FO: Optional[Union[Dict, List[Dict]]] = Field(None, title="Filter Object")
-    FB: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter gloB")
-    FH: Optional[Union[List[StrictStr], StrictStr]] = Field(
-        None, title="Filter Hostname"
-    )
-    FC: Optional[Union[List[StrictStr], StrictStr]] = Field(
-        None, title="Filter Contains"
-    )
-    FR: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter Regex")
-    FG: Optional[StrictStr] = Field(None, title="Filter Group")
-    FP: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter Prefix")
-    FL: Optional[Union[List[StrictStr], StrictStr]] = Field(None, title="Filter List")
-    FM: Optional[Union[List[StrictStr], StrictStr]] = Field(
-        None, title="Filter platforM"
-    )
-    FN: Optional[StrictBool] = Field(
-        None, title="Filter Negate", description="Negate the match"
-    )
-
-
-class ModelExecCommonArgs(ModelExecFxFilters):
+class ModelExecCommonArgs(model_ffun_fx_filters):
     render: Optional[Union[List[StrictStr], StrictStr]]
     context: Optional[Dict]
     dcache: Optional[Union[StrictStr, StrictBool]]
@@ -362,7 +341,7 @@ class model_exec_nr_learn(ModelExecCommonArgs):
         return values
 
 
-class model_exec_nr_find(ModelExecFxFilters):
+class model_exec_nr_find(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.find function arguments"""
 
     args: conlist(StrictStr, min_items=1)
@@ -383,7 +362,7 @@ class model_exec_nr_find(ModelExecFxFilters):
         return values
 
 
-class model_exec_nr_diff(ModelExecFxFilters):
+class model_exec_nr_diff(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.find function arguments"""
 
     args: Optional[List[StrictStr]]
@@ -423,7 +402,7 @@ class EnumNrFun(str, Enum):
     fun_results_queue_dump = "results_queue_dump"
 
 
-class model_exec_nr_nornir_fun(ModelExecFxFilters):
+class model_exec_nr_nornir_fun(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.nornir_fun function arguments"""
 
     args: Optional[List[StrictStr]]
@@ -480,7 +459,7 @@ class StateWorkflowOptions(BaseModel):
     fail_if_all_host_fail_any_step: Optional[List[StrictStr]]
     fail_if_all_host_fail_all_step: Optional[List[StrictStr]]
     report_all: Optional[StrictBool]
-    filters: Optional[ModelExecFxFilters]
+    filters: Optional[model_ffun_fx_filters]
     hcache: Optional[StrictBool]
     dcache: Optional[StrictBool]
     sumtable: Optional[Union[StrictBool, StrictStr]]
@@ -516,7 +495,7 @@ class model_state_nr_workflow(BaseModel):
         extra = "forbid"
 
 
-class model_runner_nr_inventory(ModelExecFxFilters):
+class model_runner_nr_inventory(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.inventory function arguments"""
 
     args: Optional[List[StrictStr]]
@@ -553,7 +532,7 @@ class RunnerRetStructTypes(str, Enum):
     struct_list = "list"
 
 
-class model_runner_nr_call(ModelExecFxFilters):
+class model_runner_nr_call(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
 
     args: Optional[List[StrictStr]]
@@ -587,7 +566,7 @@ class model_runner_nr_event(BaseModel):
         extra = "forbid"
 
 
-class model_runner_nr_cfg(ModelExecFxFilters):
+class model_runner_nr_cfg(ModelExecCommonArgs):
     """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
 
     host_batch: Optional[StrictInt]
@@ -603,7 +582,8 @@ class model_runner_nr_cfg(ModelExecFxFilters):
     ret_struct: Optional[RunnerRetStructTypes]
     interactive: Optional[StrictBool]
     dry_run: Optional[StrictBool]
-
+    plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
+        
     class Config:
         extra = "allow"
 
@@ -616,6 +596,49 @@ class model_runner_nr_cfg(ModelExecFxFilters):
         return values
 
 
+class SaltNornirProxyType(str, Enum):
+    nornir = "nornir"
+    
+    
+class SaltNornirProxyMemAction(str, Enum):
+    log = "log"
+    restart = "restart"
+    
+    
+class model_nornir_config_proxy(BaseModel):
+    """Model for Salt-Nornir Proxy Minion configuration proxy attributes"""
+
+    proxytype: SaltNornirProxyType
+    process_count_max: Optional[StrictInt] = 3
+    multiprocessing: Optional[StrictBool] = True
+    nornir_filter_required: Optional[StrictBool] = False
+    connections_idle_timeout: Optional[StrictInt] = 1
+    watchdog_interval: Optional[StrictInt] = 30
+    child_process_max_age: Optional[StrictInt] = 660
+    job_wait_timeout: Optional[StrictInt] = 600
+    memory_threshold_mbyte: Optional[StrictInt] = 300
+    memory_threshold_action: Optional[SaltNornirProxyMemAction] = "log"
+    files_base_path: Optional[StrictStr]  = "/var/salt-nornir/{proxy_id}/files/"
+    files_max_count: Optional[StrictInt] = 5
+    event_progress_all: Optional[StrictBool] = False
+    nr_cli: Optional[Dict] = {}
+    nr_cfg: Optional[Dict] = {}
+    nr_nc: Optional[Dict] = {}
+    runner: Optional[Dict] = {}
+    inventory: Optional[Dict] = {}
+
+    class Config:
+        extra = "allow"
+        
+class model_nornir_config(BaseModel):
+    """Model for Salt-Nornir Proxy Minion configuration attributes"""
+    
+    proxy: model_nornir_config_proxy
+    hosts: Optional[Dict]
+    groups: Optional[Dict]
+    defaults: Optional[Dict]
+        
+        
 class SaltNornirExecutionFunctions(BaseModel):
     cli: model_exec_nr_cli
     tas: model_exec_nr_task
@@ -650,3 +673,5 @@ class SaltNornirMasterModel(BaseModel):
     execution: SaltNornirExecutionFunctions
     state: SaltNornirStateFunctions
     runner: SaltNornirRunnerFunctions
+    config: model_nornir_config
+    
