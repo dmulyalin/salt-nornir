@@ -95,12 +95,12 @@ Nornir Salt Dependency
 ======================
 
 Salt-Nornir and Nornir-Salt uses SemVer approach for version numbering following
-this naming convention ``<major number>.<minor number>.<maintenance number>`` for example 
-``0.11.1``,  ``1.2.3`` etc. 
+this naming convention ``<major number>.<minor number>.<maintenance number>`` for example
+``0.11.1``,  ``1.2.3`` etc.
 
-Main dependency for Salt-Nornir is `nornir-salt package <https://pypi.org/project/nornir-salt/>`_, 
+Main dependency for Salt-Nornir is `nornir-salt package <https://pypi.org/project/nornir-salt/>`_,
 it must be of the same major and minor versions as ``salt-nornir`` package itself. For example,
-compatible Salt-Nornir and Nornir-Salt versions are ``0.11.*``, on the other hand Salt-Nornir 
+compatible Salt-Nornir and Nornir-Salt versions are ``0.11.*``, on the other hand Salt-Nornir
 of version ``0.11.0`` is not compatible with Nornir-Salt ``0.8.0``.
 
 Upgrade Procedure
@@ -109,11 +109,11 @@ Upgrade Procedure
 Uninstall existing packages:
 
     python3 -m pip uninstall nornir-salt salt-nornir
-    
+
 Install updated packages::
 
     python3 -m pip install nornir-salt salt-nornir --upgrade
-    
+
 Optionally, upgrade sets of extras libraries:
 
     python3 -m pip install salt-nornir[extras-name-here] --upgrade
