@@ -25,6 +25,8 @@ module, ``salt-nornir`` should be installed on Salt Master machine as well.
 For installation of SaltStack master and minion/proxy-minion modules
 refer to `official documentation <https://repo.saltproject.io/>`_.
 
+.. warning:: Python 3.6 support deprecated starting with version 0.12.0.
+
 Installation extras
 ===================
 
@@ -48,6 +50,23 @@ Salt-Nornir comes with these installation extras.
        additional modules required to support complete Salt-Nornir feature set such as
        PyGNMI, PyATS, Scrapli, NAPALM etc. All libraries have versions fixed to produce
        tested and working environment.
+   * - ``netmiko``
+     - Installs these libraries: netmiko, nornir-netmiko
+   * - ``napalm``
+     - Installs these libraries: napalm, nornir-napalm
+   * - ``scrapli``
+     - Installs these libraries: scrapli, scrapli-community
+   * - ``pyats``
+     - Installs these libraries: genie, pyats
+   * - ``netconf``
+     - Installs these libraries: ncclient, scrapli-netconf
+   * - ``gnmi``
+     - Installs these libraries:  pygnmi
+   * - ``restconf``
+     - Installs these libraries:  requests
+   * - ``dataprocessor``
+     - Installs these libraries: cerberus, jmespath, ntc-templates, pyyaml, tabulate, ttp,
+       ttp-templates, xmltodict, lxml
 
 To install Salt-Nornir only, without any additional plugins::
 
@@ -75,24 +94,29 @@ Other SaltStack versions might work too, but not tested.
 Nornir Salt Dependency
 ======================
 
-Main dependency is `nornir-salt package <https://pypi.org/project/nornir-salt/>`_, it is
-must be of the same major and minor versions as ``salt-nornir`` package.
+Salt-Nornir and Nornir-Salt uses SemVer approach for version numbering following
+this naming convention ``<major number>.<minor number>.<maintenance number>`` for example 
+``0.11.1``,  ``1.2.3`` etc. 
 
-Compatible versions
-
-+--------------+--------+--------+-------+-------+-------+-------+-------+-------+-------+
-| salt-nornir  | 0.11.* | 0.10.* | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
-+--------------+--------+--------+-------+-------+-------+-------+-------+-------+-------+
-| nornir-salt  | 0.11.* | 0.10.* | 0.9.* | 0.8.* | 0.7.* | 0.6.* | 0.5.* | 0.4.* | 0.3.* |
-+--------------+--------+--------+-------+-------+-------+-------+-------+-------+-------+
+Main dependency for Salt-Nornir is `nornir-salt package <https://pypi.org/project/nornir-salt/>`_, 
+it must be of the same major and minor versions as ``salt-nornir`` package itself. For example,
+compatible Salt-Nornir and Nornir-Salt versions are ``0.11.*``, on the other hand Salt-Nornir 
+of version ``0.11.0`` is not compatible with Nornir-Salt ``0.8.0``.
 
 Upgrade Procedure
 =================
 
+Uninstall existing packages:
+
+    python3 -m pip uninstall nornir-salt salt-nornir
+    
 Install updated packages::
 
-    python3 -m pip install nornir-salt --upgrade
-    python3 -m pip install salt-nornir --upgrade
+    python3 -m pip install nornir-salt salt-nornir --upgrade
+    
+Optionally, upgrade sets of extras libraries:
+
+    python3 -m pip install salt-nornir[extras-name-here] --upgrade
 
 Restart your proxy minions to pick up updated version.
 

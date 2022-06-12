@@ -1,7 +1,7 @@
-FROM centos:7
+FROM rockylinux:8.5
 
 # install misc libs
-RUN yum install -y python3 nano tree
+RUN dnf install -y python3.9 nano tree
 
 # do python libs installation
 RUN python3 -m pip install pip --upgrade

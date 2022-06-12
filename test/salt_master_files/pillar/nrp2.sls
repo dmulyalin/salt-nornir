@@ -17,7 +17,7 @@ hosts:
               os: iosxe
               connections:
                 default:
-                  ip: 131.226.217.143
+                  ip: sandbox-iosxe-latest-1.cisco.com
                   protocol: ssh
                   port: 22
       http:
@@ -65,6 +65,16 @@ hosts:
           auth_strict_key: False
           transport_options: 
             netconf_force_pty: False
+      pyats:
+        extras:
+          devices:
+            iosxr1:
+              os: iosxr
+              connections:
+                default:
+                  ip: sandbox-iosxr-1.cisco.com
+                  protocol: ssh
+                  port: 22 
   nxos1:
     hostname: sandbox-nxos-1.cisco.com
     platform: nxos_ssh
@@ -86,4 +96,13 @@ hosts:
           auth_strict_key: False
           transport_options: 
             netconf_force_pty: False            
-            
+      pyats:
+        extras:
+          devices:
+            nxos1:
+              os: nxos
+              connections:
+                default:
+                  ip: sandbox-nxos-1.cisco.com
+                  protocol: ssh
+                  port: 22            

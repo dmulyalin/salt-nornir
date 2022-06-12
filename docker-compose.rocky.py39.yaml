@@ -126,7 +126,7 @@ services:
     privileged: true
     build:
       context: ..
-      dockerfile: salt_nornir/test/Dockerfile.centos.py36.fakenos
+      dockerfile: salt_nornir/test/Dockerfile.rocky.py39.fakenos
     volumes:
       # bind fakenos inventory
       - type: bind
@@ -135,7 +135,7 @@ services:
       # bind FakeNOS packages for the ease of development/debugging
       - type: bind
         source: ../fakenos/fakenos/
-        target: /usr/local/lib/python3.6/site-packages/fakenos/
+        target: /usr/local/lib/python3.9/site-packages/fakenos/
     networks:
       ceos-dummy: {}
       net1:

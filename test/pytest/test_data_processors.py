@@ -79,13 +79,9 @@ def test_ttp_parser_from_ttp_templates_using_platform():
         tgt_type="glob",
         timeout=60,
     )
-    pprint.pprint(ret)
-    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"], list)
-    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"], list)
-    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"][0], list)
-    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"][0], list)    
-    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"][0][0], dict)
-    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"][0][0], dict)  
+    pprint.pprint(ret)  
+    assert isinstance(ret["nrp1"]["ceos1"]["show hostname"][0][0][0], dict)
+    assert isinstance(ret["nrp1"]["ceos2"]["show hostname"][0][0][0], dict)  
     
 # test_ttp_parser_from_ttp_templates_using_platform()
 

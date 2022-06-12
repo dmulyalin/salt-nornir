@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "salt_nornir"
-version = "0.11.0"
+version = "0.12.0"
 description = "Salt-Nornir Proxy Minion SaltStack Modules"
 authors = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
 maintainers = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
@@ -23,35 +23,37 @@ classifiers = [
 
 [tool.poetry.dependencies]
 # mandatory dependencies
-python = ">=3.6.5,<3.11"
-nornir = "3.2.0"
-pydantic = "1.9.*"
-nornir_salt = "0.11.*"
+python = ">=3.7,<4.0"
+nornir = "3.3.0"
+pydantic = "1.9.1"
+nornir_salt = "0.12.*"
 
 # optional dependencies for extras definition
 cerberus = { version = "1.3.4", optional = true }
 genie = { version = "22.1", markers = "sys_platform != 'win32'", optional = true }
-jmespath = { version = "0.10.0", optional = true }
-napalm = { version = "3.3.1", optional = true }
+jmespath = { version = "1.0.0", optional = true }
+napalm = { version = "3.4.1", optional = true }
 ncclient = { version = "0.6.9", optional = true }
 netmiko = { version = "3.4.0", optional = true }
-nornir-napalm = { version = "0.1.2", optional = true }
+nornir-napalm = { version = "0.2.0", optional = true }
 nornir-netmiko = { version = "0.1.2", optional = true }
-nornir-scrapli = { version = "2021.7.30", optional = true }
+nornir-scrapli = { version = "2022.1.30", optional = true }
 ntc-templates = { version = "^1.7.0", optional = true }
-paramiko = { version = "2.9.2", optional = true }
+paramiko = { version = "2.11.0", optional = true }
 pyats = { version = "22.1", markers = "sys_platform != 'win32'", optional = true }
-pygnmi = { version = "0.6.8", optional = true }
+pygnmi = { version = "0.6.9", optional = true }
 pyyaml = { version = "6.0", optional = true }
 requests = { version = "2.27.1", optional = true }
 rich = { version = "11.2.0", optional = true }
-scrapli = { version = "2021.7.30", optional = true }
-scrapli-community = { version = "2021.7.30", optional = true }
-scrapli-netconf = { version = "2022.1.30a1", optional = true }
+scrapli = { version = "2022.1.30", optional = true }
+scrapli-community = { version = "2022.1.30", optional = true }
+scrapli-netconf = { version = "2022.1.30", optional = true }
 tabulate = { version = "0.8.9", optional = true }
 ttp = { version = "0.8.4", optional = true }
 ttp-templates = { version = "0.1.*", optional = true }
-xmltodict = { version = "0.12.0", optional = true }
+xmltodict = { version = "0.13.0", optional = true }
+lxml = { version = "4.8.0", optional = true }
+jinja2 = { version = "3.0.3", optional = true }
 
 # docs dependencies for extras definition
 readthedocs-sphinx-search = { version = "0.1.1", optional = true }
@@ -91,6 +93,7 @@ prodmin = [
     "ttp",
     "ttp-templates",
     "xmltodict",
+    "jinja2",
 ]
 prodmax = [
     "cerberus",
@@ -116,6 +119,7 @@ prodmax = [
     "ttp",
     "ttp-templates",
     "xmltodict",
+    "jinja2"
 ]
 docs = [
     "readthedocs-sphinx-search",
@@ -129,6 +133,43 @@ docs = [
     "sphinxcontrib-qthelp",
     "sphinxcontrib-serializinghtml",
     "sphinxcontrib-spelling",
+]
+netmiko = [
+    "netmiko",
+    "nornir-netmiko"
+]
+napalm = [
+    "napalm",
+    "nornir-napalm"
+]
+scrapli = [
+    "scrapli",
+    "scrapli-community",
+]
+pyats = [
+    "genie",
+    "pyats"
+]
+netconf = [
+    "ncclient",
+    "scrapli-netconf",
+]
+gnmi = [
+    "pygnmi"
+]
+restconf = [
+    "requests"
+]
+dataprocessor = [
+    "cerberus",
+    "jmespath",
+    "ntc-templates",
+    "pyyaml",
+    "tabulate",
+    "ttp",
+    "ttp-templates",
+    "xmltodict",
+    "lxml"
 ]
 
 [tool.poetry.plugins."salt.loader"]
