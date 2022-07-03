@@ -630,6 +630,60 @@ class model_nornir_config_proxy(BaseModel):
     class Config:
         extra = "allow"
 
+        
+class EnumN2GDataPlugins(str, Enum):
+    L2 = "L2"
+    IP = "IP"
+    OSPF = "OSPF"
+    ISIS = "ISIS"
+
+    
+class EnumN2GDiagramPlugins(str, Enum):
+    yed = "yed"
+    drawio = "drawio"
+    v3d = "v3d"
+    
+    
+class model_runner_nr_diagram(model_ffun_fx_filters):
+    """Model for salt_nornir.states.nornir_proxy_runner_module.diagramm function arguments"""
+
+    args: Optional[List[StrictStr]]
+    data_plugin: Optional[EnumN2GDataPlugins]
+    diagram_plugin: Optional[EnumN2GDiagramPlugins]
+    tgt: Optional[StrictStr]
+    tgt_type: Optional[StrictStr]
+    job_retry: Optional[StrictInt]
+    job_timeout: Optional[StrictInt]
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
+    save_data: Optional[StrictBool]
+    outfile: Optional[StrictStr]
+    cli: Optional[Dict[StrictStr, Any]]
+        
+    class Config:
+        extra = "allow"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        data_plugin = values["args"][0] if len(values.get("args", [])) >= 1 else values.get("data_plugin")
+        diagram_plugin = values["args"][1] if len(values["args"]) == 2 else values.pop("diagram_plugin", "yed")
+        if not data_plugin:
+            raise CommandExecutionError("No data plugin name provided")
+        if not any(data_plugin == i.value for i in EnumN2GDataPlugins):
+            raise CommandExecutionError(
+                "Unsupported N2G data plugin '{}', supported {}".format(
+                    data_plugin, 
+                    ", ".join([i.value for i in EnumN2GDataPlugins])
+                )
+            )
+        if not any(diagram_plugin == i.value for i in EnumN2GDiagramPlugins):
+            raise CommandExecutionError(
+                "Unsupported N2G diagram plugin '{}', supported {}".format(
+                    diagram_plugin, 
+                    ", ".join([i.value for i in EnumN2GDiagramPlugins])
+                )
+            )
+        return values
+    
 
 class model_nornir_config(BaseModel):
     """Model for Salt-Nornir Proxy Minion configuration attributes"""
@@ -668,7 +722,7 @@ class SaltNornirRunnerFunctions(BaseModel):
     call: model_runner_nr_call
     event: model_runner_nr_event
     cfg: model_runner_nr_cfg
-
+    diagram: model_runner_nr_diagram
 
 class SaltNornirMasterModel(BaseModel):
     execution: SaltNornirExecutionFunctions

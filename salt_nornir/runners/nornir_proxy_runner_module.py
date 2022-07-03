@@ -65,6 +65,7 @@ from salt_nornir.pydantic_models import (
     model_runner_nr_call,
     model_runner_nr_event,
     model_runner_nr_cfg,
+    model_runner_nr_diagram,
     SaltNornirMasterModel,
 )
 
@@ -1027,7 +1028,7 @@ def make_plugin(kind, name=None):
     """
     return MakePlugin(kind=kind, name=name)
 
-
+@ValidateFuncArgs(model_runner_nr_diagram)
 def diagram(*args, **kwargs):
     """
     Function to retrieve output from devices and produce diagram using N2G library.
@@ -1035,10 +1036,11 @@ def diagram(*args, **kwargs):
     This function depends on N2G, TTP and TTP-Templates libraries to obtain list of
     per-platfrom commands to retrieve from devices, parse output and build diagram.
 
-    :param data: (str) data plugin name to use to process output from devices
+    :param data_plugin: (str) data plugin name to use to process output from devices
     :param diagram_plugin: (str) N2G diagram plugin name - ``yed``, ``drawio``, ``v3d``
     :param outfile: (str) OS path to save diagram file, default is
         ``./Output/{data plugin name}_{curent time}.{diagram plugin extension}``
+    :param save_data: (bool) if True, saves results in "Data" folder next to diagram file
     :param cli: (dict) arguments for ``nr.cli`` execution module function to get devices output
     :param Fx: (str) Nornir filter functions to filter list of devices (hosts) to get output from
     :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by default - ``proxy:proxytype:nornir``
@@ -1046,20 +1048,26 @@ def diagram(*args, **kwargs):
     :param job_retry: (int) how many times to retry if no results returned from all minions, default 0
     :param job_timeout: (int) seconds to wait for results from minions before retry, default 300s
     :param progress: progress display type to use - bars, raw, log, if False, no progress displayed
-    :param save_data: (bool) if True, saves results in "Data" folder next to diagram file
-    :param **kwargs: any additional arguments to use with N2G ``data`` plugin
+    :param **kwargs: any additional arguments to use with
+        `N2G data plugins <https://n2g.readthedocs.io/en/latest/data_plugins/index.html>`_
 
-    N2G ``data`` plugins names and details:
+    N2G ``data_plugin`` names and details:
 
-    - ``L2`` - uses CDP and LLDP protocols peerings data to produce L2 diagram of the network
-    - ``IP`` - uses IP related data to produce L3 diagram of the network
-    - ``ISIS`` - uses ISIS LSDB data to produce L3 diagram of the network
-    - ``OSPF`` - uses OSPFv2 LSDB data to produce L3 diagram of the network
+    - ``L2`` - `CLI L2 Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_l2_data.html>`_ 
+        uses CDP and LLDP protocols peerings data to produce L2 diagram of the network
+    - ``IP`` - `CLI IP Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_ip_data.html>`_
+        uses IP related data to produce L3 diagram of the network
+    - ``ISIS`` - `CLI ISIS LSDB Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_isis_data.html>`_
+        uses ISIS LSDB data to produce L3 diagram of the network
+    - ``OSPF`` - `CLI OSPFv2 LSDB Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_ospf_data.html>`_
+        uses OSPFv2 LSDB data to produce L3 diagram of the network
 
     Sample usage::
 
         salt-run nr.diagram L2 v3d FB="ceos*"
-        salt-run nr.diagram data=L2 diagram_plugin=v3d FB="ceos1" outfile="cdp_lldp_diagram.json"
+        salt-run nr.diagram data_plugin=L2 diagram_plugin=v3d FB="ceos1" outfile="cdp_lldp_diagram.json"
+        salt-run nr.diagram IP drawio FM="cisco_ios" add_arp=True group_links=True
+        salt-run nr.diagram L2 v3d FC="core" group_links=True add_all_connected=True
     """
     try:
         import N2G
@@ -1069,20 +1077,27 @@ def diagram(*args, **kwargs):
         log.exception(e)
         return f"nr.diagram failed importing required modules - {e}"
 
-    n2g_data = {}
+    n2g_data = {} # to store collected from devices data
+    collected_hosts_list = [] # list of devices collected data from
     ctime = time.strftime("%Y-%m-%d_%H-%M-%S")
-    data = args[0] if len(args) >= 1 else kwargs.pop("data")
+    data_plugin = args[0] if len(args) >= 1 else kwargs.pop("data_plugin")
     diagram_plugin = args[1] if len(args) == 2 else kwargs.pop("diagram_plugin", "yed")
     Fx = {k: kwargs.pop(k) for k in list(kwargs) if k in FFun_functions}
     cli = {**kwargs.pop("cli", {}), **Fx}
     cli.setdefault("plugin", "netmiko")
-    tgt = kwargs.pop("tgt", "proxy:proxytype:nornir")
-    tgt_type = kwargs.pop("tgt_type", "pillar")
-    job_timeout = kwargs.pop("job_timeout", 300)
-    job_retry = kwargs.pop("job_retry", 0)
-    progress = kwargs.pop("progress", "log")
     save_data = kwargs.pop("save_data", False)
 
+    # construct argument for call functions
+    call_kwargs = {
+        "tgt": kwargs.pop("tgt", "proxy:proxytype:nornir"),
+        "tgt_type": kwargs.pop("tgt_type", "pillar"),
+        "job_timeout": kwargs.pop("job_timeout", 300),
+        "job_retry": kwargs.pop("job_retry", 0),
+        "progress": kwargs.pop("progress", "log"),
+        "raise_no_tgt_match": False,
+        "fun": "cli",
+    }
+    
     drawing_plugin, ext = {
         "yed": (N2G.yed_diagram, "graphml"),
         "drawio": (N2G.drawio_diagram, "drawio"),
@@ -1094,16 +1109,16 @@ def diagram(*args, **kwargs):
         "IP": ("cli_ip_data", N2G.cli_ip_data),
         "ISIS": ("cli_isis_data", N2G.cli_isis_data),
         "OSPF": ("cli_ospf_data", N2G.cli_ospf_data),
-    }[data]
+    }[data_plugin]
 
-    outfile = kwargs.pop("outfile", f"./Output/{data}_{ctime}.{ext}")
+    outfile = kwargs.pop("outfile", f"./Output/{data_plugin}_{ctime}.{ext}")
     out_filename = outfile.split(os.sep)[-1]
     out_folder = os.sep.join(outfile.split(os.sep)[:-1])
 
     # form list of platforms to collect output for
-    n2g_supported_platorms = list_templates()["misc"]["N2G"][template_dir]
     n2g_supported_platorms = [
-        ".".join(i.split(".")[:-1]) for i in n2g_supported_platorms
+        ".".join(i.split(".")[:-1]) 
+        for i in list_templates()["misc"]["N2G"][template_dir]
     ]
     # if FM filter provided, leave only supported platforms
     if cli.get("FM"):
@@ -1135,24 +1150,23 @@ def diagram(*args, **kwargs):
                     cli_args.update(input_params.get("kwargs", {}))
 
         # get output from devices
-        devices_output = call(fun="cli", raise_no_tgt_match=False, **cli_args)
+        devices_output = call(**call_kwargs, **cli_args)
 
         # populate n2g data dictionary keyed by platform and save results to files
         for host_name, host_results in devices_output.items():
+            collected_hosts_list.append(host_name)
             n2g_data[platform].append("\n".join([i["result"] for i in host_results]))
             if save_data:
                 data_folder = os.path.join(out_folder, f"Data_{ctime}", platform)
+                data_file = os.path.join(data_folder, f"{host_name}.txt")
                 os.makedirs(data_folder, exist_ok=True)
-                with open(
-                    os.path.join(data_folder, f"{host_name}.txt"),
-                    mode="w",
-                    encoding="utf-8",
-                ) as f:
+                with open(data_file, mode="w", encoding="utf-8") as f:
                     f.write(n2g_data[platform][-1])
 
     print(
-        "Retrieved output for platforms: {}".format(
-            ", ".join([k for k in n2g_data.keys() if n2g_data[k]])
+        "Retrieved output for platforms - {} - from devices: {}".format(
+            ", ".join([k for k in n2g_data.keys() if n2g_data[k] != []]),
+            ", ".join(collected_hosts_list)
         )
     )
 
@@ -1162,7 +1176,7 @@ def diagram(*args, **kwargs):
     drawer.work(n2g_data)
     drawing.dump_file(folder=out_folder, filename=out_filename)
 
-    return f"'{data}' diagram in '{diagram_plugin}' format saved at: '{out_folder}{os.sep}{out_filename}'"
+    return f"'{data_plugin}' diagram in '{diagram_plugin}' format saved at: '{out_folder}{os.sep}{out_filename}'"
 
 
 def service(*args, **kwargs):
