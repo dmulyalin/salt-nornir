@@ -2547,7 +2547,11 @@ def nornir_fun(fun, *args, **kwargs):
         kwargs["call"] = args[0] if len(args) == 1 else kwargs["call"]
         return __proxy__["nornir.workers_utils"](**kwargs)
     elif fun == "dir":
-        return {"Supported functions": sorted(supported_functions)}
+        return {
+            "Supported functions": sorted(
+                model_exec_nr_nornir_fun.schema()["definitions"]["EnumNrFun"]["enum"]
+            )
+        }
     elif fun == "results_queue_dump":
         return __proxy__["nornir.queues_utils"](call="results_queue_dump")
 
