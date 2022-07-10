@@ -2190,7 +2190,7 @@ def file(*args, **kwargs):
         )
     """
     # form kwargs content
-    kwargs["call"] = kwargs.pop("call", args[0])
+    kwargs["call"] = args[0] if len(args) >= 1 else kwargs["call"]
     kwargs["identity"] = _form_identity(kwargs, "file")
     kwargs["filegroup"] = kwargs.pop(
         "filegroup", list(args[1:]) if len(args) >= 2 else None

@@ -1,0 +1,4 @@
+
+VRF: default
+Address         Age (sec)  Hardware Addr   Interface
+10.0.1.5          0:01:55  0242.0a00.0105  Ethernet1

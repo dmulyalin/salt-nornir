@@ -1,0 +1,10 @@
+PING ceos2 (5.5.5.5) 72(100) bytes of data.
+80 bytes from ceos2 (5.5.5.5): icmp_seq=1 ttl=64 time=0.049 ms
+80 bytes from ceos2 (5.5.5.5): icmp_seq=2 ttl=64 time=0.023 ms
+80 bytes from ceos2 (5.5.5.5): icmp_seq=3 ttl=64 time=0.018 ms
+80 bytes from ceos2 (5.5.5.5): icmp_seq=4 ttl=64 time=0.023 ms
+80 bytes from ceos2 (5.5.5.5): icmp_seq=5 ttl=64 time=0.018 ms
+
+--- ceos2 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.018/0.026/0.049/0.012 ms, ipg/ewma 0.203/0.037 ms

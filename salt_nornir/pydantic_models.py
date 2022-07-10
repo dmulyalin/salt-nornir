@@ -634,6 +634,7 @@ class model_nornir_config_proxy(BaseModel):
 class EnumN2GDataPlugins(str, Enum):
     L2 = "L2"
     IP = "IP"
+    L3 = "L3"
     OSPF = "OSPF"
     ISIS = "ISIS"
 
@@ -655,10 +656,12 @@ class model_runner_nr_diagram(model_ffun_fx_filters):
     job_retry: Optional[StrictInt]
     job_timeout: Optional[StrictInt]
     progress: Optional[Union[RunnerProgressTypes, StrictBool]]
-    save_data: Optional[StrictBool]
+    save_data: Optional[Union[StrictBool, StrictStr]]
     outfile: Optional[StrictStr]
     cli: Optional[Dict[StrictStr, Any]]
-        
+    filegroup: Optional[StrictStr]
+    last: Optional[StrictInt]
+    
     class Config:
         extra = "allow"
 

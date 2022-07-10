@@ -94,6 +94,37 @@ services:
         source: .
         target: /tmp/salt_nornir/
 
+  salt-minion-nrp3:
+    container_name: salt-minion-nrp3
+    hostname: 'salt-minion-nrp3'
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.rocky.py39.minion
+    environment:
+      PROXY_ID: "nrp3"
+    networks:
+      net0:
+        ipv4_address: 10.0.0.7
+      net1:
+        ipv4_address: 10.0.1.7
+    depends_on:
+      - salt-master
+    volumes:
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.9/site-packages/salt_nornir/
+      - type: bind
+        source: ../nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.9/site-packages/nornir_salt/
+      # bind local folder to salt-minion in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+        
   ceos1:
     container_name: ceos1
     hostname: 'ceos1'

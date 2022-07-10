@@ -16,209 +16,22 @@ hosts:
       plugin: arista_ceos
       configuration:
         commands: 
-          "show ip int brief": 
-            output: "ceos1.show_ip_int_brief.txt"        
-          "ping ceos1": 
-            output: |
-              PING ceos1 (1.1.1.1) 72(100) bytes of data.
-              80 bytes from ceos2 (1.1.1.1): icmp_seq=1 ttl=64 time=0.049 ms
-              80 bytes from ceos2 (1.1.1.1): icmp_seq=2 ttl=64 time=0.023 ms
-              80 bytes from ceos2 (1.1.1.1): icmp_seq=3 ttl=64 time=0.018 ms
-              80 bytes from ceos2 (1.1.1.1): icmp_seq=4 ttl=64 time=0.023 ms
-              80 bytes from ceos2 (1.1.1.1): icmp_seq=5 ttl=64 time=0.018 ms
-              
-              --- ceos1 ping statistics ---
-              5 packets transmitted, 5 received, 0% packet loss, time 0ms
-              rtt min/avg/max/mdev = 0.018/0.026/0.049/0.012 ms, ipg/ewma 0.203/0.037 ms
-          "show run":
-            prompt: "{base_prompt}#"
-            output: |
-              ! Command: show running-config
-              ! device: ceos1 (cEOSLab, EOS-4.26.0F-21792469.4260F (engineering build))
-              !
-              transceiver qsfp default-mode 4x10G
-              !
-              service routing protocols model ribd
-              !
-              agent Bfd shutdown
-              agent PowerManager shutdown
-              agent LedPolicy shutdown
-              agent Thermostat shutdown
-              agent PowerFuse shutdown
-              agent StandbyCpld shutdown
-              agent LicenseManager shutdown
-              !
-              no logging console
-              logging host 1.1.1.1 514
-              logging host 1.2.3.4 514
-              logging host 1.2.3.5 514
-              logging host 1.2.3.6 514
-              logging host 2.2.2.2 514
-              logging host 4.3.2.1 514
-              logging host 5.5.5.5 514
-              logging host 7.7.7.7 514
-              logging host 9.9.9.9 514
-              !
-              logging level AAA informational
-              !
-              hostname ceos1
-              !
-              ntp server 1.1.1.1
-              ntp server 1.1.1.2
-              ntp server 1.1.1.10
-              ntp server 1.1.1.11
-              ntp server 2.2.2.2
-              ntp server 2.2.2.3
-              ntp server 3.3.3.3
-              ntp server 3.3.3.4
-              ntp server 4.3.2.1
-              ntp server 6.6.6.6
-              ntp server 7.7.7.7
-              ntp server 7.7.7.8
-              !
-              snmp-server location "North West Hall DC1"
-              snmp-server local-interface Ethernet1
-              snmp-server host 1.2.3.4 version 2c test
-              snmp-server host 1.2.3.5 version 2c test
-              !
-              spanning-tree mode mstp
-              !
-              no aaa root
-              !
-              username nornir privilege 15 secret sha512 $6$EkriX8oB5g3Midq4$ErOpqzIWT7FxiW1IkSNQKS8gEqsn9HsbRVm8.Zw47y3Xm9a.GywP9zPF/avyTBBS8c5/ZSMMj/6BHL64KcW2I1
-              !
-              interface Ethernet1
-                 description Configured by NETCONF
-                 mtu 9200
-                 no switchport
-                 ip address 10.0.1.4/24
-              !
-              interface Loopback1
-                 ip address 1.1.1.1/24
-              !
-              interface Loopback2
-                 description Lopback2 for Customer 27123
-                 ip address 2.2.2.2/24
-              !
-              interface Loopback3
-                 description Customer #56924 service
-                 ip address 1.2.3.4/24
-              !
-              no ip routing
-              !
-              management api http-commands
-                 protocol http
-                 no shutdown
-              !
-              management api gnmi
-                 transport grpc default
-              !
-              management api netconf
-                 transport ssh def
-              !
-              end              
+          "show ip int brief": {output: "ceos1.show_ip_int_brief.txt"}       
+          "show ip interface brief": {output: "ceos1.show_ip_int_brief.txt"} 
+          "ping ceos1": {output: "ceos1.ping_ceos1.txt"}
+          "show run": {prompt: "{base_prompt}#", output: "ceos1.show_run.txt"}
+          "show running-config": {prompt: "{base_prompt}#", output: "ceos1.show_run.txt"}
+          "show version": {output: "ceso1.show_version.txt"}
+          "show ip arp vrf all": {output: "ceos1.show_ip_arp_vrf_all.txt"}
   ceos2: 
     nos:
       plugin: arista_ceos
       configuration:
         commands:  
-          "show ip int brief": 
-            output: "ceos2.show_ip_int_brief.txt"             
-          "ping ceos2": 
-            output: |
-              PING ceos2 (5.5.5.5) 72(100) bytes of data.
-              80 bytes from ceos2 (5.5.5.5): icmp_seq=1 ttl=64 time=0.049 ms
-              80 bytes from ceos2 (5.5.5.5): icmp_seq=2 ttl=64 time=0.023 ms
-              80 bytes from ceos2 (5.5.5.5): icmp_seq=3 ttl=64 time=0.018 ms
-              80 bytes from ceos2 (5.5.5.5): icmp_seq=4 ttl=64 time=0.023 ms
-              80 bytes from ceos2 (5.5.5.5): icmp_seq=5 ttl=64 time=0.018 ms
-              
-              --- ceos2 ping statistics ---
-              5 packets transmitted, 5 received, 0% packet loss, time 0ms
-              rtt min/avg/max/mdev = 0.018/0.026/0.049/0.012 ms, ipg/ewma 0.203/0.037 ms
-          "show run": 
-            prompt: "{base_prompt}#"
-            output: |
-              ! Command: show running-config
-              ! device: ceos2 (cEOSLab, EOS-4.26.0F-21792469.4260F (engineering build))
-              !
-              transceiver qsfp default-mode 4x10G
-              !
-              service routing protocols model ribd
-              !
-              agent Bfd shutdown
-              agent PowerManager shutdown
-              agent LedPolicy shutdown
-              agent Thermostat shutdown
-              agent PowerFuse shutdown
-              agent StandbyCpld shutdown
-              agent LicenseManager shutdown
-              !
-              no logging console
-              logging host 1.1.1.2 514
-              logging host 1.2.3.4 514
-              logging host 1.2.3.5 514
-              logging host 1.2.3.6 514
-              logging host 2.2.2.1 514
-              logging host 4.3.2.1 514
-              logging host 5.5.5.5 514
-              logging host 7.7.7.7 514
-              logging host 9.9.9.9 514
-              !
-              hostname ceos2
-              !
-              ntp server 1.1.1.1
-              ntp server 1.1.1.2
-              ntp server 1.1.1.10
-              ntp server 1.2.3.4
-              ntp server 2.2.2.2
-              ntp server 2.2.2.3
-              ntp server 3.3.3.3
-              ntp server 3.3.3.4
-              ntp server 4.3.2.1
-              ntp server 6.6.6.6
-              ntp server 7.7.7.7
-              ntp server 7.7.7.8
-              !
-              snmp-server location "East City Warehouse"
-              snmp-server local-interface Ethernet1
-              snmp-server host 1.2.3.4 version 2c test
-              snmp-server host 1.2.3.5 version 2c test
-              !
-              spanning-tree mode mstp
-              !
-              no aaa root
-              !
-              username nornir privilege 15 secret sha512 $6$EkriX8oB5g3Midq4$ErOpqzIWT7FxiW1IkSNQKS8gEqsn9HsbRVm8.Zw47y3Xm9a.GywP9zPF/avyTBBS8c5/ZSMMj/6BHL64KcW2I1
-              !
-              interface Ethernet1
-                 description Configured by NETCONF
-                 mtu 9200
-                 no switchport
-                 ip address 10.0.1.5/24
-              !
-              interface Loopback100
-                 description MGMT Range xYz
-                 ip address 100.12.3.4/22
-              !
-              interface Loopback101
-                 description NTU workstation service
-                 ip address 1.101.2.2/32
-              !
-              interface Loopback102
-                 description Customer ID 67123A5
-                 ip address 5.5.5.5/24
-              !
-              no ip routing
-              !
-              management api http-commands
-                 protocol http
-                 no shutdown
-              !
-              management api gnmi
-                 transport grpc default
-              !
-              management api netconf
-                 transport ssh def
-              !
-              end
+          "show ip int brief": {output: "ceos2.show_ip_int_brief.txt"}   
+          "show ip interface brief": {output: "ceos2.show_ip_int_brief.txt"}  
+          "ping ceos2": {output: "ceos2.ping_ceos2.txt"}
+          "show run": {prompt: "{base_prompt}#", output: "ceos2.show_run.txt"}
+          "show running-config": {prompt: "{base_prompt}#", output: "ceos2.show_run.txt"}
+          "show version": {output: "ceos2.show_version.txt"}
+          "show ip arp vrf all": {output: "ceos2.show_ip_arp_vrf_all.txt"}
