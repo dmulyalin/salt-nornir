@@ -5,18 +5,37 @@ proxy:
 hosts:
   ceos1:
     hostname: 10.0.1.10
-    platform: arista_eos
     port: 6001
-    connection_options: {}
-    data: {}
     groups:
     - eos_params
   ceos2:
     hostname: 10.0.1.10
-    platform: arista_eos
     port: 6002
-    connection_options: {}
-    data: {}
+    groups:
+    - eos_params
+  ceos3_1:
+    hostname: 10.0.1.10
+    port: 5001
+    groups:
+    - eos_params
+  ceos3_2:
+    hostname: 10.0.1.10
+    port: 5002
+    groups:
+    - eos_params
+  ceos3_3:
+    hostname: 10.0.1.10
+    port: 5003
+    groups:
+    - eos_params 
+  ceos3_4:
+    hostname: 10.0.1.10
+    port: 5004
+    groups:
+    - eos_params
+  ceos3_5:
+    hostname: 10.0.1.10
+    port: 5005
     groups:
     - eos_params
     
@@ -30,6 +49,7 @@ groups:
         platform: arista_eos
     password: nornir
     username: nornir
+    platform: arista_eos
     
 nornir:
   actions: {}

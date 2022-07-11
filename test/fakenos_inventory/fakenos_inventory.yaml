@@ -35,3 +35,8 @@ hosts:
           "show running-config": {prompt: "{base_prompt}#", output: "ceos2.show_run.txt"}
           "show version": {output: "ceos2.show_version.txt"}
           "show ip arp vrf all": {output: "ceos2.show_ip_arp_vrf_all.txt"}
+  ceos3_: 
+    nos:
+      plugin: arista_ceos
+    count: 5
+    port: [5001, 5100]
