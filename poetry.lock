@@ -1067,7 +1067,7 @@ textfsm = "1.1.2"
 
 [[package]]
 name = "nornir-salt"
-version = "0.12.0"
+version = "0.13.0"
 description = "Nornir plugins used with SaltStack Salt-Nornir Proxy Minion"
 category = "main"
 optional = false
@@ -1078,13 +1078,13 @@ nornir = "3.3.0"
 pydantic = "1.9.1"
 
 [package.extras]
-prodmax = ["cerberus (==1.3.4)", "genie (==22.1)", "jmespath (==1.0.0)", "napalm (==3.4.1)", "ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir-napalm (==0.2.0)", "nornir-netmiko (==0.1.2)", "nornir-scrapli (==2022.1.30)", "ntc-templates (>=1.7.0,<2.0.0)", "paramiko (==2.11.0)", "pyats (==22.1)", "pygnmi (==0.6.9)", "pyyaml (==6.0)", "requests (==2.27.1)", "scrapli (==2022.1.30)", "scrapli-community (==2022.1.30)", "scrapli-netconf (==2022.1.30)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (>=0.1.0,<0.2.0)", "xmltodict (==0.13.0)", "lxml (==4.8.0)"]
-dataprocessor = ["cerberus (==1.3.4)", "jmespath (==1.0.0)", "ntc-templates (>=1.7.0,<2.0.0)", "pyyaml (==6.0)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (>=0.1.0,<0.2.0)", "xmltodict (==0.13.0)", "lxml (==4.8.0)"]
-pyats = ["genie (==22.1)", "pyats (==22.1)"]
-napalm = ["napalm (==3.4.1)", "nornir-napalm (==0.2.0)"]
-prodmin = ["ncclient (==0.6.9)", "netmiko (==3.4.0)", "nornir-netmiko (==0.1.2)", "paramiko (==2.11.0)", "requests (==2.27.1)", "tabulate (==0.8.9)", "ttp (==0.8.4)", "ttp-templates (>=0.1.0,<0.2.0)", "xmltodict (==0.13.0)", "lxml (==4.8.0)"]
-netconf = ["ncclient (==0.6.9)", "scrapli-netconf (==2022.1.30)"]
-netmiko = ["netmiko (==3.4.0)", "nornir-netmiko (==0.1.2)"]
+prodmax = ["cerberus (==1.3.4)", "genie[full] (==22.1)", "jmespath (==1.0.0)", "napalm (==4.0.0)", "ncclient (==0.6.13)", "netmiko (==4.1.1)", "nornir-napalm (==0.3.0)", "nornir-netmiko (==0.2.0)", "nornir-scrapli (==2022.1.30)", "ntc-templates (>=3.0.0,<4.0.0)", "paramiko (==2.11.0)", "pyats[full] (==22.1)", "pygnmi (==0.6.9)", "pyyaml (==6.0)", "requests (==2.27.1)", "scrapli (==2022.1.30)", "scrapli-community (==2022.1.30)", "scrapli-netconf (==2022.1.30)", "tabulate (==0.8.9)", "ttp (>=0.9.0,<0.10.0)", "ttp-templates (>=0.3.0,<0.4.0)", "xmltodict (==0.13.0)", "textfsm (==1.1.2)", "jinja2 (==3.0.3)"]
+dataprocessor = ["cerberus (==1.3.4)", "jmespath (==1.0.0)", "ntc-templates (>=3.0.0,<4.0.0)", "pyyaml (==6.0)", "tabulate (==0.8.9)", "ttp (>=0.9.0,<0.10.0)", "ttp-templates (>=0.3.0,<0.4.0)", "xmltodict (==0.13.0)", "lxml (==4.8.0)"]
+pyats = ["genie[full] (==22.1)", "pyats[full] (==22.1)"]
+napalm = ["napalm (==4.0.0)", "nornir-napalm (==0.3.0)"]
+prodmin = ["ncclient (==0.6.13)", "netmiko (==4.1.1)", "nornir-netmiko (==0.2.0)", "paramiko (==2.11.0)", "requests (==2.27.1)", "tabulate (==0.8.9)", "ttp (>=0.9.0,<0.10.0)", "ttp-templates (>=0.3.0,<0.4.0)", "xmltodict (==0.13.0)", "textfsm (==1.1.2)", "jinja2 (==3.0.3)"]
+netconf = ["ncclient (==0.6.13)", "scrapli-netconf (==2022.1.30)"]
+netmiko = ["netmiko (==4.1.1)", "nornir-netmiko (==0.2.0)"]
 gnmi = ["pygnmi (==0.6.9)"]
 restconf = ["requests (==2.27.1)"]
 scrapli = ["scrapli (==2022.1.30)", "scrapli-community (==2022.1.30)"]
@@ -2501,7 +2501,7 @@ scrapli = ["scrapli", "scrapli-community"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<4.0"
-content-hash = "a63353c49bc21bdcad13657ee01c08a57877f82a577e73443228840c97d5fd51"
+content-hash = "0ea7b21f16d1e4b049ad37dd79b64ed074259b4735cc7c7635f7b664f5cd7b00"
 
 [metadata.files]
 aiofiles = [
@@ -3211,8 +3211,8 @@ nornir = [
 nornir-napalm = []
 nornir-netmiko = []
 nornir-salt = [
-    {file = "nornir_salt-0.12.0-py3-none-any.whl", hash = "sha256:5be596a551bf3c00b6cd9af010fb9e72186bc399e71447ef6c313e25ea653bb4"},
-    {file = "nornir_salt-0.12.0.tar.gz", hash = "sha256:f919538a3a91c249dd161e9bd0182e740126905c05d9f5ac032912069f35b0e1"},
+    {file = "nornir_salt-0.13.0-py3-none-any.whl", hash = "sha256:caa2e206e32672de773e33e85beb67cab850a0e75200982bd53e00bac286b8f1"},
+    {file = "nornir_salt-0.13.0.tar.gz", hash = "sha256:d12ee3c3bd03cd241fde21ec1654d686675c132835080bb79ffcfc7ea6ba9a53"},
 ]
 nornir-scrapli = [
     {file = "nornir_scrapli-2022.1.30-py3-none-any.whl", hash = "sha256:4873a7dbff5b054220176858e679c98a183362b41ea75e125a8078a5fbfb3064"},

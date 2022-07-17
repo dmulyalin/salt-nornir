@@ -30,6 +30,8 @@ Nornir Runner module functions
      - Function to return brief inventory data for certain hosts in a table format
    * - `nr.make_plugin`_
      - Function to generate boilerplate code for Salt-Nornir plugins
+   * - `nr.diagram`_
+     - Function to retrieve output from devices and produce diagram using N2G library
 
 nr.call
 +++++++
@@ -50,6 +52,10 @@ nr.inventory
 nr.make_plugin
 ++++++++++++++
 .. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.make_plugin
+
+nr.diagram
+++++++++++++++
+.. autofunction:: salt_nornir.runners.nornir_proxy_runner_module.diagram
 """
 # Import python libs
 import logging
