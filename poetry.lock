@@ -64,6 +64,18 @@ optional = true
 python-versions = "*"
 
 [[package]]
+name = "arrow"
+version = "1.2.2"
+description = "Better dates & times for Python"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+
+[package.dependencies]
+python-dateutil = ">=2.7.0"
+typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
+
+[[package]]
 name = "astroid"
 version = "2.9.3"
 description = "An abstract syntax tree for Python with inference support."
@@ -138,6 +150,14 @@ python-versions = ">=3.6"
 pytz = ">=2015.7"
 
 [[package]]
+name = "backports.ssl"
+version = "0.0.9"
+description = "The Python 3.4 standard `ssl` module API implemented on top of pyOpenSSL"
+category = "main"
+optional = true
+python-versions = "*"
+
+[[package]]
 name = "bandit"
 version = "1.7.4"
 description = "Security oriented static analyser for python code."
@@ -170,6 +190,17 @@ cffi = ">=1.1"
 [package.extras]
 tests = ["pytest (>=3.2.1,!=3.3.0)"]
 typecheck = ["mypy"]
+
+[[package]]
+name = "binaryornot"
+version = "0.4.4"
+description = "Ultra-lightweight pure Python package to check if a file is binary or text."
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+chardet = ">=3.0.2"
 
 [[package]]
 name = "black"
@@ -266,24 +297,10 @@ six = "*"
 dev = ["grpcio-tools", "googleapis-common-protos", "pylint", "twine", "setuptools", "wheel", "pytest", "pytest-cov", "pytest-mock", "coverage"]
 
 [[package]]
-name = "ciscoconfparse"
-version = "1.6.40"
-description = "Parse, Audit, Query, Build, and Modify Cisco IOS-style and JunOS-style configurations"
-category = "main"
-optional = true
-python-versions = ">=3.6"
-
-[package.dependencies]
-dnspython = ">=2.1.0,<3.0.0"
-loguru = "0.6.0"
-passlib = ">=1.7.4,<2.0.0"
-toml = "0.10.2"
-
-[[package]]
 name = "click"
 version = "8.1.3"
 description = "Composable command line interface toolkit"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -309,6 +326,23 @@ python-versions = "*"
 
 [package.extras]
 test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
+
+[[package]]
+name = "cookiecutter"
+version = "2.1.1"
+description = "A command-line utility that creates projects from project templates, e.g. creating a Python package project from a Python package project template."
+category = "main"
+optional = true
+python-versions = ">=3.7"
+
+[package.dependencies]
+binaryornot = ">=0.4.4"
+click = ">=7.0,<9.0.0"
+Jinja2 = ">=2.7,<4.0.0"
+jinja2-time = ">=0.2.0"
+python-slugify = ">=4.0.0"
+pyyaml = ">=5.3.1"
+requests = ">=2.23.0"
 
 [[package]]
 name = "cryptography"
@@ -356,7 +390,7 @@ graph = ["objgraph (>=1.7.2)"]
 
 [[package]]
 name = "distlib"
-version = "0.3.4"
+version = "0.3.5"
 description = "Distribution utilities"
 category = "dev"
 optional = false
@@ -369,22 +403,6 @@ description = "Distro - an OS platform information API"
 category = "main"
 optional = true
 python-versions = ">=3.6"
-
-[[package]]
-name = "dnspython"
-version = "2.2.1"
-description = "DNS toolkit"
-category = "main"
-optional = true
-python-versions = ">=3.6,<4.0"
-
-[package.extras]
-dnssec = ["cryptography (>=2.6,<37.0)"]
-curio = ["curio (>=1.2,<2.0)", "sniffio (>=1.1,<2.0)"]
-doh = ["h2 (>=4.1.0)", "httpx (>=0.21.1)", "requests (>=2.23.0,<3.0.0)", "requests-toolbelt (>=0.9.1,<0.10.0)"]
-idna = ["idna (>=2.1,<4.0)"]
-trio = ["trio (>=0.14,<0.20)"]
-wmi = ["wmi (>=1.5.1,<2.0.0)"]
 
 [[package]]
 name = "docutils"
@@ -446,16 +464,41 @@ python-versions = ">=3.5"
 
 [package.dependencies]
 dill = "*"
-"genie.libs.clean" = ">=22.1.0,<22.2.0"
-"genie.libs.conf" = ">=22.1.0,<22.2.0"
-"genie.libs.filetransferutils" = ">=22.1.0,<22.2.0"
-"genie.libs.health" = ">=22.1.0,<22.2.0"
-"genie.libs.ops" = ">=22.1.0,<22.2.0"
-"genie.libs.parser" = ">=22.1.0,<22.2.0"
-"genie.libs.sdk" = ">=22.1.0,<22.2.0"
+"genie.libs.clean" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.conf" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.filetransferutils" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.health" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.ops" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.parser" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.libs.robot" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
+"genie.libs.sdk" = [
+    {version = ">=22.1.0,<22.2.0"},
+    {version = "*", optional = true, markers = "extra == \"full\""},
+]
+"genie.telemetry" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
+"genie.trafficgen" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
 jsonpickle = "*"
 netaddr = "*"
 PrettyTable = "*"
+"pyats.robot" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
 tqdm = "*"
 
 [package.extras]
@@ -544,6 +587,20 @@ xmltodict = "*"
 dev = ["coverage", "restview", "sphinx", "sphinx-rtd-theme"]
 
 [[package]]
+name = "genie.libs.robot"
+version = "22.1"
+description = "Genie libs Robot: RobotFramework libraries to interact with Genie"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+robotframework = "*"
+
+[package.extras]
+dev = ["coverage", "restview", "sphinx", "sphinx-rtd-theme"]
+
+[[package]]
 name = "genie.libs.sdk"
 version = "22.1.2"
 description = "Genie libs sdk: Libraries containing all Triggers and Verifications"
@@ -557,6 +614,36 @@ cisco-gnmi = "*"
 
 [package.extras]
 dev = ["coverage", "restview", "sphinx", "sphinxcontrib-napoleon", "sphinx-rtd-theme", "xmltodict", "rest.connector", "protobuf"]
+
+[[package]]
+name = "genie.telemetry"
+version = "22.1"
+description = "Genie libs Telemetry: Genie Telemetry Libraries"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+genie = "*"
+
+[package.extras]
+dev = ["coverage", "restview", "sphinx", "sphinx-rtd-theme", "sphinxcontrib-mockautodoc"]
+
+[[package]]
+name = "genie.trafficgen"
+version = "22.1"
+description = "Genie Library for traffic generator connection support"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+genie = "*"
+ixnetwork = "*"
+ixnetwork-restpy = "*"
+
+[package.extras]
+dev = ["coverage", "restview", "sphinx", "sphinx-rtd-theme", "sphinxcontrib-mockautodoc"]
 
 [[package]]
 name = "gitdb"
@@ -673,6 +760,32 @@ colors = ["colorama (>=0.4.3,<0.5.0)"]
 plugins = ["setuptools"]
 
 [[package]]
+name = "ixnetwork"
+version = "9.0.1915.16"
+description = "IxNetwork Low Level API"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+"backports.ssl" = ">=0.0.9backports.ssl-match-hostname"
+pyopenssl = ">=17.5.0"
+requests = ">=2.18.4"
+websocket-client = ">=0.47.0"
+
+[[package]]
+name = "ixnetwork-restpy"
+version = "1.1.6"
+description = "The IxNetwork Python Client"
+category = "main"
+optional = true
+python-versions = ">=2.7, <4"
+
+[package.dependencies]
+requests = "*"
+websocket-client = "*"
+
+[[package]]
 name = "jinja2"
 version = "3.0.3"
 description = "A very fast and expressive template engine."
@@ -685,6 +798,18 @@ MarkupSafe = ">=2.0"
 
 [package.extras]
 i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "jinja2-time"
+version = "0.2.0"
+description = "Jinja2 Extension for Dates and Times"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+arrow = "*"
+jinja2 = "*"
 
 [[package]]
 name = "jmespath"
@@ -723,7 +848,7 @@ six = "*"
 
 [[package]]
 name = "junos-eznc"
-version = "2.6.3"
+version = "2.6.4"
 description = "Junos 'EZ' automation for non-programmers"
 category = "main"
 optional = true
@@ -732,7 +857,7 @@ python-versions = ">=3.*, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 [package.dependencies]
 jinja2 = ">=2.7.1"
 lxml = ">=3.2.4"
-ncclient = "0.6.9"
+ncclient = "0.6.13"
 netaddr = "*"
 paramiko = ">=1.15.2"
 pyparsing = "*"
@@ -758,21 +883,6 @@ description = "A fast and thorough lazy object proxy."
 category = "dev"
 optional = false
 python-versions = ">=3.6"
-
-[[package]]
-name = "loguru"
-version = "0.6.0"
-description = "Python logging made (stupidly) simple"
-category = "main"
-optional = true
-python-versions = ">=3.5"
-
-[package.dependencies]
-colorama = {version = ">=0.3.4", markers = "sys_platform == \"win32\""}
-win32-setctime = {version = ">=1.0.0", markers = "sys_platform == \"win32\""}
-
-[package.extras]
-dev = ["colorama (>=0.3.4)", "docutils (==0.16)", "flake8 (>=3.7.7)", "tox (>=3.9.0)", "pytest (>=4.6.2)", "pytest-cov (>=2.7.1)", "black (>=19.10b0)", "isort (>=5.1.1)", "Sphinx (>=4.1.1)", "sphinx-autobuild (>=0.7.1)", "sphinx-rtd-theme (>=0.4.3)"]
 
 [[package]]
 name = "lxml"
@@ -821,8 +931,20 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "n2g"
+version = "0.3.2"
+description = "Need To Graph"
+category = "main"
+optional = true
+python-versions = ">=3.6,<4.0"
+
+[package.extras]
+full = ["ttp (>=0.9.0,<0.10.0)", "ttp_templates (>=0.3.0,<0.4.0)", "flask (==2.1.2)", "openpyxl (>=3.0.0,<3.1.0)", "python-igraph (>=0.9.0,<0.10.0)"]
+docs = ["readthedocs-sphinx-search (==0.1.1)", "Sphinx (==4.3.0)", "sphinx_rtd_theme (==1.0.0)", "sphinxcontrib-applehelp (==1.0.1)", "sphinxcontrib-devhelp (==1.0.1)", "sphinxcontrib-htmlhelp (==2.0.0)", "sphinxcontrib-jsmath (==1.0.1)", "sphinxcontrib-napoleon (==0.7)", "sphinxcontrib-qthelp (==1.0.2)", "sphinxcontrib-serializinghtml (==1.1.5)", "sphinxcontrib-spelling (==7.2.1)"]
+
+[[package]]
 name = "napalm"
-version = "3.4.1"
+version = "4.0.0"
 description = "Network Automation and Programmability Abstraction Layer with Multivendor support"
 category = "main"
 optional = true
@@ -830,24 +952,27 @@ python-versions = "*"
 
 [package.dependencies]
 cffi = ">=1.11.3"
-ciscoconfparse = "*"
 future = "*"
 jinja2 = "*"
 junos-eznc = ">=2.6.3"
 lxml = ">=4.3.0"
 ncclient = "*"
 netaddr = "*"
-netmiko = ">=3.3.0,<4.0.0"
+netmiko = ">=4.0.0"
+netutils = ">=1.0.0"
 paramiko = ">=2.6.0"
 pyeapi = ">=0.8.2"
 pyYAML = "*"
 requests = ">=2.7.0"
 scp = "*"
-textfsm = "*"
+textfsm = "<=1.1.2"
+ttp = "*"
+ttp-templates = "*"
+typing-extensions = ">=4.3.0"
 
 [[package]]
 name = "ncclient"
-version = "0.6.9"
+version = "0.6.13"
 description = "Python library for NETCONF clients"
 category = "main"
 optional = true
@@ -868,21 +993,28 @@ python-versions = "*"
 
 [[package]]
 name = "netmiko"
-version = "3.4.0"
-description = "Multi-vendor library to simplify Paramiko SSH connections to network devices"
+version = "4.1.1"
+description = "Multi-vendor library to simplify legacy CLI connections to network devices"
 category = "main"
 optional = true
 python-versions = "*"
 
 [package.dependencies]
-ntc-templates = "*"
-paramiko = ">=2.6.0"
+ntc-templates = ">=2.0.0"
+paramiko = ">=2.7.2"
 pyserial = "*"
-scp = ">=0.13.2"
+pyyaml = ">=5.3"
+scp = ">=0.13.3"
 tenacity = "*"
+textfsm = ">=1.1.2"
 
-[package.extras]
-test = ["pyyaml (>=5.1.2)", "pytest (>=5.1.2)"]
+[[package]]
+name = "netutils"
+version = "1.1.0"
+description = "Common helper functions useful in network automation."
+category = "main"
+optional = true
+python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "nodeenv"
@@ -911,26 +1043,27 @@ docs = ["sphinx (>=4,<5)", "sphinx_rtd_theme (>=1.0,<2.0)", "sphinxcontrib-napol
 
 [[package]]
 name = "nornir-napalm"
-version = "0.2.0"
+version = "0.3.0"
 description = "NAPALM's plugins for nornir"
 category = "main"
 optional = true
 python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-napalm = ">=3,<4"
+napalm = ">=4,<5"
 nornir = ">=3,<4"
 
 [[package]]
 name = "nornir-netmiko"
-version = "0.1.2"
+version = "0.2.0"
 description = "Netmiko's plugins for Nornir"
 category = "main"
 optional = true
-python-versions = ">=3.6.2,<4.0.0"
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-netmiko = ">=3.4.0,<4.0.0"
+netmiko = ">=4.0.0,<5.0.0"
+textfsm = "1.1.2"
 
 [[package]]
 name = "nornir-salt"
@@ -993,17 +1126,14 @@ nornir = ">=3,<4"
 
 [[package]]
 name = "ntc-templates"
-version = "1.7.0"
-description = "Package to return structured data from the output of network devices."
+version = "3.0.0"
+description = "TextFSM Templates for Network Devices, and Python wrapper for TextFSM's CliTable."
 category = "main"
 optional = true
-python-versions = "*"
+python-versions = ">=3.6,<4.0"
 
 [package.dependencies]
-textfsm = ">=1.1.0"
-
-[package.extras]
-dev = ["pytest", "pyyaml", "black", "yamllint", "ruamel.yaml"]
+textfsm = ">=1.1.0,<2.0.0"
 
 [[package]]
 name = "packaging"
@@ -1035,20 +1165,6 @@ all = ["pyasn1 (>=0.1.7)", "pynacl (>=1.0.1)", "bcrypt (>=3.1.3)", "invoke (>=1.
 ed25519 = ["pynacl (>=1.0.1)", "bcrypt (>=3.1.3)"]
 gssapi = ["pyasn1 (>=0.1.7)", "gssapi (>=1.4.1)", "pywin32 (>=2.1.8)"]
 invoke = ["invoke (>=1.3)"]
-
-[[package]]
-name = "passlib"
-version = "1.7.4"
-description = "comprehensive password hashing framework supporting over 30 schemes"
-category = "main"
-optional = true
-python-versions = "*"
-
-[package.extras]
-argon2 = ["argon2-cffi (>=18.2.0)"]
-bcrypt = ["bcrypt (>=3.1.0)"]
-build_docs = ["sphinx (>=1.6)", "sphinxcontrib-fulltoc (>=1.2.0)", "cloud-sptheme (>=1.10.1)"]
-totp = ["cryptography"]
 
 [[package]]
 name = "pathspec"
@@ -1172,17 +1288,24 @@ optional = true
 python-versions = ">=3.5"
 
 [package.dependencies]
+cookiecutter = {version = "*", optional = true, markers = "extra == \"full\""}
+genie = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
+"genie.libs.robot" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
+"genie.telemetry" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
+"genie.trafficgen" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
 packaging = "*"
 "pyats.aereport" = ">=22.1.0,<22.2.0"
 "pyats.aetest" = ">=22.1.0,<22.2.0"
 "pyats.async" = ">=22.1.0,<22.2.0"
 "pyats.connections" = ">=22.1.0,<22.2.0"
+"pyats.contrib" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
 "pyats.datastructures" = ">=22.1.0,<22.2.0"
 "pyats.easypy" = ">=22.1.0,<22.2.0"
 "pyats.kleenex" = ">=22.1.0,<22.2.0"
 "pyats.log" = ">=22.1.0,<22.2.0"
 "pyats.reporter" = ">=22.1.0,<22.2.0"
 "pyats.results" = ">=22.1.0,<22.2.0"
+"pyats.robot" = {version = ">=22.1.0,<22.2.0", optional = true, markers = "extra == \"full\""}
 "pyats.tcl" = ">=22.1.0,<22.2.0"
 "pyats.topology" = ">=22.1.0,<22.2.0"
 "pyats.utils" = ">=22.1.0,<22.2.0"
@@ -1260,6 +1383,21 @@ unicon = ">=22.1.0,<22.2.0"
 
 [package.extras]
 dev = ["sphinx", "sphinx-rtd-theme"]
+
+[[package]]
+name = "pyats.contrib"
+version = "22.1"
+description = "Open source package for pyATS framework extensions."
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+requests = "*"
+requests-toolbelt = "*"
+xlrd = "1.2"
+xlsxwriter = "*"
+xlwt = "*"
 
 [[package]]
 name = "pyats.datastructures"
@@ -1365,6 +1503,22 @@ description = "pyATS Results: Representing Results using Objects"
 category = "main"
 optional = true
 python-versions = ">=3.5"
+
+[package.extras]
+dev = ["sphinx", "sphinx-rtd-theme"]
+
+[[package]]
+name = "pyats.robot"
+version = "22.1"
+description = "pyATS Robot: Robot Module"
+category = "main"
+optional = true
+python-versions = ">=3.5"
+
+[package.dependencies]
+"pyats.aetest" = ">=22.1.0,<22.2.0"
+"pyats.connections" = ">=22.1.0,<22.2.0"
+robotframework = "*"
 
 [package.extras]
 dev = ["sphinx", "sphinx-rtd-theme"]
@@ -1548,6 +1702,21 @@ docs = ["sphinx (>=1.6.5)", "sphinx-rtd-theme"]
 tests = ["pytest (>=3.2.1,!=3.3.0)", "hypothesis (>=3.27.0)"]
 
 [[package]]
+name = "pyopenssl"
+version = "22.0.0"
+description = "Python wrapper module around the OpenSSL library"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+
+[package.dependencies]
+cryptography = ">=35.0"
+
+[package.extras]
+docs = ["sphinx", "sphinx-rtd-theme"]
+test = ["flaky", "pretend", "pytest (>=3.0.1)"]
+
+[[package]]
 name = "pyparsing"
 version = "3.0.9"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -1592,6 +1761,17 @@ tomli = ">=1.0.0"
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "xmlschema"]
 
 [[package]]
+name = "python-dateutil"
+version = "2.8.2"
+description = "Extensions to the standard Python datetime module"
+category = "main"
+optional = true
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+
+[package.dependencies]
+six = ">=1.5"
+
+[[package]]
 name = "python-engineio"
 version = "3.14.2"
 description = "Engine.IO server"
@@ -1605,6 +1785,20 @@ six = ">=1.9.0"
 [package.extras]
 asyncio_client = ["aiohttp (>=3.4)"]
 client = ["requests (>=2.21.0)", "websocket-client (>=0.54.0)"]
+
+[[package]]
+name = "python-slugify"
+version = "6.1.2"
+description = "A Python slugify application that also handles Unicode"
+category = "main"
+optional = true
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
+
+[package.dependencies]
+text-unidecode = ">=1.3"
+
+[package.extras]
+unidecode = ["Unidecode (>=1.1.1)"]
 
 [[package]]
 name = "python-socketio"
@@ -1665,6 +1859,17 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
+name = "requests-toolbelt"
+version = "0.9.1"
+description = "A utility belt for advanced users of python-requests"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.dependencies]
+requests = ">=2.0.1,<3.0.0"
+
+[[package]]
 name = "rich"
 version = "11.2.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -1680,6 +1885,14 @@ typing-extensions = {version = ">=3.7.4,<5.0", markers = "python_version < \"3.8
 
 [package.extras]
 jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
+
+[[package]]
+name = "robotframework"
+version = "5.0.1"
+description = "Generic automation framework for acceptance testing and robotic process automation (RPA)"
+category = "main"
+optional = true
+python-versions = ">=3.6"
 
 [[package]]
 name = "ruamel.yaml"
@@ -1980,6 +2193,14 @@ python-versions = ">=3.6"
 doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
+name = "text-unidecode"
+version = "1.3"
+description = "The most basic Text::Unidecode port"
+category = "main"
+optional = true
+python-versions = "*"
+
+[[package]]
 name = "textfsm"
 version = "1.1.2"
 description = "Python module for parsing semi-structured text into python tables."
@@ -2003,7 +2224,7 @@ python-versions = ">=2.7"
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -2164,15 +2385,17 @@ optional = true
 python-versions = "*"
 
 [[package]]
-name = "win32-setctime"
-version = "1.1.0"
-description = "A small Python utility to set file creation time on Windows"
+name = "websocket-client"
+version = "1.3.3"
+description = "WebSocket client for Python with low level API options"
 category = "main"
 optional = true
-python-versions = ">=3.5"
+python-versions = ">=3.7"
 
 [package.extras]
-dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
+docs = ["Sphinx (>=3.4)", "sphinx-rtd-theme (>=0.5)"]
+optional = ["python-socks", "wsaccel"]
+test = ["websockets"]
 
 [[package]]
 name = "wrapt"
@@ -2181,6 +2404,30 @@ description = "Module for decorators, wrappers and monkey patching."
 category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
+
+[[package]]
+name = "xlrd"
+version = "1.2.0"
+description = "Library for developers to extract data from Microsoft Excel (tm) spreadsheet files"
+category = "main"
+optional = true
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
+name = "xlsxwriter"
+version = "3.0.3"
+description = "A Python module for creating Excel XLSX files."
+category = "main"
+optional = true
+python-versions = ">=3.4"
+
+[[package]]
+name = "xlwt"
+version = "1.3.0"
+description = "Library to create spreadsheet files compatible with MS Excel 97/2000/XP/2003 XLS files, on any platform, with Python 2.6, 2.7, 3.3+"
+category = "main"
+optional = true
+python-versions = "*"
 
 [[package]]
 name = "xmltodict"
@@ -2228,15 +2475,15 @@ typing-extensions = {version = ">=3.7.4", markers = "python_version < \"3.8\""}
 
 [[package]]
 name = "zipp"
-version = "3.8.0"
+version = "3.8.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)"]
-testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
+docs = ["sphinx", "jaraco.packaging (>=9)", "rst.linker (>=1.9)", "jaraco.tidelift (>=1.4)"]
+testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.3)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy (>=0.9.1)"]
 
 [extras]
 dataprocessor = ["cerberus", "jmespath", "ntc-templates", "pyyaml", "tabulate", "ttp", "ttp-templates", "xmltodict", "lxml"]
@@ -2245,7 +2492,7 @@ gnmi = ["pygnmi"]
 napalm = ["napalm", "nornir-napalm"]
 netconf = ["ncclient", "scrapli-netconf"]
 netmiko = ["netmiko", "nornir-netmiko"]
-prodmax = ["cerberus", "genie", "jmespath", "napalm", "ncclient", "netmiko", "nornir-napalm", "nornir-netmiko", "nornir-scrapli", "ntc-templates", "paramiko", "pyats", "pygnmi", "pyyaml", "requests", "rich", "scrapli", "scrapli-community", "scrapli-netconf", "tabulate", "ttp", "ttp-templates", "xmltodict", "jinja2", "textfsm"]
+prodmax = ["cerberus", "genie", "jmespath", "napalm", "ncclient", "netmiko", "nornir-napalm", "nornir-netmiko", "nornir-scrapli", "ntc-templates", "paramiko", "pyats", "pygnmi", "pyyaml", "requests", "rich", "scrapli", "scrapli-community", "scrapli-netconf", "tabulate", "ttp", "ttp-templates", "xmltodict", "jinja2", "textfsm", "N2G"]
 prodmin = ["ncclient", "netmiko", "nornir-netmiko", "paramiko", "requests", "rich", "tabulate", "ttp", "ttp-templates", "xmltodict", "jinja2", "textfsm"]
 pyats = ["genie", "pyats"]
 restconf = ["requests"]
@@ -2254,7 +2501,7 @@ scrapli = ["scrapli", "scrapli-community"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<4.0"
-content-hash = "887072a2eab86105db8e90fcfaab1fd59e0e3d94f1c9071b612359f09da6b729"
+content-hash = "a63353c49bc21bdcad13657ee01c08a57877f82a577e73443228840c97d5fd51"
 
 [metadata.files]
 aiofiles = [
@@ -2347,6 +2594,10 @@ alabaster = [
     {file = "alabaster-0.7.12-py2.py3-none-any.whl", hash = "sha256:446438bdcca0e05bd45ea2de1668c1d9b032e1a9154c2c259092d77031ddd359"},
     {file = "alabaster-0.7.12.tar.gz", hash = "sha256:a661d72d58e6ea8a57f7a86e37d86716863ee5e92788398526d58b26a4e4dc02"},
 ]
+arrow = [
+    {file = "arrow-1.2.2-py3-none-any.whl", hash = "sha256:d622c46ca681b5b3e3574fcb60a04e5cc81b9625112d5fb2b44220c36c892177"},
+    {file = "arrow-1.2.2.tar.gz", hash = "sha256:05caf1fd3d9a11a1135b2b6f09887421153b94558e5ef4d090b567b47173ac2b"},
+]
 astroid = [
     {file = "astroid-2.9.3-py3-none-any.whl", hash = "sha256:506daabe5edffb7e696ad82483ad0228245a9742ed7d2d8c9cdb31537decf9f6"},
     {file = "astroid-2.9.3.tar.gz", hash = "sha256:1efdf4e867d4d8ba4a9f6cf9ce07cd182c4c41de77f23814feb27ca93ca9d877"},
@@ -2372,6 +2623,9 @@ babel = [
     {file = "Babel-2.10.3-py3-none-any.whl", hash = "sha256:ff56f4892c1c4bf0d814575ea23471c230d544203c7748e8c68f0089478d48eb"},
     {file = "Babel-2.10.3.tar.gz", hash = "sha256:7614553711ee97490f732126dc077f8d0ae084ebc6a96e23db1482afabdb2c51"},
 ]
+"backports.ssl" = [
+    {file = "backports.ssl-0.0.9.tar.gz", hash = "sha256:079549f44a5d52e6b6c97455cc322725e0590772237d6dc362cda57635128e1d"},
+]
 bandit = [
     {file = "bandit-1.7.4-py3-none-any.whl", hash = "sha256:412d3f259dab4077d0e7f0c11f50f650cc7d10db905d98f6520a95a18049658a"},
     {file = "bandit-1.7.4.tar.gz", hash = "sha256:2d63a8c573417bae338962d4b9b06fbc6080f74ecd955a092849e1e65c717bd2"},
@@ -2388,6 +2642,10 @@ bcrypt = [
     {file = "bcrypt-3.2.2-cp36-abi3-win32.whl", hash = "sha256:4e029cef560967fb0cf4a802bcf4d562d3d6b4b1bf81de5ec1abbe0f1adb027e"},
     {file = "bcrypt-3.2.2-cp36-abi3-win_amd64.whl", hash = "sha256:7ff2069240c6bbe49109fe84ca80508773a904f5a8cb960e02a977f7f519b129"},
     {file = "bcrypt-3.2.2.tar.gz", hash = "sha256:433c410c2177057705da2a9f2cd01dd157493b2a7ac14c8593a16b3dab6b6bfb"},
+]
+binaryornot = [
+    {file = "binaryornot-0.4.4-py2.py3-none-any.whl", hash = "sha256:b8b71173c917bddcd2c16070412e369c3ed7f0528926f70cac18a6c97fd563e4"},
+    {file = "binaryornot-0.4.4.tar.gz", hash = "sha256:359501dfc9d40632edc9fac890e19542db1a287bbcfa58175b66658392018061"},
 ]
 black = [
     {file = "black-22.3.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:2497f9c2386572e28921fa8bec7be3e51de6801f7459dffd6e62492531c47e09"},
@@ -2500,10 +2758,6 @@ cisco-gnmi = [
     {file = "cisco_gnmi-1.0.15-py3-none-any.whl", hash = "sha256:5384532d3145b8e348cbdf9d75b24d0a2619b5ba7f406e454400c9c67ff24ccb"},
     {file = "cisco_gnmi-1.0.15.tar.gz", hash = "sha256:cab322f50095b11b2fed2a16e18b9ca3f772da978e9862be7692ca9bd2bcfd71"},
 ]
-ciscoconfparse = [
-    {file = "ciscoconfparse-1.6.40-py3-none-any.whl", hash = "sha256:1dc4c7b30b4b58613b4e656a6a966fd2914c61503fe06ed5c0bcf40160194222"},
-    {file = "ciscoconfparse-1.6.40.tar.gz", hash = "sha256:277bd491841990e2c048791028f0bd280a7fca4002bb3f23f1c6e396e39b4a79"},
-]
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
@@ -2516,6 +2770,10 @@ commonmark = [
     {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
     {file = "commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60"},
 ]
+cookiecutter = [
+    {file = "cookiecutter-2.1.1-py2.py3-none-any.whl", hash = "sha256:9f3ab027cec4f70916e28f03470bdb41e637a3ad354b4d65c765d93aad160022"},
+    {file = "cookiecutter-2.1.1.tar.gz", hash = "sha256:f3982be8d9c53dac1261864013fdec7f83afd2e42ede6f6dd069c5e149c540d5"},
+]
 cryptography = []
 dictdiffer = [
     {file = "dictdiffer-0.9.0-py2.py3-none-any.whl", hash = "sha256:442bfc693cfcadaf46674575d2eba1c53b42f5e404218ca2c2ff549f2df56595"},
@@ -2525,17 +2783,10 @@ dill = [
     {file = "dill-0.3.5.1-py2.py3-none-any.whl", hash = "sha256:33501d03270bbe410c72639b350e941882a8b0fd55357580fbc873fba0c59302"},
     {file = "dill-0.3.5.1.tar.gz", hash = "sha256:d75e41f3eff1eee599d738e76ba8f4ad98ea229db8b085318aa2b3333a208c86"},
 ]
-distlib = [
-    {file = "distlib-0.3.4-py2.py3-none-any.whl", hash = "sha256:6564fe0a8f51e734df6333d08b8b94d4ea8ee6b99b5ed50613f731fd4089f34b"},
-    {file = "distlib-0.3.4.zip", hash = "sha256:e4b58818180336dc9c529bfb9a0b58728ffc09ad92027a3f30b7cd91e3458579"},
-]
+distlib = []
 distro = [
     {file = "distro-1.7.0-py3-none-any.whl", hash = "sha256:d596311d707e692c2160c37807f83e3820c5d539d5a83e87cfb6babd8ba3a06b"},
     {file = "distro-1.7.0.tar.gz", hash = "sha256:151aeccf60c216402932b52e40ee477a939f8d58898927378a02abbe852c1c39"},
-]
-dnspython = [
-    {file = "dnspython-2.2.1-py3-none-any.whl", hash = "sha256:a851e51367fb93e9e1361732c1d60dab63eff98712e503ea7d92e6eccb109b4f"},
-    {file = "dnspython-2.2.1.tar.gz", hash = "sha256:0f7569a4a6ff151958b64304071d370daa3243d15941a7beedf0c9fe5105603e"},
 ]
 docutils = [
     {file = "docutils-0.17.1-py2.py3-none-any.whl", hash = "sha256:cf316c8370a737a022b72b56874f6602acf974a37a9fba42ec2876387549fc61"},
@@ -2647,8 +2898,17 @@ genie = [
 "genie.libs.parser" = [
     {file = "genie.libs.parser-22.1-py3-none-any.whl", hash = "sha256:d0e08ac9a8ad2c4e63d1002b1b7f0a15d60f6cbb48a17f454715b5f6eb09407a"},
 ]
+"genie.libs.robot" = [
+    {file = "genie.libs.robot-22.1-py3-none-any.whl", hash = "sha256:685bacae144a9153002030e27a4752b812afde3731e19228c80e08aceb9c9cc1"},
+]
 "genie.libs.sdk" = [
     {file = "genie.libs.sdk-22.1.2-py3-none-any.whl", hash = "sha256:480a23cb68cdcd0f3d66d836e53f1750aa3bde0242cce7f7e6906a957823d762"},
+]
+"genie.telemetry" = [
+    {file = "genie.telemetry-22.1-py3-none-any.whl", hash = "sha256:87f066b2d9621695a2857368cdadbca7d2f66e85ae7dd3625c702f446e104a7d"},
+]
+"genie.trafficgen" = [
+    {file = "genie.trafficgen-22.1-py3-none-any.whl", hash = "sha256:576b616c74367e8cc123474244484144b0e4e6229f5b1eb757f9493090ae627c"},
 ]
 gitdb = [
     {file = "gitdb-4.0.9-py3-none-any.whl", hash = "sha256:8033ad4e853066ba6ca92050b9df2f89301b8fc8bf7e9324d412a63f8bf1a8fd"},
@@ -2684,9 +2944,20 @@ isort = [
     {file = "isort-5.10.1-py3-none-any.whl", hash = "sha256:6f62d78e2f89b4500b080fe3a81690850cd254227f27f75c3a0c491a1f351ba7"},
     {file = "isort-5.10.1.tar.gz", hash = "sha256:e8443a5e7a020e9d7f97f1d7d9cd17c88bcb3bc7e218bf9cf5095fe550be2951"},
 ]
+ixnetwork = [
+    {file = "IxNetwork-9.0.1915.16-py2.py3-none-any.whl", hash = "sha256:d5319382eebe371d6e9988d29647a7333f30e2da8180430922fe0e371e71759c"},
+]
+ixnetwork-restpy = [
+    {file = "ixnetwork_restpy-1.1.6-py2.py3-none-any.whl", hash = "sha256:83d5ae4d3ef9548a44386edcdd4dda81ed7004d736b619cfb28e2b654261537d"},
+    {file = "ixnetwork_restpy-1.1.6.tar.gz", hash = "sha256:32fcf7de5f2d52fba8ea413ae9677b601db38ae6fe2aa3e7db9bf85ca881fda6"},
+]
 jinja2 = [
     {file = "Jinja2-3.0.3-py3-none-any.whl", hash = "sha256:077ce6014f7b40d03b47d1f1ca4b0fc8328a692bd284016f806ed0eaca390ad8"},
     {file = "Jinja2-3.0.3.tar.gz", hash = "sha256:611bb273cd68f3b993fabdc4064fc858c5b47a973cb5aa7999ec1ba405c87cd7"},
+]
+jinja2-time = [
+    {file = "jinja2-time-0.2.0.tar.gz", hash = "sha256:d14eaa4d315e7688daa4969f616f226614350c48730bfa1692d2caebd8c90d40"},
+    {file = "jinja2_time-0.2.0-py2.py3-none-any.whl", hash = "sha256:d3eab6605e3ec8b7a0863df09cc1d23714908fa61aa6986a845c20ba488b4efa"},
 ]
 jmespath = [
     {file = "jmespath-1.0.0-py3-none-any.whl", hash = "sha256:e8dcd576ed616f14ec02eed0005c85973b5890083313860136657e24784e4c04"},
@@ -2700,8 +2971,8 @@ junit-xml = [
     {file = "junit_xml-1.9-py2.py3-none-any.whl", hash = "sha256:ec5ca1a55aefdd76d28fcc0b135251d156c7106fa979686a4b48d62b761b4732"},
 ]
 junos-eznc = [
-    {file = "junos-eznc-2.6.3.tar.gz", hash = "sha256:4eee93d0af203af7cee54a8f0c7bd28af683e829edf1fd68feba85d0ad737395"},
-    {file = "junos_eznc-2.6.3-py2.py3-none-any.whl", hash = "sha256:353fbe230a21caa021d37a0f840b09a9748a4f3d9689f46222200c3853d9bd20"},
+    {file = "junos-eznc-2.6.4.tar.gz", hash = "sha256:19d5b111e31482c09af8c6627227aae99e109ae5a33bc7ca900a61732e9aa75c"},
+    {file = "junos_eznc-2.6.4-py2.py3-none-any.whl", hash = "sha256:491a3cfc612048fc41ed9d1d039a20141a962fce23357f5e45eb88977e3e4dc0"},
 ]
 kthread = [
     {file = "kthread-0.2.3-py3-none-any.whl", hash = "sha256:808d3bb0ec6d573c8a00c10dfabe81b7e87d4ac945cb58335432c17f8db78ca6"},
@@ -2745,10 +3016,6 @@ lazy-object-proxy = [
     {file = "lazy_object_proxy-1.7.1-cp39-cp39-win32.whl", hash = "sha256:2130db8ed69a48a3440103d4a520b89d8a9405f1b06e2cc81640509e8bf6548f"},
     {file = "lazy_object_proxy-1.7.1-cp39-cp39-win_amd64.whl", hash = "sha256:677ea950bef409b47e51e733283544ac3d660b709cfce7b187f5ace137960d61"},
     {file = "lazy_object_proxy-1.7.1-pp37.pp38-none-any.whl", hash = "sha256:d66906d5785da8e0be7360912e99c9188b70f52c422f9fc18223347235691a84"},
-]
-loguru = [
-    {file = "loguru-0.6.0-py3-none-any.whl", hash = "sha256:4e2414d534a2ab57573365b3e6d0234dfb1d84b68b7f3b948e6fb743860a77c3"},
-    {file = "loguru-0.6.0.tar.gz", hash = "sha256:066bd06758d0a513e9836fd9c6b5a75bfb3fd36841f4b996bc60b547a309d41c"},
 ]
 lxml = [
     {file = "lxml-4.8.0-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:e1ab2fac607842ac36864e358c42feb0960ae62c34aa4caaf12ada0a1fb5d99b"},
@@ -2924,21 +3191,15 @@ mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
 ]
-napalm = [
-    {file = "napalm-3.4.1-py2.py3-none-any.whl", hash = "sha256:c1ab88c8a7474d3657fed69afb2d94cef27f5d57bb1973ecba8def39a1990839"},
-    {file = "napalm-3.4.1.tar.gz", hash = "sha256:9a9673f79a1c257a23af62675689d0d34a8c7b1a98702f5c1aab841bf1a829cd"},
-]
-ncclient = [
-    {file = "ncclient-0.6.9.tar.gz", hash = "sha256:0112f2ad41fb658f52446d870853a63691d69299c73c7351c520d38dbd8dc0c4"},
-]
+n2g = []
+napalm = []
+ncclient = []
 netaddr = [
     {file = "netaddr-0.8.0-py2.py3-none-any.whl", hash = "sha256:9666d0232c32d2656e5e5f8d735f58fd6c7457ce52fc21c98d45f2af78f990ac"},
     {file = "netaddr-0.8.0.tar.gz", hash = "sha256:d6cc57c7a07b1d9d2e917aa8b36ae8ce61c35ba3fcd1b83ca31c5a0ee2b5a243"},
 ]
-netmiko = [
-    {file = "netmiko-3.4.0-py3-none-any.whl", hash = "sha256:b66f25717db3609878f83c85604349dd40a0ab494d8eafd817dcde8388131136"},
-    {file = "netmiko-3.4.0.tar.gz", hash = "sha256:acadb9dd97864ee848e2032f1f0e301c7b31e7a4153757d98f5c8ba1b9614993"},
-]
+netmiko = []
+netutils = []
 nodeenv = [
     {file = "nodeenv-1.7.0-py2.py3-none-any.whl", hash = "sha256:27083a7b96a25f2f5e1d8cb4b6317ee8aeda3bdd121394e5ac54e498028a042e"},
     {file = "nodeenv-1.7.0.tar.gz", hash = "sha256:e0e7f7dfb85fc5394c6fe1e8fa98131a2473e04311a45afb6508f7cf1836fa2b"},
@@ -2947,14 +3208,8 @@ nornir = [
     {file = "nornir-3.3.0-py3-none-any.whl", hash = "sha256:4590d96edb5044e6a9e6f84e15625d32932177a10654040f99e145d73b352479"},
     {file = "nornir-3.3.0.tar.gz", hash = "sha256:1c6fd283bcdff9972358b126703c0990e9076dff1dfdc211e3077d45ada937d5"},
 ]
-nornir-napalm = [
-    {file = "nornir_napalm-0.2.0-py3-none-any.whl", hash = "sha256:08f9e50cc1bda814cc3ea4ae647ff600aa7067e2ce5b6f12acf98f4654f9862d"},
-    {file = "nornir_napalm-0.2.0.tar.gz", hash = "sha256:5d462596a7ec5829b5796a4c43db3a915452de9eb544d30eeccb33f37e414bd3"},
-]
-nornir-netmiko = [
-    {file = "nornir_netmiko-0.1.2-py3-none-any.whl", hash = "sha256:adb575a2eb729f5ed3ab16c79624c80ee29cce26681ac312a40b031c7c02ed7f"},
-    {file = "nornir_netmiko-0.1.2.tar.gz", hash = "sha256:19688c6d0f964ffce623d732f3cc1dfa8f944611278209f9be103aacaeb454b5"},
-]
+nornir-napalm = []
+nornir-netmiko = []
 nornir-salt = [
     {file = "nornir_salt-0.12.0-py3-none-any.whl", hash = "sha256:5be596a551bf3c00b6cd9af010fb9e72186bc399e71447ef6c313e25ea653bb4"},
     {file = "nornir_salt-0.12.0.tar.gz", hash = "sha256:f919538a3a91c249dd161e9bd0182e740126905c05d9f5ac032912069f35b0e1"},
@@ -2968,8 +3223,8 @@ nornir-utils = [
     {file = "nornir_utils-0.2.0.tar.gz", hash = "sha256:4de6aaa35e5c1a98e1c84db84a008b0b1e974dc65d88484f2dcea3e30c95fbc2"},
 ]
 ntc-templates = [
-    {file = "ntc_templates-1.7.0-py3-none-any.whl", hash = "sha256:08ffeafd02a1d3e42f4f12f910f0b4c64b93783d76ece186c9a63389403a450b"},
-    {file = "ntc_templates-1.7.0.tar.gz", hash = "sha256:4e098f83b35624751f4f6aaa4eed9eefd50a742f3d009c86f4bb22843a6a72fc"},
+    {file = "ntc_templates-3.0.0-py3-none-any.whl", hash = "sha256:a652ff1659803d98fc088fc1b0838a74533316b0ad627c1220c0424dd82d12b3"},
+    {file = "ntc_templates-3.0.0.tar.gz", hash = "sha256:866c1b57af48625e1a38cc7226067e400d8a992c4d5594b914cafd7b13fd4a50"},
 ]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
@@ -2978,10 +3233,6 @@ packaging = [
 paramiko = [
     {file = "paramiko-2.11.0-py2.py3-none-any.whl", hash = "sha256:655f25dc8baf763277b933dfcea101d636581df8d6b9774d1fb653426b72c270"},
     {file = "paramiko-2.11.0.tar.gz", hash = "sha256:003e6bee7c034c21fbb051bf83dc0a9ee4106204dd3c53054c71452cc4ec3938"},
-]
-passlib = [
-    {file = "passlib-1.7.4-py2.py3-none-any.whl", hash = "sha256:aa6bca462b8d8bda89c70b382f0c298a20b5560af6cbfa2dce410c0a2fb669f1"},
-    {file = "passlib-1.7.4.tar.gz", hash = "sha256:defd50f72b65c5402ab2c573830a6978e5f202ad0d984793c8dde2c4152ebe04"},
 ]
 pathspec = [
     {file = "pathspec-0.9.0-py2.py3-none-any.whl", hash = "sha256:7d15c4ddb0b5c802d161efc417ec1a2558ea2653c2e8ad9c19098201dc1c993a"},
@@ -3155,6 +3406,9 @@ pyats = [
     {file = "pyats.connections-22.1-cp39-cp39-macosx_10_16_x86_64.whl", hash = "sha256:8780c98d85a8d3ce755fa59994dea95fead845037ee4c19c398ec072dcdb01cc"},
     {file = "pyats.connections-22.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:e7ab9f333c1f080e5f99143326596e263c30672dac37fe4d4deb856278b0ec90"},
 ]
+"pyats.contrib" = [
+    {file = "pyats.contrib-22.1-py3-none-any.whl", hash = "sha256:c738bd6e28f5ac0e8e34e7e92443645cc7576f5fba8c93eaf7dad1f737936b86"},
+]
 "pyats.datastructures" = [
     {file = "pyats.datastructures-22.1-cp310-cp310-macosx_10_16_x86_64.whl", hash = "sha256:abcd40b7ca21847355eb37ef253d84f8d0c2d0c28db7380e9277796f7b1bb762"},
     {file = "pyats.datastructures-22.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:d19ac84432afc02ffbdb977b030b6381034cae3f25776a62343af642984d8104"},
@@ -3250,6 +3504,9 @@ pyats = [
     {file = "pyats.results-22.1-cp39-cp39-macosx_10_10_x86_64.whl", hash = "sha256:e5ae8828c889332ba3d5fdb70290e9871815d30981d33ade5539899f2d1b4252"},
     {file = "pyats.results-22.1-cp39-cp39-macosx_10_16_x86_64.whl", hash = "sha256:e5a028a611a79d8a556442a61630aba89a8efc1a84d0a047350c1984d99e2f73"},
     {file = "pyats.results-22.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:547d8c725b24c83fab61f708ec5a423eb01cb075b1017cdc041d7ef526fa5c9c"},
+]
+"pyats.robot" = [
+    {file = "pyats.robot-22.1-py3-none-any.whl", hash = "sha256:ce0b624b048c0dc17e8c5648be674b89e344a7d66404fa667a2f01439c9ea065"},
 ]
 "pyats.tcl" = [
     {file = "pyats.tcl-22.1-cp310-cp310-macosx_10_16_x86_64.whl", hash = "sha256:422e4d950d9cbbcd87c6b2e9b4d654dd296a3cdace56ff272e297a616893e183"},
@@ -3383,6 +3640,10 @@ pynacl = [
     {file = "PyNaCl-1.5.0-cp36-abi3-win_amd64.whl", hash = "sha256:20f42270d27e1b6a29f54032090b972d97f0a1b0948cc52392041ef7831fee93"},
     {file = "PyNaCl-1.5.0.tar.gz", hash = "sha256:8ac7448f09ab85811607bdd21ec2464495ac8b7c66d146bf545b0f08fb9220ba"},
 ]
+pyopenssl = [
+    {file = "pyOpenSSL-22.0.0-py2.py3-none-any.whl", hash = "sha256:ea252b38c87425b64116f808355e8da644ef9b07e429398bfece610f893ee2e0"},
+    {file = "pyOpenSSL-22.0.0.tar.gz", hash = "sha256:660b1b1425aac4a1bea1d94168a85d99f0b3144c869dd4390d27629d0087f1bf"},
+]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
@@ -3395,9 +3656,17 @@ pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},
     {file = "pytest-7.1.2.tar.gz", hash = "sha256:a06a0425453864a270bc45e71f783330a7428defb4230fb5e6a731fde06ecd45"},
 ]
+python-dateutil = [
+    {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
+    {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
+]
 python-engineio = [
     {file = "python-engineio-3.14.2.tar.gz", hash = "sha256:eab4553f2804c1ce97054c8b22cf0d5a9ab23128075248b97e1a5b2f29553085"},
     {file = "python_engineio-3.14.2-py2.py3-none-any.whl", hash = "sha256:5a9e6086d192463b04a1428ff1f85b6ba631bbb19d453b144ffc04f530542b84"},
+]
+python-slugify = [
+    {file = "python-slugify-6.1.2.tar.gz", hash = "sha256:272d106cb31ab99b3496ba085e3fea0e9e76dcde967b5e9992500d1f785ce4e1"},
+    {file = "python_slugify-6.1.2-py2.py3-none-any.whl", hash = "sha256:7b2c274c308b62f4269a9ba701aa69a797e9bca41aeee5b3a9e79e36b6656927"},
 ]
 python-socketio = [
     {file = "python-socketio-4.6.1.tar.gz", hash = "sha256:cd1f5aa492c1eb2be77838e837a495f117e17f686029ebc03d62c09e33f4fa10"},
@@ -3450,9 +3719,17 @@ requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
     {file = "requests-2.27.1.tar.gz", hash = "sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61"},
 ]
+requests-toolbelt = [
+    {file = "requests-toolbelt-0.9.1.tar.gz", hash = "sha256:968089d4584ad4ad7c171454f0a5c6dac23971e9472521ea3b6d49d610aa6fc0"},
+    {file = "requests_toolbelt-0.9.1-py2.py3-none-any.whl", hash = "sha256:380606e1d10dc85c3bd47bf5a6095f815ec007be7a8b69c878507068df059e6f"},
+]
 rich = [
     {file = "rich-11.2.0-py3-none-any.whl", hash = "sha256:d5f49ad91fb343efcae45a2b2df04a9755e863e50413623ab8c9e74f05aee52b"},
     {file = "rich-11.2.0.tar.gz", hash = "sha256:1a6266a5738115017bb64a66c59c717e7aa047b3ae49a011ede4abdeffc6536e"},
+]
+robotframework = [
+    {file = "robotframework-5.0.1-py3-none-any.whl", hash = "sha256:2d2072cf9ec807e820bf27e5f71240e715e37691c9ba930a59a71d5c0fd61998"},
+    {file = "robotframework-5.0.1.zip", hash = "sha256:cf5dc59777ed9d8c3e1e91fb4403454890242867735681f22f4f22dbb2a20fc8"},
 ]
 "ruamel.yaml" = [
     {file = "ruamel.yaml-0.17.21-py3-none-any.whl", hash = "sha256:742b35d3d665023981bd6d16b3d24248ce5df75fdb4e2924e93a05c1f8b61ca7"},
@@ -3569,6 +3846,10 @@ tenacity = [
     {file = "tenacity-8.0.1-py3-none-any.whl", hash = "sha256:f78f4ea81b0fabc06728c11dc2a8c01277bfc5181b321a4770471902e3eb844a"},
     {file = "tenacity-8.0.1.tar.gz", hash = "sha256:43242a20e3e73291a28bcbcacfd6e000b02d3857a9a9fff56b297a27afdc932f"},
 ]
+text-unidecode = [
+    {file = "text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93"},
+    {file = "text_unidecode-1.3-py2.py3-none-any.whl", hash = "sha256:1311f10e8b895935241623731c2ba64f4c455287888b18189350b67134a822e8"},
+]
 textfsm = [
     {file = "textfsm-1.1.2-py2.py3-none-any.whl", hash = "sha256:f3d4e9bd4344935a08e6844e53d6220e2e4fb7e465bee51fa909152ed6bab406"},
     {file = "textfsm-1.1.2.tar.gz", hash = "sha256:85a450b441aff04b1cac726bdb36f35534a5b196cca08c8bc14fddd879c4255c"},
@@ -3652,9 +3933,9 @@ wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
 ]
-win32-setctime = [
-    {file = "win32_setctime-1.1.0-py3-none-any.whl", hash = "sha256:231db239e959c2fe7eb1d7dc129f11172354f98361c4fa2d6d2d7e278baa8aad"},
-    {file = "win32_setctime-1.1.0.tar.gz", hash = "sha256:15cf5750465118d6929ae4de4eb46e8edae9a5634350c01ba582df868e932cb2"},
+websocket-client = [
+    {file = "websocket-client-1.3.3.tar.gz", hash = "sha256:d58c5f284d6a9bf8379dab423259fe8f85b70d5fa5d2916d5791a84594b122b1"},
+    {file = "websocket_client-1.3.3-py3-none-any.whl", hash = "sha256:5d55652dc1d0b3c734f044337d929aaf83f4f9138816ec680c1aefefb4dc4877"},
 ]
 wrapt = [
     {file = "wrapt-1.13.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:e05e60ff3b2b0342153be4d1b597bbcfd8330890056b9619f4ad6b8d5c96a81a"},
@@ -3708,6 +3989,18 @@ wrapt = [
     {file = "wrapt-1.13.3-cp39-cp39-win32.whl", hash = "sha256:0a017a667d1f7411816e4bf214646d0ad5b1da2c1ea13dec6c162736ff25a374"},
     {file = "wrapt-1.13.3-cp39-cp39-win_amd64.whl", hash = "sha256:81bd7c90d28a4b2e1df135bfbd7c23aee3050078ca6441bead44c42483f9ebfb"},
     {file = "wrapt-1.13.3.tar.gz", hash = "sha256:1fea9cd438686e6682271d36f3481a9f3636195578bab9ca3382e2f5f01fc185"},
+]
+xlrd = [
+    {file = "xlrd-1.2.0-py2.py3-none-any.whl", hash = "sha256:e551fb498759fa3a5384a94ccd4c3c02eb7c00ea424426e212ac0c57be9dfbde"},
+    {file = "xlrd-1.2.0.tar.gz", hash = "sha256:546eb36cee8db40c3eaa46c351e67ffee6eeb5fa2650b71bc4c758a29a1b29b2"},
+]
+xlsxwriter = [
+    {file = "XlsxWriter-3.0.3-py3-none-any.whl", hash = "sha256:df0aefe5137478d206847eccf9f114715e42aaea077e6a48d0e8a2152e983010"},
+    {file = "XlsxWriter-3.0.3.tar.gz", hash = "sha256:e89f4a1d2fa2c9ea15cde77de95cd3fd8b0345d0efb3964623f395c8c4988b7f"},
+]
+xlwt = [
+    {file = "xlwt-1.3.0-py2.py3-none-any.whl", hash = "sha256:a082260524678ba48a297d922cc385f58278b8aa68741596a87de01a9c628b2e"},
+    {file = "xlwt-1.3.0.tar.gz", hash = "sha256:c59912717a9b28f1a3c2a98fd60741014b06b043936dcecbc113eaaada156c88"},
 ]
 xmltodict = [
     {file = "xmltodict-0.13.0-py2.py3-none-any.whl", hash = "sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852"},
@@ -3791,7 +4084,4 @@ yarl = [
     {file = "yarl-1.7.2-cp39-cp39-win_amd64.whl", hash = "sha256:797c2c412b04403d2da075fb93c123df35239cd7b4cc4e0cd9e5839b73f52c58"},
     {file = "yarl-1.7.2.tar.gz", hash = "sha256:45399b46d60c253327a460e99856752009fcee5f5d3c80b2f7c0cae1c38d56dd"},
 ]
-zipp = [
-    {file = "zipp-3.8.0-py3-none-any.whl", hash = "sha256:c4f6e5bbf48e74f7a38e7cc5b0480ff42b0ae5178957d564d18932525d5cf099"},
-    {file = "zipp-3.8.0.tar.gz", hash = "sha256:56bf8aadb83c24db6c4b577e13de374ccfb67da2078beba1d037c17980bf43ad"},
-]
+zipp = []

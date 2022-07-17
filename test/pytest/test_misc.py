@@ -1826,3 +1826,56 @@ def test_simeltenious_download():
     for wkr_id, res in ret["nrp1"].items():
         for hostname, hostres in res.items():
             assert "Traceback" not in hostres["salt_cfg_gen"], "wkr {}, host {} returned traceback".format(wkr_id, hostname)
+            
+
+def test_nornir_refresh_workers_only():
+    # save some data in hcache and verify it cached
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        kwarg={"hcache": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos1"]["data"], "No data cached"
+    assert "hcache" in inventory["nrp1"]["hosts"]["ceos2"]["data"], "No data cached"
+    # refresh nornir
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["refresh"],
+        kwarg={"workers_only": True},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    # sleep for 30 seconds to make sure nornir refreshed
+    time.sleep(30)
+    # verify cache is gone
+    inventory = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        tgt_type="glob",
+        timeout=60,
+    )    
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos1"]["data"], "Cached data not gone after refresh"
+    assert "hcache" not in inventory["nrp1"]["hosts"]["ceos2"]["data"], "Cached data not gone after refresh"
+    
+    # verify nornir is functional
+    res_check = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock", "show hostname"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "show clock" in res_check["nrp1"]["ceos1"], "Nornir not working after refresh"
+    assert "show clock" in res_check["nrp1"]["ceos2"], "Nornir not working after refresh"

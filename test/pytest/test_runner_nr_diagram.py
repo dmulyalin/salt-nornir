@@ -34,7 +34,12 @@ def test_nr_diagram_IP():
     ret = runner.cmd(
         fun="nr.diagram",
         arg=["IP"],
-        kwarg={"FB": "ceos[12]", "outfile": "/tmp/pytest/test_nr_diagram_IP.graphml"},        
+        kwarg={
+            "FB": "ceos[12]", 
+            "outfile": "/tmp/pytest/test_nr_diagram_IP.graphml", 
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
+        },        
     )
     pprint.pprint(ret)
     with open("/tmp/pytest/test_nr_diagram_IP.graphml") as f:
@@ -53,7 +58,12 @@ def test_nr_diagram_IP_from_file():
     commands_output = runner.cmd(
         fun="nr.call",
         arg=["cli", "show run", "show ip arp"],
-        kwarg={"FB": "ceos[12]", "tf": "ip_data"},        
+        kwarg={
+            "FB": "ceos[12]", 
+            "tf": "ip_data",
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
+        },        
     )
     # build diagram out of files
     ret = runner.cmd(
@@ -64,7 +74,9 @@ def test_nr_diagram_IP_from_file():
             "outfile": 
             "/tmp/pytest/test_nr_diagram_IP_from_file.graphml", 
             "filegroup": "ip_data", 
-            "last": 1
+            "last": 1,
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
         },        
     )
     
@@ -88,6 +100,8 @@ def test_nr_diagram_IP_save_data_true():
             "FB": "ceos[12]", 
             "outfile": "/tmp/pytest/test_nr_diagram_IP_save_data_true.graphml", 
             "save_data": True, 
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
         },        
     )
     
@@ -112,6 +126,8 @@ def test_nr_diagram_IP_save_data_path():
             "FB": "ceos[12]", 
             "outfile": "/tmp/pytest/test_nr_diagram_IP_save_data_path.graphml", 
             "save_data": "/tmp/pytest/test_nr_diagram_IP_save_data_path/", 
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
         },        
     )
     

@@ -2422,7 +2422,10 @@ def nornir_fun(fun, *args, **kwargs):
 
     * ``dir`` - return a list of supported functions
     * ``test`` - this method tests proxy minion module worker thread without invoking any Nornir code
-    * ``refresh`` - re-instantiates Nornir object after retrieving latest pillar data from Salt Master
+    * ``refresh`` - re-instantiates Nornir workers after retrieving latest pillar data from Salt Master,
+      if ``workers_only=True`` only refreshes Nornir workers using latest pillar data, without closing
+      queues and killing child processes, resulting in inventory refresh but with no interruption to jobs
+      execution process.
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
     * ``inventory`` - interact with Nornir Process inventory data, using ``InventoryFun`` function,
@@ -2468,6 +2471,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir connect scrapli port=2022 close_open=True
         salt nrp1 nr.nornir connections conn_name=netmiko
         salt nrp1 nr.nornir disconnect conn_name=ncclient
+        salt nrp1 nr.nornir refresh workers_only=True
 
     Sample Python API usage from Salt-Master::
 
@@ -2498,7 +2502,11 @@ def nornir_fun(fun, *args, **kwargs):
     elif fun == "kill":
         return __proxy__["nornir.kill_nornir"]()
     elif fun == "refresh":
-        return task(plugin="refresh", identity=_form_identity(kwargs, "nornir.refresh"))
+        return task(
+            plugin="refresh",
+            identity=_form_identity(kwargs, "nornir.refresh"),
+            **kwargs
+        )
     elif fun == "test":
         return task(plugin="test", identity=_form_identity(kwargs, "nornir.test"))
     elif fun == "hosts":

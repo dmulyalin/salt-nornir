@@ -124,7 +124,7 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
-        
+
   ceos1:
     container_name: ceos1
     hostname: 'ceos1'

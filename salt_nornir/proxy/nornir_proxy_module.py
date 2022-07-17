@@ -451,9 +451,14 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def init(opts, loader=None):
+def init(opts, loader=None, init_queues=True):
     """
     Initiate Nornir by calling InitNornir()
+
+    :param opts: (dict) proxy minion options
+    :param loader: (obj) SaltStack loader context object
+    :param init_queues: (bool) if True, initialises multiprocessing queues,
+        set to False if "nr.nornir refresh workers_only=True" called
     """
     # validate Salt-Nornir minion configuration
     _ = model_nornir_config(
@@ -552,9 +557,11 @@ def init(opts, loader=None):
     nornir_data["stats"]["hosts_count"] = len(
         nornir_data["nrs"][0]["nr"].inventory.hosts.keys()
     )
-    # Initiate multiprocessing related queus, locks and threads
-    nornir_data["jobs_queue"] = multiprocessing.Queue()
-    nornir_data["res_queue"] = multiprocessing.Queue()
+    # Initiate multiprocessing related queus if they are not initialised
+    # already, which is the case if we doing workers_only refresh
+    if not nornir_data.get("jobs_queue") or init_queues:
+        nornir_data["jobs_queue"] = multiprocessing.Queue()
+        nornir_data["res_queue"] = multiprocessing.Queue()
     # if loader not None, meaning init() called by _refresh_nornir function
     if loader:
         loader = loader
@@ -609,9 +616,11 @@ def shutdown():
     try:
         # trigger worker and watchdogs threads to stop
         nornir_data["initialized"] = False
-        # close connections to devices
-        for nr in nornir_data["nrs"]:
+        # close connections to devices and delete old Nornir Objects
+        while nornir_data["nrs"]:
+            nr = nornir_data["nrs"].pop()
             nr["nr"].close_connections(on_good=True, on_failed=True)
+            del nr
         # close queues
         nornir_data["jobs_queue"].close()
         nornir_data["jobs_queue"].join_thread()
@@ -620,8 +629,6 @@ def shutdown():
         # kill child processes left
         for p in multiprocessing.active_children():
             os.kill(p.pid, signal.SIGKILL)
-        # delete old Nornir Object
-        nornir_data["nrs"] = []
         log.info("Nornir-proxy MAIN PID {}, Nornir shutted down".format(os.getpid()))
         return True
     except:
@@ -980,7 +987,7 @@ def _worker(wkr_data, loader):
                     {"output": True, "identity": job["identity"]}
                 )
                 # loader used by decorator, loader_ used by _refresh_nornir itself
-                _refresh_nornir(loader=loader, loader_=loader)
+                _refresh_nornir(loader=loader, loader_=loader, **job["kwargs"])
                 # stop this worker thread as another one will be started
                 break
             if job["task_fun"] == "shutdown":
@@ -1416,44 +1423,64 @@ def _clear_dcache(nr, cache_keys=None):
 
 
 @_use_loader_context
-def _refresh_nornir(loader_):
+def _refresh_nornir(loader_, workers_only=False, **kwargs):
     """
     Function to re-initialize Nornir proxy with latest pillar data.
 
-    This function calls ``shutdown`` function, gets latest modules and pillar
-    from master and calls ``init`` function to re-instantiate Nornir object,
-    worker and watchdog threads and queues.
+    If ``workers_only`` is False, this function calls ``shutdown`` function, gets latest
+    modules and pillar from master and calls ``init`` function to re-instantiate Nornir
+    workers objects, watchdog thread and queues.
+
+    If ``workers_only`` is True, only refreshes Nornir workers without closing queues and
+    killing child processes, resulting in inventory refresh without interrupting jobs
+    execution process.
 
     It takes about a minute to finish refresh process.
 
     :param loader_: (obj) ``__salt__.loader`` object instance for ``init``
+    :param workers_only: (bool) if True, only refreshes Nornir workers
     """
-    log.info("Nornir-proxy MAIN PID {}, refreshing".format(os.getpid()))
-    if shutdown():
-        # refresh all modules
-        __salt__["saltutil.sync_all"]()
-        # refresh in memory pillar
-        __salt__["saltutil.refresh_pillar"]()
-        # get latest pillar data from master
-        __opts__["pillar"] = __salt__["pillar.items"]()
-        __opts__["proxy"] = __opts__["pillar"]["proxy"]
-        log.debug(
-            "Nornir-proxy MAIN PID {}, refreshing, new proxy data: {}".format(
-                os.getpid(), __opts__["proxy"]
-            )
+    if workers_only:
+        log.info("Nornir-proxy MAIN PID {}, doing inventory only refresh".format(os.getpid()))
+        # trigger worker and watchdogs threads to stop
+        nornir_data["initialized"] = False
+        # close connections to devices and delete old Nornir Objects
+        while nornir_data["nrs"]:
+            nr = nornir_data["nrs"].pop()
+            nr["nr"].close_connections(on_good=True, on_failed=True)
+            del nr
+        # signal to init() method that needs to keep queues intact
+        init_queues = False
+    elif shutdown():
+        log.info("Nornir-proxy MAIN PID {}, doing hard refresh".format(os.getpid()))
+        init_queues = True
+    else:
+        return False
+
+    # refresh all modules
+    __salt__["saltutil.sync_all"]()
+    # refresh in memory pillar
+    __salt__["saltutil.refresh_pillar"]()
+    # get latest pillar data from master
+    __opts__["pillar"] = __salt__["pillar.items"]()
+    __opts__["proxy"] = __opts__["pillar"]["proxy"]
+    log.debug(
+        "Nornir-proxy MAIN PID {}, refreshing, new proxy data: {}".format(
+            os.getpid(), __opts__["proxy"]
         )
-        log.debug(
-            "Nornir-proxy MAIN PID {}, refreshing, new pillar data: {}".format(
-                os.getpid(), __opts__["pillar"]
-            )
+    )
+    log.debug(
+        "Nornir-proxy MAIN PID {}, refreshing, new pillar data: {}".format(
+            os.getpid(), __opts__["pillar"]
         )
-        # re-init proxy module
-        init(__opts__, loader_)
-        # refresh in memory pillar one more time for salt to ead updated data
-        __salt__["saltutil.refresh_pillar"]()
-        log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
-        return True
-    return False
+    )
+    # re-init proxy module
+    init(__opts__, loader_, init_queues)
+    # refresh in memory pillar one more time for salt to read updated data
+    __salt__["saltutil.refresh_pillar"]()
+    log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))
+
+    return True
 
 
 def _rm_tasks_data_from_hosts(hosts):
@@ -1717,6 +1744,11 @@ def execute_job(task_fun, kwargs, identity):
                     nornir_data["res_queue"].put(res)
             except queue.Empty:
                 continue
+            except OSError:
+                raise CommandExecutionError(
+                    f"Nornir-proxy failed all-workers-job '{identity}', jobs queues closed "
+                    f"while main process refreshing, traceback:\n{traceback.format_exc()}"
+                )
             # check if collected results from all workers
             if len(results) == nornir_data["nornir_workers"]:
                 break
@@ -1770,6 +1802,11 @@ def execute_job(task_fun, kwargs, identity):
                 nornir_data["res_queue"].put(res)
         except queue.Empty:
             continue
+        except OSError:
+            raise CommandExecutionError(
+                f"Nornir-proxy failed job '{identity}', jobs queues closed "
+                f"while main process refreshing, traceback:\n{traceback.format_exc()}"
+            )
     else:
         raise TimeoutError(
             "Nornir-proxy MAIN PID {}, identity '{}', {}s job_wait_timeout expired.".format(

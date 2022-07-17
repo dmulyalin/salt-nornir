@@ -408,6 +408,8 @@ class model_exec_nr_nornir_fun(model_ffun_fx_filters):
     args: Optional[List[StrictStr]]
     fun: Optional[EnumNrFun]
     worker: Optional[Union[StrictInt, StrictStr]]
+    workers_only: Optional[StrictBool]
+    stat: Optional[StrictStr]
 
     class Config:
         extra = "allow"
@@ -630,7 +632,7 @@ class model_nornir_config_proxy(BaseModel):
     class Config:
         extra = "allow"
 
-        
+
 class EnumN2GDataPlugins(str, Enum):
     L2 = "L2"
     IP = "IP"
@@ -638,13 +640,13 @@ class EnumN2GDataPlugins(str, Enum):
     OSPF = "OSPF"
     ISIS = "ISIS"
 
-    
+
 class EnumN2GDiagramPlugins(str, Enum):
     yed = "yed"
     drawio = "drawio"
     v3d = "v3d"
-    
-    
+
+
 class model_runner_nr_diagram(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.diagramm function arguments"""
 
@@ -661,7 +663,7 @@ class model_runner_nr_diagram(model_ffun_fx_filters):
     cli: Optional[Dict[StrictStr, Any]]
     filegroup: Optional[StrictStr]
     last: Optional[StrictInt]
-    
+
     class Config:
         extra = "allow"
 
@@ -674,19 +676,19 @@ class model_runner_nr_diagram(model_ffun_fx_filters):
         if not any(data_plugin == i.value for i in EnumN2GDataPlugins):
             raise CommandExecutionError(
                 "Unsupported N2G data plugin '{}', supported {}".format(
-                    data_plugin, 
+                    data_plugin,
                     ", ".join([i.value for i in EnumN2GDataPlugins])
                 )
             )
         if not any(diagram_plugin == i.value for i in EnumN2GDiagramPlugins):
             raise CommandExecutionError(
                 "Unsupported N2G diagram plugin '{}', supported {}".format(
-                    diagram_plugin, 
+                    diagram_plugin,
                     ", ".join([i.value for i in EnumN2GDiagramPlugins])
                 )
             )
         return values
-    
+
 
 class model_nornir_config(BaseModel):
     """Model for Salt-Nornir Proxy Minion configuration attributes"""

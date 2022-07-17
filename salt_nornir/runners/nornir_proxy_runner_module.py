@@ -1036,20 +1036,20 @@ def diagram(*args, **kwargs):
     This function depends on N2G, TTP and TTP-Templates libraries to obtain list of
     per-platfrom commands to retrieve from devices, parse output and build diagram.
 
-    Alternativly, instead of getting show commands output from devices, ``nr.diagram`` 
-    can retrieve previously saved show commands output using ``nr.file read`` execution 
+    Alternativly, instead of getting show commands output from devices, ``nr.diagram``
+    can retrieve previously saved show commands output using ``nr.file read`` execution
     module function if ``filegroup`` name provided.
-    
+
     :param data_plugin: (str) data plugin name to use to process output from devices
     :param diagram_plugin: (str) N2G diagram plugin name - ``yed``, ``drawio``, ``v3d``
     :param outfile: (str) OS path to save diagram file, default is
         ``./Output/{data plugin name}_{curent time}.{diagram plugin extension}``
-    :param save_data: (bool, str) if True, saves commands otput results retrieve from devices 
-        in "Data" folder next to diagram file, if ``save_dat``a is a string, it must be an OS path 
+    :param save_data: (bool, str) if True, saves commands otput results retrieve from devices
+        in "Data" folder next to diagram file, if ``save_dat``a is a string, it must be an OS path
         to folder where to save devices output. This is useful during troubleshooting to be able
         to check what output devices return.
     :param cli: (dict) arguments for ``nr.cli`` execution module function to get devices output
-    :param filegroup: (str) ``filegroup`` argument value for ``nr.file read`` function to 
+    :param filegroup: (str) ``filegroup`` argument value for ``nr.file read`` function to
         retrieve previously saved devices show commands output
     :param last: (int) ``last`` argument value for ``nr.file read`` function, default value is 1
     :param Fx: (str) Nornir filter functions to filter list of devices (hosts) to get output from
@@ -1063,7 +1063,7 @@ def diagram(*args, **kwargs):
 
     N2G ``data_plugin`` names and details:
 
-    - ``L2`` - `CLI L2 Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_l2_data.html>`_ 
+    - ``L2`` - `CLI L2 Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_l2_data.html>`_
         uses CDP and LLDP protocols peerings data to produce L2 diagram of the network
     - ``L3` or ``IP`` - `CLI IP Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_ip_data.html>`_
         uses IP related data to produce L3 diagram of the network
@@ -1100,7 +1100,7 @@ def diagram(*args, **kwargs):
     save_data = kwargs.pop("save_data", False)
     filegroup = kwargs.pop("filegroup", None)
     last = kwargs.pop("last", 1)
-    
+
     # construct argument for call functions
     call_kwargs = {
         "tgt": kwargs.pop("tgt", "proxy:proxytype:nornir"),
@@ -1110,7 +1110,7 @@ def diagram(*args, **kwargs):
         "progress": kwargs.pop("progress", "log"),
         "raise_no_tgt_match": False,
     }
-    
+
     # decide on how to retrieve the data - using nr.cli or nr.file read
     if filegroup:
         call_kwargs["fun"] = "file"
@@ -1119,7 +1119,7 @@ def diagram(*args, **kwargs):
     else:
         call_kwargs["fun"] = "cli"
         FM = cli.pop("FM", [])
-        
+
     drawing_plugin, ext = {
         "yed": (N2G.yed_diagram, "graphml"),
         "drawio": (N2G.drawio_diagram, "drawio"),
@@ -1143,10 +1143,10 @@ def diagram(*args, **kwargs):
         data_out_folder = save_data
     elif save_data is True:
         data_out_folder = os.path.join(out_folder, f"{data_plugin}_Data_{ctime}")
-        
+
     # form list of platforms to collect output for
     n2g_supported_platorms = [
-        ".".join(i.split(".")[:-1]) 
+        ".".join(i.split(".")[:-1])
         for i in list_templates()["misc"]["N2G"][template_dir]
     ]
     # if FM filter provided, leave only supported platforms
@@ -1154,13 +1154,13 @@ def diagram(*args, **kwargs):
 
     print("Retrieving output for devices using '{}'".format(f"nr.file read {filegroup}" if filegroup else "nr.cli"))
 
-    # retrieve output on a per-platform basis to save it 
+    # retrieve output on a per-platform basis to save it
     # in n2g_data dict keyed by platform name
     for platform in platforms:
         n2g_data.setdefault(platform, [])
         cli_args = copy.deepcopy(cli)
         file_args = copy.deepcopy(file) if filegroup else {}
-        
+
         # use N2G ttp templates to get list of commands and list of platforms
         # to collect show commands output from devices
         parser = ttp(
@@ -1175,14 +1175,14 @@ def diagram(*args, **kwargs):
                 file_args["FM"] = input_params.get("platform", platform)
                 if cli_args["plugin"] == "netmiko":
                     cli_args.update(input_params.get("kwargs", {}))
-                    
+
         # get output for previously saved commands using "nr.file read"
         if filegroup:
             devices_output = call(**call_kwargs, **file_args)
-        # get show commands output from devices using "nr.cli"     
+        # get show commands output from devices using "nr.cli"
         else:
             devices_output = call(**call_kwargs, **cli_args)
-            
+
         # populate n2g data dictionary keyed by platform and save results to files
         for host_name, host_results in devices_output.items():
             collected_hosts_list.append(host_name)

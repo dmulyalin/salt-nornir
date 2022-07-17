@@ -12,5 +12,6 @@ COPY salt_nornir/ /tmp/salt_nornir/
 COPY nornir_salt/ /tmp/nornir_salt/
 RUN python3 -m pip install /tmp/nornir_salt/.[prodmin] --upgrade
 RUN python3 -m pip install /tmp/salt_nornir/.[prodmin] --upgrade
+RUN python3 -m pip install N2G
 
 ENTRYPOINT ["salt-master", "-l", "debug"]
