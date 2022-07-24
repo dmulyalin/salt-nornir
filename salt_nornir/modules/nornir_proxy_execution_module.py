@@ -1838,6 +1838,9 @@ def nc(*args, **kwargs):
     default_kwargs = __proxy__["nornir.nr_data"]("nr_nc")
     args = list(args)
     kwargs["call"] = args.pop(0) if args else kwargs.pop("call")
+    kwargs.setdefault(
+        "render", ["rpc", "config", "data", "filter", "filter_", "filters"]
+    )
     kwargs = {**default_kwargs, **kwargs}
     plugin = kwargs.pop("plugin", "ncclient")
     # decide on plugin to use
@@ -2505,7 +2508,7 @@ def nornir_fun(fun, *args, **kwargs):
         return task(
             plugin="refresh",
             identity=_form_identity(kwargs, "nornir.refresh"),
-            **kwargs
+            **kwargs,
         )
     elif fun == "test":
         return task(plugin="test", identity=_form_identity(kwargs, "nornir.test"))

@@ -1441,7 +1441,9 @@ def _refresh_nornir(loader_, workers_only=False, **kwargs):
     :param workers_only: (bool) if True, only refreshes Nornir workers
     """
     if workers_only:
-        log.info("Nornir-proxy MAIN PID {}, doing inventory only refresh".format(os.getpid()))
+        log.info(
+            "Nornir-proxy MAIN PID {}, doing inventory only refresh".format(os.getpid())
+        )
         # trigger worker and watchdogs threads to stop
         nornir_data["initialized"] = False
         # close connections to devices and delete old Nornir Objects

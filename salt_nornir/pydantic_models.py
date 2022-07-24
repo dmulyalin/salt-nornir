@@ -669,22 +669,28 @@ class model_runner_nr_diagram(model_ffun_fx_filters):
 
     @root_validator(pre=True)
     def check_params_given(cls, values):
-        data_plugin = values["args"][0] if len(values.get("args", [])) >= 1 else values.get("data_plugin")
-        diagram_plugin = values["args"][1] if len(values["args"]) == 2 else values.pop("diagram_plugin", "yed")
+        data_plugin = (
+            values["args"][0]
+            if len(values.get("args", [])) >= 1
+            else values.get("data_plugin")
+        )
+        diagram_plugin = (
+            values["args"][1]
+            if len(values["args"]) == 2
+            else values.pop("diagram_plugin", "yed")
+        )
         if not data_plugin:
             raise CommandExecutionError("No data plugin name provided")
         if not any(data_plugin == i.value for i in EnumN2GDataPlugins):
             raise CommandExecutionError(
                 "Unsupported N2G data plugin '{}', supported {}".format(
-                    data_plugin,
-                    ", ".join([i.value for i in EnumN2GDataPlugins])
+                    data_plugin, ", ".join([i.value for i in EnumN2GDataPlugins])
                 )
             )
         if not any(diagram_plugin == i.value for i in EnumN2GDiagramPlugins):
             raise CommandExecutionError(
                 "Unsupported N2G diagram plugin '{}', supported {}".format(
-                    diagram_plugin,
-                    ", ".join([i.value for i in EnumN2GDiagramPlugins])
+                    diagram_plugin, ", ".join([i.value for i in EnumN2GDiagramPlugins])
                 )
             )
         return values
@@ -728,6 +734,7 @@ class SaltNornirRunnerFunctions(BaseModel):
     event: model_runner_nr_event
     cfg: model_runner_nr_cfg
     diagram: model_runner_nr_diagram
+
 
 class SaltNornirMasterModel(BaseModel):
     execution: SaltNornirExecutionFunctions

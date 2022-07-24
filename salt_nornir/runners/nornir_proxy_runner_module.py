@@ -1034,6 +1034,7 @@ def make_plugin(kind, name=None):
     """
     return MakePlugin(kind=kind, name=name)
 
+
 @ValidateFuncArgs(model_runner_nr_diagram)
 def diagram(*args, **kwargs):
     """
@@ -1095,8 +1096,8 @@ def diagram(*args, **kwargs):
         log.exception(e)
         return f"nr.diagram failed importing required modules - {e}"
 
-    n2g_data = {} # to store collected from devices data
-    collected_hosts_list = [] # list of devices collected data from
+    n2g_data = {}  # to store collected from devices data
+    collected_hosts_list = []  # list of devices collected data from
     ctime = time.strftime("%Y-%m-%d_%H-%M-%S")
     data_plugin = args[0] if len(args) >= 1 else kwargs.pop("data_plugin")
     diagram_plugin = args[1] if len(args) == 2 else kwargs.pop("diagram_plugin", "yed")
@@ -1156,9 +1157,15 @@ def diagram(*args, **kwargs):
         for i in list_templates()["misc"]["N2G"][template_dir]
     ]
     # if FM filter provided, leave only supported platforms
-    platforms = [p for p in n2g_supported_platorms if p in FM] if FM else n2g_supported_platorms
+    platforms = (
+        [p for p in n2g_supported_platorms if p in FM] if FM else n2g_supported_platorms
+    )
 
-    print("Retrieving output for devices using '{}'".format(f"nr.file read {filegroup}" if filegroup else "nr.cli"))
+    print(
+        "Retrieving output for devices using '{}'".format(
+            f"nr.file read {filegroup}" if filegroup else "nr.cli"
+        )
+    )
 
     # retrieve output on a per-platform basis to save it
     # in n2g_data dict keyed by platform name
@@ -1203,7 +1210,7 @@ def diagram(*args, **kwargs):
     print(
         "Retrieved output for platforms - {} - from devices: {}".format(
             ", ".join([k for k in n2g_data.keys() if n2g_data[k] != []]),
-            ", ".join(collected_hosts_list)
+            ", ".join(collected_hosts_list),
         )
     )
 
