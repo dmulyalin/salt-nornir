@@ -417,7 +417,77 @@ class TestJunosNrNc:
         for host_name, data in lo0_config[test_proxy_id].items():
             assert str(rand_id) in data["get_config"], f"lo0 description was not updated with rand int {rand_id}"     
             
-    
+
+    def test_ncclient_transaction_load_configuration_set_with_comment(self):
+        rand_id = random.randint(0, 10000)
+        payload = 'set interfaces lo0 description "Configured over NETCONF {}"'.format(rand_id)
+        # edit configuration
+        ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.nc",
+            arg=["transaction"],
+            kwarg={
+                "config": payload,
+                "FM": "*jun*",
+                "edit_rpc": "load_configuration",
+                "edit_arg": {
+                    "action": "set",
+                },
+                "target": "candidate",
+                "confirmed": True,
+                "confirm_delay": 120,
+                "commit_final_delay": 5,
+                "commit_arg": {"comment": f"Test comment {rand_id}"}
+            },
+            tgt_type="glob",
+            timeout=60,
+        )
+        # get config to verify description updated
+        lo0_config = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.nc",
+            arg=["get_config"],
+            kwarg={
+                "FM": "*jun*",
+                "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
+                "ftype": "subtree", 
+                "source": "running",
+            },
+            tgt_type="glob",
+            timeout=60,
+        )  
+        # get commits history to verify comment
+        commits_history = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cli",
+            arg=["show system commit"],
+            kwarg={
+                "FM": "*jun*",
+            },
+            tgt_type="glob",
+            timeout=60,
+        )  
+        print("Transaction call return:")
+        pprint.pprint(ret)
+        print("get config return:")
+        pprint.pprint(lo0_config)
+        print("commits history:")
+        pprint.pprint(commits_history, width=150)
+        # check transaction results
+        for host_name, data in ret[test_proxy_id].items():
+            assert "<ok/>" in data["transaction"][0]["discard_changes"]
+            assert "<ok/>" in data["transaction"][1]["load_configuration"]
+            assert "<ok/>" in data["transaction"][2]["validate"]
+            assert "<ok/>" in data["transaction"][3]["commit_confirmed"]
+            assert "<ok/>" in data["transaction"][4]["commit"]
+        # check get config return
+        for host_name, data in lo0_config[test_proxy_id].items():
+            assert str(rand_id) in data["get_config"], f"lo0 description was not updated with rand int {rand_id}"  
+        # check if comment present in commit history
+        for host_name, data in commits_history[test_proxy_id].items():
+            assert str(rand_id) in data["show system commit"], f"random integer '{rand_id}' not found in commit history"
+            
+            
     def test_ncclient_netconf_rpc_call(self):
         ret = client.cmd(
             tgt=test_proxy_id,
