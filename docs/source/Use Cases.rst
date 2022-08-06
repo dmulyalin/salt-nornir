@@ -582,7 +582,7 @@ This example demonstrates salt cli command to perform these tasks:
 - use ``nr.cfg_gen`` to verify cached logging configuration
 - use ``nr.cfg`` to re-apply cached logging configuration to device
 
-Save devices output into ``hcache``:
+Save devices output into ``hcache``::
 
     salt nrp1 nr.cli "show run | inc logging" hcache="log_config"
     salt nrp1 nr.cfg_gen '{{ host.log_config["show run | inc logging"] }}'
