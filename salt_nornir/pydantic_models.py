@@ -135,6 +135,7 @@ class EnumExecNrCfgPlugins(str, Enum):
 class model_exec_nr_cfg(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.cfg function arguments"""
 
+    args: Optional[List[Union[StrictStr]]]
     commands: Optional[Union[List[StrictStr], StrictStr]]
     plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
     filename: Optional[StrictStr]
@@ -146,7 +147,10 @@ class model_exec_nr_cfg(ModelExecCommonArgs):
     @root_validator(pre=True)
     def check_commands_given(cls, values):
         assert (
-            values.get("commands") or values.get("filename") or values.get("config")
+            values.get("args") or
+            values.get("commands") or
+            values.get("filename") or
+            values.get("config")
         ), "No CLI commands, filename or config provided"
         return values
 

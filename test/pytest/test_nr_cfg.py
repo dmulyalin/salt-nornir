@@ -17,6 +17,8 @@ if HAS_SALT:
     # initiate execution modules client to run 'salt xyz command' commands
     client = salt.client.LocalClient()
 
+# list of workds that should ne be in good results
+INVALID = ["Traceback", "Invalid input"]
 
 def test_nr_cfg_inline_commands_plugin_netmiko():
     """
@@ -78,8 +80,90 @@ def test_nr_cfg_inline_commands_plugin_netmiko():
         assert results["netmiko_send_config"]["failed"] is False
         assert isinstance(results["netmiko_send_config"]["result"], str)
         assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
 
+        
+def test_nr_cfg_commands_argument_string_plugin_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={"plugin": "netmiko", "commands": "ntp server 1.1.1.1"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["netmiko_send_config"]["changed"] is True
+        assert results["netmiko_send_config"]["exception"] is None
+        assert results["netmiko_send_config"]["failed"] is False
+        assert isinstance(results["netmiko_send_config"]["result"], str)
+        assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
+        
+        
+def test_nr_cfg_commands_argument_list_plugin_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=[],
+        kwarg={"plugin": "netmiko", "commands": ["ntp server 1.1.1.1", "ntp server 1.1.1.2"]},
+        tgt_type="glob",
+        timeout=60,
+    )
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["netmiko_send_config"]["changed"] is True
+        assert results["netmiko_send_config"]["exception"] is None
+        assert results["netmiko_send_config"]["failed"] is False
+        assert isinstance(results["netmiko_send_config"]["result"], str)
+        assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
+               
+               
+def test_nr_cfg_multiline_commands_string_plugin_netmiko():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=["ntp server 1.1.1.1\nntp server 1.1.1.2"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["netmiko_send_config"]["changed"] is True
+        assert results["netmiko_send_config"]["exception"] is None
+        assert results["netmiko_send_config"]["failed"] is False
+        assert isinstance(results["netmiko_send_config"]["result"], str)
+        assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
+        
 
+def test_nr_cfg_escaped_multiline_commands_string_plugin_netmiko():
+    """
+    Multiline cmmand string has \\n escaped \n in it
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=["ntp server 1.1.1.1\\nntp server 1.1.1.2"],
+        kwarg={"plugin": "netmiko"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for host, results in ret["nrp1"].items():
+        assert len(results.keys()) == 1, "Got additional results: {}".format(results)
+        assert results["netmiko_send_config"]["changed"] is True
+        assert results["netmiko_send_config"]["exception"] is None
+        assert results["netmiko_send_config"]["failed"] is False
+        assert isinstance(results["netmiko_send_config"]["result"], str)
+        assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
+        
+        
 def test_nr_cfg_from_file_plugin_netmiko():
     """
     This test pushes static config from same file to all hosts
@@ -138,6 +222,7 @@ def test_nr_cfg_from_file_plugin_netmiko():
         assert results["netmiko_send_config"]["failed"] is False
         assert isinstance(results["netmiko_send_config"]["result"], str)
         assert len(results["netmiko_send_config"]["result"]) > 0
+        assert all(i not in results["netmiko_send_config"]["result"] for i in INVALID)
 
 
 def test_nr_cfg_from_file_template_plugin_netmiko():
@@ -429,6 +514,44 @@ def test_nr_cfg_inline_commands_plugin_scrapli():
         assert len(results["scrapli_send_config"]["result"]) > 0
 
 
+def test_nr_cfg_multiline_commands_string_plugin_scrapli():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=["ntp server 1.1.1.1\nntp server 1.1.1.2"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for host, results in ret["nrp1"].items():
+        assert results["scrapli_send_config"]["changed"] is True
+        assert results["scrapli_send_config"]["exception"] is None
+        assert results["scrapli_send_config"]["failed"] is False
+        assert isinstance(results["scrapli_send_config"]["result"], str)
+        assert len(results["scrapli_send_config"]["result"]) > 0
+        assert all(i not in results["scrapli_send_config"]["result"] for i in INVALID)
+        
+        
+def test_nr_cfg_escaped_multiline_commands_string_plugin_scrapli():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg",
+        arg=["ntp server 1.1.1.1\\nntp server 1.1.1.2"],
+        kwarg={"plugin": "scrapli"},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    for host, results in ret["nrp1"].items():
+        assert results["scrapli_send_config"]["changed"] is True
+        assert results["scrapli_send_config"]["exception"] is None
+        assert results["scrapli_send_config"]["failed"] is False
+        assert isinstance(results["scrapli_send_config"]["result"], str)
+        assert len(results["scrapli_send_config"]["result"]) > 0
+        assert all(i not in results["scrapli_send_config"]["result"] for i in INVALID)
+        
+        
 def test_nr_cfg_inline_commands_plugin_napalm():
     """
     ret should look like::

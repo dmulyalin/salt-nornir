@@ -1210,13 +1210,15 @@ def cli(*args, **kwargs):
 
 
 @ValidateFuncArgs(model_exec_nr_cfg)
-def cfg(*commands, **kwargs):
+def cfg(*args, **kwargs):
     """
     Function to push configuration to devices using NAPALM, Netmiko, Scrapli or
     or PyATS task plugin.
 
-    :param commands: (list) list of commands or multiline string to send to device
+    :param commands: (str, list) list of commands or multiline string to send to device
     :param filename: (str) path to file with configuration or template
+    :param config: (str, dict) configuration string or reference to configuration template or
+        dictionary keyed by host name with value set to configuration string or template
     :param template_engine: (str) template engine to render configuration, default is jinja2
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
@@ -1226,8 +1228,6 @@ def cfg(*commands, **kwargs):
     :param dry_run: (bool) default False, controls whether to apply changes to device or simulate them
     :param commit: (bool or dict) by default commit is ``True``. With ``netmiko`` plugin
         if ``commit`` argument is a dictionary it is supplied to commit call as arguments
-    :param config: (str) configuration string or reference to configuration template or
-        dictionary keyed by host name with value set to configuration string or template
 
     .. warning:: ``dry_run`` not supported by ``netmiko`` and ``pyats`` plugins
 
@@ -1280,9 +1280,10 @@ def cfg(*commands, **kwargs):
     kwargs.setdefault("add_details", True)
     kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
+    commands = kwargs.pop("commands", args)
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
-        kwargs.setdefault("commands", commands)
+        kwargs["commands"] = commands
     # decide on task plugin to run
     if plugin.lower() == "napalm":
         task_fun = "nornir_salt.plugins.tasks.napalm_configure"
@@ -1303,7 +1304,7 @@ def cfg(*commands, **kwargs):
 
 
 @ValidateFuncArgs(model_exec_nr_cfg)
-def cfg_gen(*commands, **kwargs):
+def cfg_gen(*args, **kwargs):
     """
     Function to render configuration from template file. No configuration pushed
     to devices.
@@ -1311,13 +1312,14 @@ def cfg_gen(*commands, **kwargs):
     This function can be useful to stage/test templates or to generate configuration
     without pushing it to devices.
 
+    :param commands: (str, list) list of commands or multiline string to send to device
     :param filename: (str) path to template
+    :param config: (str, dict) configuration string or reference to configuration template or
+        dictionary keyed by host name with value set to configuration string or template
     :param template_engine: (str) template engine to render configuration, default is jinja2
     :param saltenv: (str) name of SALT environment
     :param context: Overrides default context variables passed to the template.
     :param defaults: Default context passed to the template.
-    :param config: (str) configuration string or reference to configuration template or
-        dictionary keyed by host name with value set to configuration string or template
 
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
@@ -1364,9 +1366,10 @@ def cfg_gen(*commands, **kwargs):
     kwargs = {**default_kwargs, **kwargs}
     kwargs.setdefault("render", ["commands", "filename", "config"])
     # get configuration commands
+    commands = kwargs.pop("commands", args)
     commands = [commands] if isinstance(commands, str) else commands
     if any(commands):
-        kwargs.setdefault("commands", commands)
+        kwargs["commands"] = commands
     # work and return results
     return __proxy__["nornir.execute_job"](
         task_fun="nornir_salt.plugins.tasks.salt_cfg_gen",

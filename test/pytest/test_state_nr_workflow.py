@@ -119,7 +119,9 @@ def test_state_nr_workflow_report_all():
         tgt_type="glob",
         timeout=60,
     )
+    print("ret_1st: ")
     pprint.pprint(ret_1st)
+    print("ret_2nd: ")
     pprint.pprint(ret_2nd)
     # verify first run
     for v in ret_1st["nrp1"].values():
@@ -791,6 +793,81 @@ def test_state_nr_workflow_common_kwargs():
                 assert isinstance(v, str)
                 assert "Traceback" not in v
         
+      
+def test_state_nr_workflow_common_filters_fl_str():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_common_filters_fl_str"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)   
+    for v in ret["nrp1"].values():
+        for item in v["changes"]["details"]:
+            for k, v in item.items():
+                assert k == "show_current_time"
+                assert "Clock source" in v["ceos1"]["show clock"]["result"]
+                assert len(v) == 1, "matched more than 1 host"
+
+    
+def test_state_nr_workflow_common_filters_fo():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_common_filters_fo"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)   
+    for v in ret["nrp1"].values():
+        for item in v["changes"]["details"]:
+            for k, v in item.items():
+                assert k == "show_current_time"
+                assert "Clock source" in v["ceos2"]["show clock"]["result"]
+                assert len(v) == 1, "matched more than 1 host"
+                
+                
+def test_state_nr_workflow_common_filters_fb():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_common_filters_fb"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)   
+    for v in ret["nrp1"].values():
+        for item in v["changes"]["details"]:
+            for k, v in item.items():
+                assert k == "pre_check_pull_config"
+                assert "/interface" in v["ceos1"]["get_config"]["result"]
+                assert "Traceback" not in v["ceos1"]["get_config"]["result"]
+                assert len(v) == 1, "matched more than 1 host"
+                
+                
+def test_state_nr_workflow_common_filters_fo_fb_fl_fakenos():
+    """
+    This test targets multiple proxy minons but Fx filters used to match
+    fceos1 host only that is sits on nrp3
+    """
+    ret = client.cmd(
+        tgt="nrp[13]",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_common_filters_fo_fb_fl_fakenos"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)   
+    for v in ret["nrp3"].values():
+        for item in v["changes"]["details"]:
+            for k, v in item.items():
+                assert k == "show_current_time"
+                assert "Clock source" in v["fceos1"]["show clock"]["result"]
+                assert "Traceback" not in v["fceos1"]["show clock"]["result"]
+                assert len(v) == 1, "matched more than 1 host"
+                
+                
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
 #     pass

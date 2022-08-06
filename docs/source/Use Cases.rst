@@ -568,3 +568,22 @@ Sample usage::
     Ethernet0/3                unassigned      YES NVRAM  administratively down down
     Loopback0                  10.0.0.10       YES NVRAM  up                    up
     Loopback100                1.1.1.100       YES NVRAM  up                    up
+
+Storing and sourcing configuration using hcache
+===============================================
+
+Salt-Norir ``hcache`` functionality allows to cache devices output using in-memory
+Nornir inventory, that in return allows to refer to cached data within jinja2 templates
+used by ``nr.cfg`` function.
+
+This example demonstrates salt cli command to perform these tasks:
+
+- save device logging configuration into ``hcache``
+- use ``nr.cfg_gen`` to verify cached logging configuration
+- use ``nr.cfg`` to re-apply cached logging configuration to device
+
+Save devices output into ``hcache``:
+
+    salt nrp1 nr.cli "show run | inc logging" hcache="log_config"
+    salt nrp1 nr.cfg_gen '{{ host.log_config["show run | inc logging"] }}'
+    salt nrp1 nr.cfg '{{ host.log_config["show run | inc logging"] }}'

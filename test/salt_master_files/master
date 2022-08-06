@@ -15,3 +15,21 @@ pillar_roots:
     
 salt_nornir_runner:
   files_base_path: "/var/salt-nornir/runner/"
+  
+rest_cherrypy:
+  debug: True
+  host: 0.0.0.0
+  port: 8000
+  disable_ssl: True
+  
+external_auth:
+  sharedsecret:
+    # Allow saltuser to execute anything.
+    saltuser: ['.*', '@wheel', '@runner', '@jobs'] 
+
+sharedsecret: saltpass
+
+publisher_acl:
+  # Allow saltuser to publish anything anything.
+  saltuser:
+    - .*

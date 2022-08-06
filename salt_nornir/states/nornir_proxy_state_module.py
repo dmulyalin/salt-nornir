@@ -354,7 +354,11 @@ def _run_workflow_step(
 
         # form FL filter by intersecting it with FL kwargs argument if any
         if "FL" in step["kwargs"]:
-            step["kwargs"]["FL"] = list(set(step["kwargs"]["FL"]).intersection(FL))
+            kwfl = step["kwargs"].pop("FL")
+            # convert kwargs FL to a list if its a string
+            if isinstance(kwfl, str):
+                kwfl = [i.strip() for i in kwfl.split(",")]
+            step["kwargs"]["FL"] = list(set(kwfl).intersection(FL))
         else:
             step["kwargs"]["FL"] = list(FL)
 
@@ -807,6 +811,10 @@ def workflow(*args, **kwargs):
     all_hosts = __salt__["nr.nornir"](
         "hosts", **common_filters, identity=_form_identity("workflow")
     )
+    log.debug(
+        f"state:nr.workflow: '{state_name}' state filters"
+        f" {common_filters}' matched hosts '{all_hosts}'"
+    )
 
     # check if no hosts matched by common filters, exit if so
     if common_filters and not all_hosts:
@@ -824,9 +832,9 @@ def workflow(*args, **kwargs):
     # run steps
     steps_names = []
     for group_name, steps in kwargs.items():
-        log.info("state:nr.workflow: running '{}' steps".format(group_name))
+        log.info(f"state:nr.workflow: running '{group_name}' steps")
         for step in steps:
-            log.info("state:nr.workflow: running step: '{}'".format(step))
+            log.info(f"state:nr.workflow: running step: '{step}'")
             steps_names.append(step["name"])
             _run_workflow_step(
                 step,
@@ -845,12 +853,12 @@ def workflow(*args, **kwargs):
     # clean up cached data
     if hcache:
         _ = __salt__["nr.nornir"](
-            "clear_hcache", cache_keys=steps_names, identity=_form_identity("workflow")
+            "clear_hcache", cache_keys=steps_names, identity=_form_identity("workflow"), FL=all_hosts
         )
         log.info("state:nr.workflow: cleaned steps' hcache")
     if dcache:
         _ = __salt__["nr.nornir"](
-            "clear_dcache", cache_keys=steps_names, identity=_form_identity("workflow")
+            "clear_dcache", cache_keys=steps_names, identity=_form_identity("workflow"), FL=all_hosts
         )
         log.info("state:nr.workflow: cleaned steps' dcache")
 

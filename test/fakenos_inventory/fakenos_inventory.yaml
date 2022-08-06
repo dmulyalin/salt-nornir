@@ -11,32 +11,32 @@ default:
   nos: {plugin: "arista_ceos", configuration: {}}
 
 hosts:
-  ceos1: 
+  fceos1: 
     nos:
       plugin: arista_ceos
       configuration:
         commands: 
-          "show ip int brief": {output: "ceos1.show_ip_int_brief.txt"}       
-          "show ip interface brief": {output: "ceos1.show_ip_int_brief.txt"} 
-          "ping ceos1": {output: "ceos1.ping_ceos1.txt"}
-          "show run": {prompt: "{base_prompt}#", output: "ceos1.show_run.txt"}
-          "show running-config": {prompt: "{base_prompt}#", output: "ceos1.show_run.txt"}
-          "show version": {output: "ceso1.show_version.txt"}
-          "show ip arp vrf all": {output: "ceos1.show_ip_arp_vrf_all.txt"}
-  ceos2: 
+          "show ip int brief": {output: "fceos1.show_ip_int_brief.txt"}       
+          "show ip interface brief": {output: "fceos1.show_ip_int_brief.txt"} 
+          "ping fceos1": {output: "fceos1.ping_fceos1.txt"}
+          "show run": {prompt: "{base_prompt}#", output: "fceos1.show_run.txt"}
+          "show running-config": {prompt: "{base_prompt}#", output: "fceos1.show_run.txt"}
+          "show version": {output: "fceos1.show_version.txt"}
+          "show ip arp vrf all": {output: "fceos1.show_ip_arp_vrf_all.txt"}
+  fceos2: 
     nos:
       plugin: arista_ceos
       configuration:
         commands:  
-          "show ip int brief": {output: "ceos2.show_ip_int_brief.txt"}   
-          "show ip interface brief": {output: "ceos2.show_ip_int_brief.txt"}  
-          "ping ceos2": {output: "ceos2.ping_ceos2.txt"}
-          "show run": {prompt: "{base_prompt}#", output: "ceos2.show_run.txt"}
-          "show running-config": {prompt: "{base_prompt}#", output: "ceos2.show_run.txt"}
-          "show version": {output: "ceos2.show_version.txt"}
-          "show ip arp vrf all": {output: "ceos2.show_ip_arp_vrf_all.txt"}
+          "show ip int brief": {output: "fceos2.show_ip_int_brief.txt"}   
+          "show ip interface brief": {output: "fceos2.show_ip_int_brief.txt"}  
+          "ping fceos2": {output: "fceos2.ping_fceos2.txt"}
+          "show run": {prompt: "{base_prompt}#", output: "fceos2.show_run.txt"}
+          "show running-config": {prompt: "{base_prompt}#", output: "fceos2.show_run.txt"}
+          "show version": {output: "fceos2.show_version.txt"}
+          "show ip arp vrf all": {output: "fceos2.show_ip_arp_vrf_all.txt"}
   ceos3_: 
     nos:
       plugin: arista_ceos
-    count: 5
-    port: [5001, 5100]
+    count: 400
+    port: [5001, 5500]
