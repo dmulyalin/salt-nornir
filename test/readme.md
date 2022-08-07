@@ -14,13 +14,13 @@ and virtual machines:
   - always on sandox devices csr1000v-1 - sandbox-iosxe-latest-1.cisco.com
   - always on sandox devices iosxr1 - sandbox-iosxr-1.cisco.com
   - always on sandox devices nxos1 - sandbox-nxos-1.cisco.com
-- salt-minion-nrp3 - runs `nrp3` Salt-Nornir proxy minion to manage fakenos Arista cEOS devices     
+- salt-minion-nrp3 - runs `nrp3` Salt-Nornir proxy minion to manage fakenos Arista cEOS devices
 
 ## Prerequisites
 
 Test environment has these dependencies:
 
-- Machine with 1 CPU and 2-4 GByte of RAM
+- Machine with minimum of 1 CPU and 2 GByte of RAM
 - Docker Compatible Operating System to host docker containers
 - [Docker](https://docs.docker.com/engine/install/) - to run containers
 - [Docker-Compose](https://docs.docker.com/compose/install/) - to start the environment
@@ -28,11 +28,11 @@ Test environment has these dependencies:
 
 ## Setting up cEOS image
 
-This is only required if need to run tests using `nrp1` proxy minions.
+This is only required if need to run tests using `nrp1` proxy minion.
 
-Register on Arista website, download 
-[cEOS-lab.tar.xyz image](https://www.arista.com/en/support/software-download) and 
-import it in docker:
+Register on Arista website, download
+[cEOS-lab.tar.xyz image](https://www.arista.com/en/support/software-download), copy
+image file on machine running docker and import image into docker:
 
 ```
 docker import cEOS-lab.tar.xyz ceosimage:xyz
@@ -43,18 +43,18 @@ docker import cEOS-lab.tar.xyz ceosimage:xyz
 This is only required if need to run `salt-nornir/test/pytest/test_interop_juniper.py`
 tests.
 
-Download vSRX VM from Juniper and run it using configuration from  
+Download vSRX VM from Juniper and run it using configuration from
 in `salt-nornir/test/vSRX-1.conf` file adjusting management IP if required in
 both vSXR configuration and `salt-nornir/test/pytest/test_interop_juniper.py`
 file.
 
 ## Setting up required folders structure
 
-To facilitate development process, docker containers build uses local
-salt-nornir, nornir-salt and fakenos libraries without downloading them from 
-PyPI, same libraries mounted as a volumes to containers Python salt-packages
-directory. That allows to introduce changes to the code after container restart
-this changes take effect.
+To facilitate development process, docker containers build uses local copies of
+`salt-nornir`, `nornir-salt` and `fakenos` libraries without installing them from
+PyPI, these libraries mounted as a volumes to containers Python `site-packages/`
+directory. That allows to introduce changes to the code and after container restart
+this changes take effect immidiately.
 
 1. Create directory to hold test environment:
 
@@ -63,7 +63,7 @@ mkdir salt-nornir-dev
 cd salt-nornir-dev
 ```
 
-2. Clone latest code from github
+2. Clone repositories code from github
 
 ```
 git clone https://github.com/dmulyalin/nornir-salt.git
@@ -94,13 +94,13 @@ Open new terminal window login to your Minion:
 docker exec -it salt-minion-nrp1 bash
 ```
 
-Open new terminal window login to ceos1:
+Open new terminal window to access ceos1 CLI:
 
 ```
 docker exec -it ceos1 Cli
 ```
 
-To access cEOS bash shell:
+To access ceos1 bash shell:
 
 ```
 docker exec -it ceos1 bash
@@ -114,7 +114,7 @@ Most of the interaction is happening on master, to access master shell run:
 docker exec -it salt-master bash
 ```
 
-From here can run all salt utilities commands e.g.:
+From here can run any of salt utilities commands e.g.:
 
 ```
 salt --versions-report
@@ -140,7 +140,7 @@ pytest -vv
 
 ## Troubleshooting
 
-### To rebuild containers 
+### To rebuild containers
 
 Delete containers and images:
 
@@ -152,7 +152,7 @@ docker image rm -f <IMAGE ID> <<- remove salt-master, salt-minion-nrp1/2/3 image
 ```
 
 Clean up master PKI directory as it is mounted as a volume to salt-master, without
-cleaning it up it will contain keys for previously build minions containers and 
+cleaning it up it will contain keys for previously build minions containers and
 master will reject requests from rebuild minion containers:
 
 ```
@@ -168,10 +168,10 @@ on first run container shutted down but not restarted by docker:
 docker restart salt-minion-nrp1
 ```
 
-### To fix master not accepting minion keys 
+### To fix master not accepting minion keys
 
-In case salt-minion container have been rebuild need to delete all the previously 
-accepted keys on master. Master configured to automatically trust/accept all minions 
+In case salt-minion container have been rebuild need to delete all the previously
+accepted keys on master. Master configured to automatically trust/accept all minions
 keys:
 
 ```
