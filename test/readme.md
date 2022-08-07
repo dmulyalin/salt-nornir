@@ -20,7 +20,7 @@ and virtual machines:
 
 Test environment has these dependencies:
 
-- Machine with minimum of 1 CPU and 2 GByte of RAM
+- Machine with minimum of 1 CPU, 2 GByte of RAM - the more the better - and Internet access
 - Docker Compatible Operating System to host docker containers
 - [Docker](https://docs.docker.com/engine/install/) - to run containers
 - [Docker-Compose](https://docs.docker.com/compose/install/) - to start the environment
@@ -124,6 +124,11 @@ salt nrp2 nr.nornir version
 salt-run nr.call cli "show clock" FB=ceos1
 ```
 
+All files from `salt-nornir/test/salt_master_files/` mounted under `/etc/salt/` 
+directory within salt-master container, as a result any changes to any of the files in 
+`salt_master_files` directory visible within master container and accessible to master 
+process.
+
 ## Running tests
 
 All tests contained within `salt-nornir/test/pytest/` directory and mounted as a volume
@@ -136,6 +141,44 @@ using pytest:
 docker exec -it salt-master bash
 cd /tmp/pytest/
 pytest -vv
+```
+
+## Setting up Jupyter-alb
+
+This is optional, but makes it very convenient to interact with test environment using
+[Jupyter LAB](https://jupyter.org/) WEB Interface.
+
+To [install Jupyter LAB](https://jupyter.org/install):
+
+```
+pip install jupyterlab
+```
+
+Optional - Generate Jupyter LAB config and set WEB UI password:
+
+```
+jupyter notebook --generate-config
+jupyter notebook password
+```
+
+Navigate to operating system root directory and start Jupyter LAB using `nohup`:
+
+```
+cd /
+nohup jupyter lab --allow-root --ip=<your host ip> --port=8888
+```
+
+Thanks to using `nohup` terminal window can be closed.
+
+Browse to `http://<your host ip>:8888` to access Jupyter LAB WEB UI.
+
+To restart Jupyter LAB find its process id, kill it and start it again:
+
+```
+ps -A | grep jup
+kill -9 <jupyter lab pid>
+cd /
+nohup jupyter lab --allow-root --ip=<your host ip> --port=8888
 ```
 
 ## Troubleshooting
