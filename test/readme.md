@@ -1,16 +1,16 @@
-1. [Testing/Development environment for Salt-Nornir Proxy Minion](#testing/development environment for salt-nornir proxy minion)
+1. [Testing and Development environment for Salt-Nornir Proxy Minion](#testing-and-development-environment-for-salt-nornir-proxy-minion)
 2. [Prerequisites](#prerequisites)
-3. [Setting up cEOS image](#setting up ceos image)
-4. [Setting up Juniper vSRX Virtual Machine](#setting up juniper vsrx virtual machine)
-5. [Setting up required folders structure](#setting up required folders structure)
-6. [Building and starting development containers](#building and starting development containers)
-7. [Access containers shell](#access containers shell)
-8. [Working with environment](#working with environment)
-9. [Running tests](#running tests)
-10. [Setting up Jupyter LAB](#setting up jupyter lab)
+3. [Setting up cEOS image](#setting-up-ceos-image)
+4. [Setting up Juniper vSRX Virtual Machine](#setting-up-juniper-vsrx-virtual-machine)
+5. [Setting up required folders structure](#setting-up-required-folders-structure)
+6. [Building and starting development containers](#building-and-starting-development-containers)
+7. [Access containers shell](#access-containers-shell)
+8. [Working with environment](#working-with-environment)
+9. [Running tests](#running-tests)
+10. [Setting up Jupyter LAB](#setting-up-jupyter-lab)
 11. [Troubleshooting](#troubleshooting)
 
-# Testing/Development environment for Salt-Nornir Proxy Minion
+# Testing and Development environment for Salt-Nornir Proxy Minion
 
 Salt-Nornir testing environment consists of a set of docker containers
 and virtual machines:
