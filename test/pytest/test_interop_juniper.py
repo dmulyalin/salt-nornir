@@ -48,6 +48,7 @@ connection_options:
      extras:
         device_params:
            name: junos
+        raise_mode: all
         allow_agent: false
         hostkey_verify: false
         look_for_keys: false
