@@ -1,7 +1,7 @@
 FROM rockylinux:8.5
 
 # install python and other libs
-RUN dnf install -y python3.9 nano tree
+RUN dnf install -y python3.9 nano tree gcc python39-devel
 
 # do python libs and salt installation
 RUN python3 -m pip install pip setuptools wheel poetry --upgrade 

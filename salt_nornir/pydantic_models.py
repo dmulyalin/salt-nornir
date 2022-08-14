@@ -147,10 +147,10 @@ class model_exec_nr_cfg(ModelExecCommonArgs):
     @root_validator(pre=True)
     def check_commands_given(cls, values):
         assert (
-            values.get("args") or
-            values.get("commands") or
-            values.get("filename") or
-            values.get("config")
+            values.get("args")
+            or values.get("commands")
+            or values.get("filename")
+            or values.get("config")
         ), "No CLI commands, filename or config provided"
         return values
 
@@ -459,6 +459,48 @@ class model_exec_nr_gnmi(ModelExecCommonArgs):
         return values
 
 
+class NrSNMPPlugins(str, Enum):
+    puresnmp = "puresnmp"
+
+
+class model_exec_nr_snmp(ModelExecCommonArgs):
+    """Model for salt_nornir.modules.nornir_proxy_execution_module.snmp function arguments"""
+
+    call: StrictStr
+    oid: Optional[StrictStr]
+    oids: Optional[List[StrictStr]]
+    mappings: Optional[Dict[StrictStr, Any]]
+    value: Optional[Union[StrictStr]]
+    plugin: Optional[NrSNMPPlugins]
+    bulk_size: Optional[StrictInt]
+    scalar_oids: Optional[List[StrictStr]]
+    repeating_oids: Optional[List[StrictStr]]
+    method_name: Optional[StrictStr]
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        call = values.get("call")
+        if not call:
+            raise CommandExecutionError("No 'call' argument provided")
+        if call == "help" and "method_name" not in values:
+            raise CommandExecutionError("'help' requires 'method_name' argument")
+        # check plugin specific arguments presence
+        if values.get("plugin", "puresnmp") == "puresnmp":
+            if call == "multiset":
+                assert (
+                    "mappings" in values
+                ), "Method 'multiset' requires 'mappings' argument"
+            elif call in ["get", "getnext", "walk", "table", "bulktable", "set"]:
+                assert "oid" in values, f"Method '{call}' requires 'oid' argument"
+            elif call in ["multiget", "multiwalk", "bulkwalk"]:
+                assert "oids" in values, f"Method '{call}' requires 'oids' argument"
+        return values
+
+
 class StateWorkflowOptions(BaseModel):
     fail_if_any_host_fail_any_step: Optional[List[StrictStr]]
     fail_if_any_host_fail_all_step: Optional[List[StrictStr]]
@@ -724,6 +766,7 @@ class SaltNornirExecutionFunctions(BaseModel):
     diff: model_exec_nr_diff
     nornir_fun: model_exec_nr_nornir_fun
     gnmi: model_exec_nr_gnmi
+    snmp: model_exec_nr_snmp
 
 
 class SaltNornirStateFunctions(BaseModel):

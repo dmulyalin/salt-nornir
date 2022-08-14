@@ -1,7 +1,7 @@
 FROM rockylinux:8.5
 
 # install misc libs
-RUN dnf install -y python3.9 nano tree openssh-server openssh-clients
+RUN dnf install -y python3.9 nano tree openssh-server openssh-clients gcc python39-devel
 
 # do python libs installation
 RUN python3 -m pip install pip setuptools wheel --upgrade 

@@ -1041,18 +1041,18 @@ def diagram(*args, **kwargs):
     Function to retrieve output from devices and produce diagram using N2G library.
 
     This function depends on N2G, TTP and TTP-Templates libraries to obtain list of
-    per-platfrom commands to retrieve from devices, parse output and build diagram.
+    per-platform commands to retrieve from devices, parse output and build diagram.
 
-    Alternativly, instead of getting show commands output from devices, ``nr.diagram``
+    Alternatively, instead of getting show commands output from devices, ``nr.diagram``
     can retrieve previously saved show commands output using ``nr.file read`` execution
     module function if ``filegroup`` name provided.
 
     :param data_plugin: (str) data plugin name to use to process output from devices
     :param diagram_plugin: (str) N2G diagram plugin name - ``yed``, ``drawio``, ``v3d``
-    :param outfile: (str) OS path to save diagram file, default is
-        ``./Output/{data plugin name}_{curent time}.{diagram plugin extension}``
-    :param save_data: (bool, str) if True, saves commands otput results retrieve from devices
-        in "Data" folder next to diagram file, if ``save_dat``a is a string, it must be an OS path
+    :param outfile: (str) OS path to save diagram file, default
+        is ``./Output/{data plugin name}_{current time}.{diagram plugin extension}``
+    :param save_data: (bool, str) if True, saves commands output results retrieve from devices
+        in "Data" folder next to diagram file, if ``save_dat`` a is a string, it must be an OS path
         to folder where to save devices output. This is useful during troubleshooting to be able
         to check what output devices return.
     :param cli: (dict) arguments for ``nr.cli`` execution module function to get devices output
@@ -1060,12 +1060,13 @@ def diagram(*args, **kwargs):
         retrieve previously saved devices show commands output
     :param last: (int) ``last`` argument value for ``nr.file read`` function, default value is 1
     :param Fx: (str) Nornir filter functions to filter list of devices (hosts) to get output from
-    :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by default - ``proxy:proxytype:nornir``
+    :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by 
+        default - ``proxy:proxytype:nornir``
     :param tgt_type: (str) SaltStack targeting type to use, default is ``pillar``
     :param job_retry: (int) how many times to retry if no results returned from all minions, default 0
     :param job_timeout: (int) seconds to wait for results from minions before retry, default 300s
     :param progress: progress display type to use - bars, raw, log, if False, no progress displayed
-    :param **kwargs: any additional arguments to use with
+    :param kwargs: any additional arguments to use with
         `N2G data plugins <https://n2g.readthedocs.io/en/latest/data_plugins/index.html>`_
 
     N2G ``data_plugin`` names and details:

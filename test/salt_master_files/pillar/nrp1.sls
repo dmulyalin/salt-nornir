@@ -1,3 +1,12 @@
+defaults:
+  data:
+    credentials:
+      deprecated_creds:
+        password: cisco
+        username: cisco
+      local_account:
+        password: nornir
+        username: nornir
 groups:
   eos_params:
     connection_options:
@@ -49,11 +58,19 @@ groups:
       syslog_servers:
       - 1.2.3.4
       - 4.3.2.1
+      oid:
+        get_os: "1.3.6.1.2.1.1.1.0"
+        get_hostname: "1.3.6.1.2.1.1.5.0"
     password: nornir
     username: nornir
 hosts:
   ceos1:
     connection_options:
+      puresnmp:
+        extras:
+          community: public
+          version: v2c
+        port: 161
       pyats:
         extras:
           devices:
@@ -84,6 +101,17 @@ hosts:
     platform: arista_eos
   ceos2:
     connection_options:
+      puresnmp:
+        extras:
+          auth:
+            method: md5
+            password: auth_pass
+          priv:
+            method: des
+            password: priv_pass
+          version: v3
+        port: 161
+        username: snmpv3_user
       pyats:
         extras:
           devices:
@@ -99,7 +127,6 @@ hosts:
     - eos_params
     hostname: 10.0.1.5
     platform: arista_eos
-
 nornir:
   actions:
     arp:
@@ -162,12 +189,3 @@ nornir:
 proxy:
   multiprocessing: true
   proxytype: nornir
-defaults:
-  data:
-    credentials:
-      deprecated_creds:
-        username: cisco
-        password: cisco
-      local_account: 
-        username: nornir
-        password: nornir        

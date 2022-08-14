@@ -187,8 +187,8 @@ All supported processors executed in this order::
    * - `worker`_
      - Worker to use for task, supported values ``all`` or number from ``1`` to ``nornir_workers`` Proxy Minion parameter of default value 3
 
-add_detals
-++++++++++
+add_details
++++++++++++
 
 Controls Nornir-Salt
 `ResultSerializer function <https://nornir-salt.readthedocs.io/en/latest/Functions/ResultSerializer.html#resultserializer>`_
@@ -893,6 +893,8 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
 +-----------------+---------------------------------------------------+--------------------+
+| `nr.snmp`_      | Function to manage devices over SNMP              | puresnmp           |
++-----------------+---------------------------------------------------+--------------------+
 | `nr.task`_      | Function to run any Nornir task plugin            |                    |
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.test`_      | Function to test show commands output             | netmiko (default), |
@@ -961,6 +963,11 @@ nr.nornir
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
 
+nr.snmp
++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.snmp
+
 nr.task
 +++++++
 
@@ -1001,6 +1008,7 @@ from salt_nornir.pydantic_models import (
     model_exec_nr_nornir_fun,
     model_exec_nr_gnmi,
     model_exec_nr_do_action,
+    model_exec_nr_snmp,
 )
 
 log = logging.getLogger(__name__)
@@ -2708,4 +2716,89 @@ def gnmi(call, *args, **kwargs):
     # run task
     return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "gnmi")
+    )
+
+
+@ValidateFuncArgs(model_exec_nr_snmp)
+def snmp(call, *args, **kwargs):
+    """
+    Function to interact with devices using SNMP protocol utilizing one of supported plugins.
+
+    :param call: (str) (str) connection object method to call or name of one of extra methods
+    :param plugin: (str) Name of SNMP plugin to use - puresnmp (default)
+    :param method_name: (str) name of method to provide doc string for, used only by ``help`` call
+    :param kwargs: (dict) any additional keyword arguments to use with call method
+    :return: method call results
+
+    Available SNMP plugin names:
+
+    * ``puresnmp`` - ``nornir-salt`` built-in plugin that uses
+      `puresnmp library <https://github.com/exhuma/puresnmp>`_ to interact with devices.
+
+    Sample usage of ``puresnmp`` plugin, ``plugin="puresnmp"``::
+
+        salt nrp1 nr.snmp bulkget scalar_oids='["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.2.0"]' repeating_oids='["1.3.6.1.2.1.3.1"]'
+        salt nrp1 nr.snmp bulktable oid="1.3.6.1.2.1.2.2.1"
+        salt nrp1 nr.snmp bulkwalk oids='["1.3.6.1.2.1.1.1", "1.3.6.1.2.1.1.5"]'
+        salt nrp1 nr.snmp get oid="1.3.6.1.2.1.1.1.0" FB="*"
+        salt nrp1 nr.snmp getnext oid="1.3.6.1.2.1.1.1.0"
+        salt nrp1 nr.snmp multiget oids='["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.2.0"]'
+        salt nrp1 nr.snmp multiset mappings='{"1.3.6.1.2.1.1.4.0": "new contact value", "1.3.6.1.2.1.1.6.0": "new location"}'
+        salt nrp1 nr.snmp multiwalk oids='["1.3.6.1.2.1.1.1", "1.3.6.1.2.1.1.5"]'
+        salt nrp1 nr.snmp set oid="1.3.6.1.2.1.1.4.0" value="new contact value"
+        salt nrp1 nr.snmp table oid="1.3.6.1.2.1.2.2.1"
+        salt nrp1 nr.snmp walk oid="1.3.6.1.2.1.1"
+
+    By default ``oid`` and ``oids`` arguments rendered and can be sourced from
+    host inventory::
+
+        salt nrp1 nr.snmp get oid="{{ host.oid.get_os }}"
+        salt nrp1 nr.snmp multiget oids='["{{ host.oid.get_os }}", "{{ host.oid.get_hostname }}"]'
+
+    Where ``host.oid.get_os`` sourced from Nornir inventory::
+
+        hosts:
+          ceos1:
+            groups: [lab]
+        groups:
+          lab:
+            data:
+              oid:
+                get_os: "1.3.6.1.2.1.1.1.0"
+                get_hostname: "1.3.6.1.2.1.1.5.0"
+
+    **Extra Call Methods**
+
+    * ``dir`` - returns methods supported by plugin connection object::
+
+        salt nrp1 nr.snmp dir plugin=puresnmp
+
+    * ``help`` - returns ``method_name`` doc string::
+
+        salt nrp1 nr.snmp help method_name=set
+
+    Sample Python API usage from Salt-Master::
+
+        import salt.client
+        client = salt.client.LocalClient()
+
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.snmp",
+            arg=["get"],
+            kwarg={"oid": "1.3.6.1.2.1.1.1.0"},
+        )
+    """
+    plugin = kwargs.pop("plugin", "puresnmp")
+    kwargs["call"] = call
+    kwargs["render"] = ["oid", "oids"]
+
+    # decide on task plugin to use
+    if plugin.lower() == "puresnmp":
+        task_fun = "nornir_salt.plugins.tasks.puresnmp_call"
+        kwargs["connection_name"] = "puresnmp"
+
+    # run task
+    return __proxy__["nornir.execute_job"](
+        task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "snmp")
     )

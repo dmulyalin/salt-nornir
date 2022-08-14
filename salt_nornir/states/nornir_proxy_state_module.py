@@ -388,7 +388,7 @@ def _run_workflow_step(
         result = __salt__[step["function"]](
             identity=_form_identity("workflow.{}.{}".format(state_name, step["name"])),
             *step.get("args", []),
-            **step["kwargs"]
+            **step["kwargs"],
         )
         log.debug("state:nr.workflow: step '{}'; result:\n {}".format(step, result))
 
@@ -853,12 +853,18 @@ def workflow(*args, **kwargs):
     # clean up cached data
     if hcache:
         _ = __salt__["nr.nornir"](
-            "clear_hcache", cache_keys=steps_names, identity=_form_identity("workflow"), FL=all_hosts
+            "clear_hcache",
+            cache_keys=steps_names,
+            identity=_form_identity("workflow"),
+            FL=all_hosts,
         )
         log.info("state:nr.workflow: cleaned steps' hcache")
     if dcache:
         _ = __salt__["nr.nornir"](
-            "clear_dcache", cache_keys=steps_names, identity=_form_identity("workflow"), FL=all_hosts
+            "clear_dcache",
+            cache_keys=steps_names,
+            identity=_form_identity("workflow"),
+            FL=all_hosts,
         )
         log.info("state:nr.workflow: cleaned steps' dcache")
 
