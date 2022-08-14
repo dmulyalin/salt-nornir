@@ -1073,7 +1073,7 @@ def diagram(*args, **kwargs):
 
     - ``L2`` - `CLI L2 Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_l2_data.html>`_
         uses CDP and LLDP protocols peerings data to produce L2 diagram of the network
-    - ``L3` or ``IP`` - `CLI IP Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_ip_data.html>`_
+    - ``L3`` or ``IP`` - `CLI IP Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_ip_data.html>`_
         uses IP related data to produce L3 diagram of the network
     - ``ISIS`` - `CLI ISIS LSDB Data Plugin <https://n2g.readthedocs.io/en/latest/data_plugins/cli_isis_data.html>`_
         uses ISIS LSDB data to produce L3 diagram of the network
