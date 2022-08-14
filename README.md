@@ -16,7 +16,7 @@ Repository to store Nornir based SaltStack modules:
 - salt-nornir state module
 - salt-nornir runner module
 
-Nornir Proxy Minion helps to manage network devices at scale, reference
+Nornir Proxy Minion helps to manage network devices at scale, refer to
 [documentation](https://salt-nornir.readthedocs.io/en/latest/index.html)
 for details.
 
@@ -26,17 +26,21 @@ Python and Plugins.
 
 ![architecture][architecture]
 
-Nornir Proxy acts as a bridge between SaltStack and a wide set of network automation libraries.
+Nornir Proxy acts as a bridge between SaltStack and a wide set of open
+source network automation libraries.
 
-# Advantages
+# Key Features
 
-Some notable benefits:
-
-- Well tested - overall 500 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.10.0
-- Brings together SaltStack and a wealth of open-source libraries - Nornir, Netmiko, NAPALM, Scrapli, Scrapli-Netconf, Ncclient, Genie&PyATS (free, not open-source), PyGNMI, NTC-Templates, TTP, Jmespath, lxml, xmltodict, requests
-- Capable of addressing overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
+- Manage your devices over SSH or Telnet **CLI** using Netmiko 170+ drivers, Scrapli, Cisco Genie/PyATS or NAPALM
+- **NETCONF** management of network devices one command away using Ncclient or Scrapli-Netconf
+- Interact with any **HTTP API** using Python requests library, automate your networking fleet using **RESTCONF**
+- **gNMI** device management supported thanks to integration with PyGNMI library
+- Capability to manage device over **SNMPv1/2/3** using puresnmp library
+- Results data processing with the help of NTC-Templates, TTP, Jmespath, lxml, xmltodict
+- Addresses overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
 - Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
-- Integrate anything with anything, all you can do via CLI you can do via SaltStack and Nornir Python API or SaltStack REST API
+- Integrate anything with anything, all you can do via CLI supported by SaltStack and Nornir Python API or SaltStack REST API
+- Well tested - 570 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.14.0
 
 # Communication and discussion
 
