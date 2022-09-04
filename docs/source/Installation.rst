@@ -83,11 +83,12 @@ To install maximum production set::
 SaltStack versions tested
 =========================
 
-Nornir Proxy minion was well tested and confirmed working with these versions of SaltStack:
+Nornir Proxy minion was tested and confirmed working with these versions of SaltStack:
 
-* salt 3002
-* salt 3003
-* salt 3004
+* salt 3005 - Salt-Nornir 0.15.x
+* salt 3004 - Salt-Nornir 0.15.x, 0.14.x, 0.13.x, 0.12.x,
+* salt 3003 - Salt-Nornir 0.11.x
+* salt 3002 - Salt-Nornir 0.9.x
 
 Other SaltStack versions might work too, but not tested.
 

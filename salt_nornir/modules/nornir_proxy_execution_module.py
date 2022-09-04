@@ -1236,9 +1236,19 @@ def cli(*args, **kwargs):
          salt nrp1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" plugin=napalm
          salt nrp1 nr.cli "show clock" use_ps=True cutoff=60 initial_sleep=10
 
-    ``use_ps`` enables to use promptless mode of interaction with device's cli, refer to
-    `netmiko_send_commands_ps <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_command_ps.html>`_
-    Nornir-Salt task plugin for details.
+    Plugins details:
+    
+    * ``netmiko`` - uses `netmiko_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_commands.html>`_ 
+      Nornir-Salt Task plugin, ``nr.cli`` uses this plugin by default
+    * ``scrapli`` - uses `scrapli_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_commands.html>`_ 
+      Nornir-Salt Task plugin    
+    * ``napalm`` - uses `napalm_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_send_commands.html>`_ 
+      Nornir-Salt Task plugin    
+    * ``pyats`` - uses `pyats_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_commands.html>`_ 
+      Nornir-Salt Task plugin    
+    * ``use_ps`` - enables promptless mode of interaction with device's CLI, uses
+      `netmiko_send_commands_ps <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_command_ps.html>`_
+      Nornir-Salt task plugin
 
     Commands can be templates and rendered using Jinja2 Templating Engine::
 
@@ -1324,6 +1334,17 @@ def cfg(*args, **kwargs):
         command as part of configuration, moreover, scrapli will not exit configuration mode,
         need to send exit command as part of configuration commands as well.
 
+    Plugins details:
+    
+    * ``napalm`` - uses `napalm_configure <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_configure.html>`_ 
+      Nornir-Salt Task plugin, ``nr.cfg`` uses this plugin by default
+    * ``netmiko`` - uses `netmiko_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_config.html>`_ 
+      Nornir-Salt Task plugin
+    * ``scrapli`` - uses `scrapli_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_config.html>`_ 
+      Nornir-Salt Task plugin    
+    * ``pyats`` - uses `pyats_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_config.html>`_ 
+      Nornir-Salt Task plugin    
+        
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host
@@ -1863,6 +1884,13 @@ def nc(*args, **kwargs):
     :param data: (str) path to file for ``rpc`` method call or rpc content
     :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
 
+    Plugins details:
+    
+    * ``ncclient`` - uses `ncclient_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/ncclient_call.html>`_ 
+      Nornir-Salt Task plugin, ``nr.nc`` uses this plugin by default
+    * ``scrapli`` - uses `scrapli_netconf_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_netconf_call.html>`_ 
+      Nornir-Salt Task plugin
+    
     Special ``call`` arguments/methods:
 
     * ``dir`` - returns methods supported by Ncclient connection manager object::
@@ -2192,8 +2220,9 @@ def http(*args, **kwargs):
     :param url: (str) full or partial URL to send request to
     :param kwargs: (dict) any other kwargs to use with requests.<method> call
 
-    This function uses nornir_salt http_call task plugin, reference that task
-    plugin documentation for additional details.
+    This function uses Nornir-Salt 
+    `http_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/http_call.html>`_ 
+    task plugin, refer its documentation for additional details.
 
     Sample usage::
 
@@ -2674,7 +2703,8 @@ def gnmi(call, *args, **kwargs):
 
     Available gNMI plugin names:
 
-    * ``pygnmi`` - ``nornir-salt`` built-in plugin that uses `PyGNMI library <https://pypi.org/project/pygnmi/>`_
+    * ``pygnmi`` - uses `pygnmi_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/pygnmi_call.html>`_ 
+      Nornir-Salt Task plugin that relies on `PyGNMI library <https://pypi.org/project/pygnmi/>`_
       to interact with devices.
 
     gNMI specification defines several methods to work with devices - ``subscribe``, ``get`` and ``set``.
@@ -2813,8 +2843,9 @@ def snmp(call, *args, **kwargs):
 
     Available SNMP plugin names:
 
-    * ``puresnmp`` - ``nornir-salt`` built-in plugin that uses
-      `puresnmp library <https://github.com/exhuma/puresnmp>`_ to interact with devices.
+    * ``puresnmp`` - uses `puresnmp_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/puresnmp_call.html>`_
+        Nornir-Salt Task plugin that relies on `puresnmp library <https://github.com/exhuma/puresnmp>`_ 
+        to interact with devices.
 
     Sample usage of ``puresnmp`` plugin, ``plugin="puresnmp"``::
 
@@ -2889,8 +2920,9 @@ def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
 
-    This execution module uses Nornir-Salt ``netbox_tasks`` task plugin
-    that contains individual task functions to work with Netbox.
+    This execution module uses Nornir-Salt 
+    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>_` 
+    collection that contains individual task functions to work with Netbox.
 
     :param task: (str) name of Netbox task function to run
     :param kwargs: (dict) any additional keyword arguments to use with task function
@@ -2906,7 +2938,7 @@ def netbox(*args, **kwargs):
 
         salt nrp1 nr.netbox dir
         salt nrp1 nr.netbox sync_from FB="ceos1"
-        salt nrp1 nr.netbox task="sync_to" FB="ceos1"
+        salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
     """
     kwargs["task_name"] = args[0] if args else kwargs.pop("task")
     return __proxy__["nornir.execute_job"](
