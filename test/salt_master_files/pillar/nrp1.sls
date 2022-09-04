@@ -1,3 +1,10 @@
+configuration:
+  netbox:
+    instances:
+      prod_in_user_defined_config:
+        token: 0123456789abcdef0123456789abcdef01234567
+        url: http://192.168.64.200:8000/
+
 defaults:
   data:
     credentials:
@@ -33,6 +40,22 @@ groups:
           allow_agent: false
           hostkey_verify: false
         port: 830
+      netbox:
+        extras:
+          instances:
+            dev:
+              url: http://192.168.64.200:8000/
+            dev_wrong:
+              auth:
+              - username
+              - wrong
+              url: http://192.168.64.200:8000/
+            production:
+              token: 0123456789abcdef0123456789abcdef01234567
+              url: http://192.168.64.200:8000/
+              default: True
+        password: admin
+        username: admin
       pygnmi:
         extras:
           insecure: true
@@ -55,12 +78,12 @@ groups:
       ntp_servers:
       - 3.3.3.3
       - 3.3.3.4
+      oid:
+        get_hostname: 1.3.6.1.2.1.1.5.0
+        get_os: 1.3.6.1.2.1.1.1.0
       syslog_servers:
       - 1.2.3.4
       - 4.3.2.1
-      oid:
-        get_os: "1.3.6.1.2.1.1.1.0"
-        get_hostname: "1.3.6.1.2.1.1.5.0"
     password: nornir
     username: nornir
 hosts:
@@ -119,6 +142,14 @@ hosts:
         platform: eos
     data:
       location: East City Warehouse
+      netbox_import_data:
+        device_role:
+          slug: router
+        device_type:
+          slug: arista-ceos
+        site:
+          slug: salt-nornir-lab
+        status: active
       syslog:
       - 1.1.1.2
       - 2.2.2.1

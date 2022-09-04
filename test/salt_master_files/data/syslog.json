@@ -1,0 +1,6 @@
+#!json
+{
+    "servers": ["1.2.3.4", "4.3.2.1"],
+    "facility": "local",
+    "bufered_size": "64242"
+}

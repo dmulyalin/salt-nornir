@@ -125,11 +125,54 @@ class TestJunosNrCli:
             assert data["show version"]["failed"] is False
             assert isinstance(data["show version"]["result"], str)   
             assert "Traceback" not in data["show version"]["result"]
-            
+
+    def test_cli_configure_use_ps_multiline(self):
+        ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cli",
+            arg=["salt://templates/juniper_jinja_multiline_test.j2"],
+            kwarg={"add_details": True, "FM": "*jun*", "use_ps": True},
+            tgt_type="glob",
+            timeout=60,
+        )
+        pprint.pprint(ret)
+        assert ret[test_proxy_id] not in [{}, [], None]
+        for host_name, data in ret[test_proxy_id].items():        
+            assert "unknown command" not in data["configure"]["result"]
+            assert r"test\nbanner\nstring\n" in data["configure"]["result"]
             
 class TestJunosNrCfg:      
-    def test_netmiko_config_inline(self):
-        pass
+    def test_netmiko_config_inline_multiline(self):
+        rand_id = random.randint(0, 10000)
+        ret_cfg = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cfg",
+            arg=[f'set system login message "test\\n\\string\\n{rand_id}"'],
+            kwarg={"FM": "*jun*", "plugin": "netmiko"},
+            tgt_type="glob",
+            timeout=60,
+        )
+        ret_cli = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cli",
+            arg=['show configuration system login message'],
+            kwarg={"FM": "*jun*"},
+            tgt_type="glob",
+            timeout=60,
+        )
+        print("ret_cfg: ")
+        pprint.pprint(ret_cfg)
+        print("ret_cli: ")
+        pprint.pprint(ret_cli)
+        # check configuration command results
+        assert ret_cfg[test_proxy_id] not in [{}, [], None]
+        for host_name, data in ret_cfg[test_proxy_id].items():
+            assert data["netmiko_send_config"]["exception"] == None
+            assert data["netmiko_send_config"]["failed"] is False
+            assert str(rand_id) in data["netmiko_send_config"]["result"]
+        # check show command contain random int
+        for host_name, data in ret_cli[test_proxy_id].items():
+            assert str(rand_id) in data["show configuration system login message"]
     
     def test_netmiko_config_commit_confirmed(self):
         pass
@@ -315,6 +358,85 @@ class TestJunosNrNc:
         for host_name, data in lo0_config[test_proxy_id].items():
             assert str(rand_id) in data["get_config"], f"lo0 description was not updated with rand int {rand_id}"
 
+    def test_ncclient_edit_config_call(self):
+        rand_id = random.randint(0, 10000)
+        payload = """
+<config>
+    <configuration>
+        <system>
+            <login>
+                <message>test\nbanner\nstring\nnew{}</message>
+            </login>
+        </system>
+    </configuration>
+</config>
+        """.format(rand_id)
+        # edit configuration
+        edit_ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.nc",
+            arg=["edit_config"],
+            kwarg={
+                "target": "candidate",
+                "config": payload,
+                "FM": "*jun*",
+            },
+            tgt_type="glob",
+            timeout=60,
+        )
+        # commit edited configuration
+        comit_ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.nc",
+            arg=["commit"],
+            kwarg={"FM": "*jun*"},
+            tgt_type="glob",
+            timeout=60,
+        )
+        # get config to verify description updated
+        lo0_config = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.nc",
+            arg=["get_config"],
+            kwarg={
+                "FM": "*jun*",
+                "filter": "<configuration><system><login><message/></login></system></configuration>",
+                "ftype": "subtree", 
+                "source": "running",
+            },
+            tgt_type="glob",
+            timeout=60,
+        )       
+        print("edit config return:")
+        pprint.pprint(edit_ret)
+        print("commit config return:")
+        pprint.pprint(comit_ret)
+        print("get config return:")
+        pprint.pprint(lo0_config)
+        # check edit config return
+        for host_name, data in edit_ret[test_proxy_id].items():
+            assert (
+                "edit_config" in data
+            ), "No 'edit_config' output from '{}'".format(host_name)
+            assert isinstance(data["edit_config"], str)
+            assert (
+                "Traceback (most recent " not in data["edit_config"]
+            ), "edit_config call returned error"
+            assert all(k in data["edit_config"] for k in ["rpc-reply", "<ok/>"])  
+        # check commit config return
+        for host_name, data in comit_ret[test_proxy_id].items():
+            assert (
+                "commit" in data
+            ), "No 'commit' output from '{}'".format(host_name)
+            assert isinstance(data["commit"], str)
+            assert (
+                "Traceback (most recent " not in data["commit"]
+            ), "commit call returned error"
+            assert all(k in data["commit"] for k in ["rpc-reply", "<ok/>"])    
+        # check get config return
+        for host_name, data in lo0_config[test_proxy_id].items():
+            assert str(rand_id) in data["get_config"], f"Login message was not updated with rand int {rand_id}"        
+        
     def test_ncclient_transaction_call(self):
         rand_id = random.randint(0, 10000)
         payload = """

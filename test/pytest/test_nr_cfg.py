@@ -148,8 +148,8 @@ def test_nr_cfg_escaped_multiline_commands_string_plugin_netmiko():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cfg",
-        arg=["ntp server 1.1.1.1\\nntp server 1.1.1.2"],
-        kwarg={"plugin": "netmiko"},
+        arg=["interface Lo1", "description test\\nstring"],
+        kwarg={"plugin": "netmiko", "FB": "ceos1"},
         tgt_type="glob",
         timeout=60,
     )
@@ -518,8 +518,8 @@ def test_nr_cfg_multiline_commands_string_plugin_scrapli():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cfg",
-        arg=["ntp server 1.1.1.1\nntp server 1.1.1.2"],
-        kwarg={"plugin": "scrapli"},
+        arg=["interface Lo1", "description test\\nstring"],
+        kwarg={"plugin": "scrapli", "FB": "ceos1"},
         tgt_type="glob",
         timeout=60,
     )
@@ -537,7 +537,7 @@ def test_nr_cfg_escaped_multiline_commands_string_plugin_scrapli():
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cfg",
-        arg=["ntp server 1.1.1.1\\nntp server 1.1.1.2"],
+        arg=["ntp server 1.1.1.1\nntp server 1.1.1.2"],
         kwarg={"plugin": "scrapli"},
         tgt_type="glob",
         timeout=60,

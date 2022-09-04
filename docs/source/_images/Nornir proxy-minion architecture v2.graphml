@@ -388,7 +388,7 @@ Device</y:NodeLabel>
           <y:Geometry height="34.18399999999997" width="89.19999999999993" x="-577.6245218800644" y="-416.4636624610205"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="35.8525390625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="50.947265625" x="19.126367187500023" xml:space="preserve" y="-0.8342695312500155">Nornir 
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="35.8525390625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="50.947265625" x="19.126367187500023" xml:space="preserve" y="-0.8342695312500155">Nornir
 Plugins</y:NodeLabel>
           <y:Shape type="roundrectangle"/>
         </y:ShapeNode>

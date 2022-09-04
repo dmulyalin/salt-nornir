@@ -163,3 +163,179 @@ def test_nr_cfg_gen_from_template_file_per_host():
         assert len(results[task_name]) > 0
     assert "North" in ret["nrp1"]["ceos1"][task_name]
     assert "East" in ret["nrp1"]["ceos2"][task_name]
+
+    
+def test_jinja_whitespace_handling_template_file():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=[],
+        kwarg={
+            "filename": "salt://templates/jinja_whitespace_test.j2",
+            "FB": "ceos1",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'salt_cfg_gen': '123'}}}
+    
+def test_jinja_env_config_handling():
+    message = """
+    jinja_env config for nrp1 should be taken from master config faile::
+    
+        pillar_opts: true
+        jinja_env:
+          lstrip_blocks: true
+          trim_blocks: true
+      
+    as a result this template::
+    
+        {% for i in ['1', '2', '3'] %}
+        {{ i }}
+        {% endfor %}
+        
+    should render to this::
+    
+        {'nrp1': {'ceos1': {'salt_cfg_gen': '1\n2\n3\n'}}}
+        
+    for nrp2 config should be taken from pillar::
+    
+        jinja_env:
+          lstrip_blocks: false
+          trim_blocks: false
+          
+    as a result same template should render to::
+    
+        {'nrp1': {'ceos1': {'salt_cfg_gen': '\n1\n\n2\n\n3\n'}}}    
+    """
+    ret_nrp1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=[],
+        kwarg={
+            "filename": "salt://templates/jinja_trim_lstrip_test.j2",
+            "FB": "ceos1",
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    ret_nrp2 = client.cmd(
+        tgt="nrp2",
+        fun="nr.cfg_gen",
+        arg=[],
+        kwarg={
+            "filename": "salt://templates/jinja_trim_lstrip_test.j2",
+            "FB": "*1000*",
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    print("ret_nrp1:")
+    pprint.pprint(ret_nrp1)
+    print("ret_nrp2:")
+    pprint.pprint(ret_nrp2)
+    assert ret_nrp1 == {'nrp1': {'ceos1': {'salt_cfg_gen': '1\n2\n3\n'}}}, message
+    assert ret_nrp2 == {'nrp2': {'csr1000v-1': {'salt_cfg_gen': '\n1\n\n2\n\n3\n'}}}, message
+    
+   
+def test_nr_cg_gen_inline_newline_escape_handling():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=["test\\nstring\\n"],
+        kwarg={
+            "FB": "ceos1",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'salt_cfg_gen': 'test\\nstring\\n'}}}
+    
+    
+def test_nr_cg_gen_inline_newline_literal_string():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=['"test\nstring\n"'],
+        kwarg={
+            "FB": "ceos1",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'salt_cfg_gen': '"test\nstring\n"'}}}
+    
+    
+def test_nr_cfg_gen_job_data_string_path():
+    expected = [
+        'bgp', 'asn', '65555', 'rid', '1.1.1.1', 'peers',
+        'ip', '1.2.3.4', 'asn', '65000', '4.3.2.1', '65123', 
+        'ntp', 'servers', '3.3.3.3', '4.4.4.4'        
+    ]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=["{{ job_data }}"],
+        kwarg={
+            "FB": "ceos1",
+            "job_data": "salt://data/params.yaml"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )         
+    pprint.pprint(ret)
+    assert isinstance(ret['nrp1']['ceos1']['salt_cfg_gen'], str)
+    assert "Traceback" not in ret['nrp1']['ceos1']['salt_cfg_gen']
+    assert all(k in ret['nrp1']['ceos1']['salt_cfg_gen'] for k in expected)
+    
+    
+def test_nr_cfg_gen_job_data_list_of_paths():
+    expected = [
+        'bgp', 'asn', '65555', 'rid', '1.1.1.1', 'peers',
+        'ip', '1.2.3.4', 'asn', '65000', '4.3.2.1', '65123', 
+        'ntp', 'servers', '3.3.3.3', '4.4.4.4', '1.2.3.4',
+        'facility', 'local', 'bufered_size', '64242'
+    ]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=["{{ job_data }}"],
+        kwarg={
+            "FB": "ceos1",
+            "job_data": ["salt://data/params.yaml", "salt://data/syslog.json"]
+        },
+        tgt_type="glob",
+        timeout=60,
+    )         
+    pprint.pprint(ret)
+    assert isinstance(ret['nrp1']['ceos1']['salt_cfg_gen'], str)
+    assert "Traceback" not in ret['nrp1']['ceos1']['salt_cfg_gen']
+    assert all(k in ret['nrp1']['ceos1']['salt_cfg_gen'] for k in expected)
+    
+    
+def test_nr_cfg_gen_job_data_dict_of_paths():
+    expected = [
+        'bgp', 'asn', '65555', 'rid', '1.1.1.1', 'peers',
+        'ip', '1.2.3.4', 'asn', '65000', '4.3.2.1', '65123', 
+        'ntp', 'servers', '3.3.3.3', '4.4.4.4', '1.2.3.4',
+        'facility', 'local', 'bufered_size', '64242', 'foobar', 
+        'barfoo'
+    ]
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.cfg_gen",
+        arg=["{{ job_data }}"],
+        kwarg={
+            "FB": "ceos1",
+            "job_data": {"foobar": "salt://data/params.yaml", "barfoo": "salt://data/syslog.json"}
+        },
+        tgt_type="glob",
+        timeout=60,
+    )         
+    pprint.pprint(ret)
+    assert isinstance(ret['nrp1']['ceos1']['salt_cfg_gen'], str)
+    assert "Traceback" not in ret['nrp1']['ceos1']['salt_cfg_gen']
+    assert all(k in ret['nrp1']['ceos1']['salt_cfg_gen'] for k in expected)

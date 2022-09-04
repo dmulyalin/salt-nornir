@@ -33,3 +33,8 @@ publisher_acl:
   # Allow saltuser to publish anything anything.
   saltuser:
     - .*
+    
+pillar_opts: true
+jinja_env:
+  lstrip_blocks: true
+  trim_blocks: true

@@ -158,6 +158,8 @@ All supported processors executed in this order::
      - Performs in CSV file or DNS lookup of IPv4 and IPv6 addresses to replace them in output
    * - `jmespath`_
      - uses JMESPath library to run query against structured results data
+   * - `job_data`_
+     - Job data, string, list or dictionry to load using `slsutil.rendered` function
    * - `match`_
      - Filters text output using Nornir-Salt DataProcessor match function
    * - `ntfsm`_
@@ -194,7 +196,7 @@ Controls Nornir-Salt
 `ResultSerializer function <https://nornir-salt.readthedocs.io/en/latest/Functions/ResultSerializer.html#resultserializer>`_
 to form task results with or without task execution details.
 
-`add_detals` by default is False for most of the functions, but can be adjusted
+`add_details` by default is False for most of the functions, but can be adjusted
 accordingly to produce desired results structure.
 
 Supported functions: ``nr.task, nr.cli, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.gnmi``
@@ -205,9 +207,9 @@ CLI Arguments:
 
 Sample usage::
 
-    salt nrp1 nr.cli "show clock" add_detals=True
-    salt nrp1 nr.cli "show clock" add_detals=True to_dict=False
-    salt nrp1 nr.cli "show clock" add_detals=True to_dict=True
+    salt nrp1 nr.cli "show clock" add_details=True
+    salt nrp1 nr.cli "show clock" add_details=True to_dict=False
+    salt nrp1 nr.cli "show clock" add_details=True to_dict=True
 
 Fx
 ++
@@ -542,6 +544,85 @@ Sample usage::
 
     salt nrp1 nr.task nornir_napalm.plugins.tasks.napalm_get getters='["get_interfaces"]' jmespath='interfaces'
 
+job_data
+++++++++
+
+Any arbitrary data to load and make available withi template under ``job_data`` key. Uses
+`slsutil.renderer <https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.slsutil.html#salt.modules.slsutil.renderer>`_
+execution module function. In addition, ``job_data`` key added to Nornir host' ``data["__task__"]``
+dictionary to make loaded data available to task plugins.
+
+Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli, nr.gnmi, nr.snmp``
+
+Main purpose of ``job_data`` is to load any arbitrary data from any of suppoted URLs -
+salt://, http://, https://, ftp://, s3://, swift:// and file:// (proxy minion
+local filesystem) - rendering and serializing the content using ``slsutil.renderer`` function.
+That way proxy minion pillar can contain only information required to connect
+to devices and information for hosts targeting, any other parameters can be
+loaded from YAML or JSON files on demand.
+
+Job Data is analogous to SaltStack map files, but made to be more flexible.
+
+``job_data`` argument accepts string, list or dictionary, proxy minion
+downloads data from provided URLs.
+
+Sample usage::
+
+    salt nrp1 nr.cfg_gen "router bgp {{ job_data.bgp.asn }}" job_data="salt://data/params.yaml"
+    salt nrp1 nr.cfg_gen "router bgp {{ job_data[0].bgp.asn }}" job_data='["salt://data/params.yaml", "salt://data/syslog.json"]'
+    salt nrp1 nr.cfg_gen "router bgp {{ job_data['bgp'].bgp.asn }}" job_data='{"bgp": "salt://data/params.yaml", "syslog": "salt://data/syslog.json"}'
+    salt nrp1 nr.cfg_gen "logging {{ job_data['syslog'].servers[0] }}" job_data='{"bgp": "salt://data/params.yaml", "syslog": "salt://data/syslog.json"}'
+
+Where ``/etc/salt/data/params.yaml`` file content is::
+
+    bgp:
+      asn: 65555
+      rid: 1.1.1.1
+      peers:
+        - ip: 1.2.3.4
+          asn: 65000
+        - ip: 4.3.2.1
+          asn: 65123
+
+And ``/etc/salt/data/syslog.json`` file content is::
+
+    #!json
+    {
+        "servers": ["1.2.3.4", "4.3.2.1"],
+        "facility": "local",
+        "bufered_size": "64242"
+    }
+
+``job_data`` content temporarily saved into host's inventory data 
+for task execution and removed afterwards. Example of how to access 
+``job_data`` within Nornir task function::
+
+    from nornir.core.task import Result, Task
+
+    def task(task):
+        "This task echoes back job_data content"
+        task.name = "job_data_echo"
+
+        job_data = task.host["job_data"]
+
+        return Result(host=task.host, result=job_data)
+
+Assuming above task saved at ``/etc/salt/tasks/job_data_echo.py``,
+running this command::
+
+    salt nrp1 nr.task plugin="salt://tasks/job_data_echo.py" job_data='{"foo": 123}' FB=ceos1
+
+Returns this result::
+
+    nrp1:
+        ----------
+        ceos1:
+            ----------
+            job_data_echo:
+                ----------
+                foo:
+                    123
+
 match
 +++++
 
@@ -782,8 +863,8 @@ CLI Arguments:
 
 Sample usage::
 
-    salt nrp1 nr.cli "show clock" add_detals=True
-    salt nrp1 nr.cli "show clock" add_detals=True to_dict=False
+    salt nrp1 nr.cli "show clock" add_details=True
+    salt nrp1 nr.cli "show clock" add_details=True to_dict=False
 
 xml_flake
 +++++++++
@@ -893,8 +974,6 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
 +-----------------+---------------------------------------------------+--------------------+
-| `nr.snmp`_      | Function to manage devices over SNMP              | puresnmp           |
-+-----------------+---------------------------------------------------+--------------------+
 | `nr.task`_      | Function to run any Nornir task plugin            |                    |
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.test`_      | Function to test show commands output             | netmiko (default), |
@@ -962,11 +1041,6 @@ nr.nornir
 +++++++++
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
-
-nr.snmp
-+++++++
-
-.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.snmp
 
 nr.task
 +++++++
@@ -2724,9 +2798,9 @@ def snmp(call, *args, **kwargs):
     """
     Function to interact with devices using SNMP protocol utilizing one of supported plugins.
 
-    :param call: (str) (str) connection object method to call or name of one of extra methods
+    :param call: (str) connection object method to call or name of one of extra methods
     :param plugin: (str) Name of SNMP plugin to use - puresnmp (default)
-    :param method_name: (str) name of method to provide doc string for, used only by ``help`` call
+    :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
     :param kwargs: (dict) any additional keyword arguments to use with call method
     :return: method call results
 
@@ -2769,11 +2843,11 @@ def snmp(call, *args, **kwargs):
 
     **Extra Call Methods**
 
-    * ``dir`` - returns methods supported by plugin connection object::
+    * ``dir`` - returns call methods supported by plugin::
 
         salt nrp1 nr.snmp dir plugin=puresnmp
 
-    * ``help`` - returns ``method_name`` doc string::
+    * ``help`` - returns ``method_name`` docstring::
 
         salt nrp1 nr.snmp help method_name=set
 
@@ -2801,4 +2875,36 @@ def snmp(call, *args, **kwargs):
     # run task
     return __proxy__["nornir.execute_job"](
         task_fun=task_fun, kwargs=kwargs, identity=_form_identity(kwargs, "snmp")
+    )
+
+
+def netbox(*args, **kwargs):
+    """
+    Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
+
+    This execution module use Nornir-Salt ``netbox_tasks`` task plugin,
+    that contains individual task functions to work with Netbox.
+
+    :param task: (str) name of Netbox task function to run
+    :param kwargs: (dict) any additional keyword arguments to use with task function
+    :return: task results
+
+    Available ``task`` functions:
+
+    * ``dir`` - returns a list of supported tasks functions
+    * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
+    * ``sync_to`` - sync Nornir host's inventory data to Netbox device
+    * ``sync_interfaces`` - sync device interfaces data to Netbox
+
+    Sample usage::
+
+        salt nrp1 nr.netbox dir
+        salt nrp1 nr.netbox sync_from FB="ceos1"
+        salt nrp1 nr.netbox task="sync_to_netbox" FB="ceos1"
+    """
+    kwargs["task_name"] = args[0] if args else kwargs.pop("task")
+    return __proxy__["nornir.execute_job"](
+        task_fun="nornir_salt.plugins.tasks.netbox_tasks",
+        kwargs=kwargs,
+        identity=_form_identity(kwargs, "netbox"),
     )

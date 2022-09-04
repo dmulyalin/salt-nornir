@@ -186,3 +186,18 @@ def test_pyats_genie_api_ping_always_on_iosxe():
     assert ret["nrp2"]["csr1000v-1"]["pyats_genie_api"]["ping"]["address"] == "127.0.0.1"
     
 # test_pyats_genie_api_ping_always_on_iosxe()
+
+def test_job_data_task():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        kwarg={
+            "plugin": "salt://tasks/job_data_echo.py",
+            "FB": "ceos1",
+            "job_data": {"foo": 123}
+        },
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {'job_data_echo': {'foo': 123}}}}

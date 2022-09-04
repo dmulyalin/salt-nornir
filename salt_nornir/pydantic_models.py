@@ -84,6 +84,7 @@ class ModelExecCommonArgs(model_ffun_fx_filters):
     xml_flake: Optional[StrictStr]
     xpath: Optional[StrictStr]
     worker: Optional[Union[StrictInt, StrictStr]]
+    job_data: Optional[Union[StrictStr, List, Dict]]
 
 
 class EnumExecNrCliPlugins(str, Enum):
@@ -749,6 +750,7 @@ class model_nornir_config(BaseModel):
     hosts: Optional[Dict]
     groups: Optional[Dict]
     defaults: Optional[Dict]
+    user_defined: Optional[Dict]
 
 
 class SaltNornirExecutionFunctions(BaseModel):

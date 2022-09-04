@@ -150,6 +150,10 @@ Nornir proxy-minion pillar example:
             username: admin
             password: admin
 
+    # user_defined Nornir configuration
+    configuration:
+      any_key: any_value
+
 To use other type of inventory or runner plugins define their settings
 in pillar configuration:
 
@@ -166,6 +170,38 @@ in pillar configuration:
            host_file: "/var/salt-nonir/proxy-id-1/hosts.yaml"
            group_file: "/var/salt-nonir/proxy-id-1/groups.yaml"
            defaults_file: "/var/salt-nonir/proxy-id-1/defaults.yaml"
+
+Starting with version Salt-Nornir 0.15.0 Nornir ``user_defined`` parameters
+can be specified under pillar ``configuration`` key::
+
+    configuration:
+      params:
+        foo: 123
+
+Nornir Task plugins can access user defined configuration under
+``task.nr.config.user_defined`` task attribute.
+
+Starting with version Salt-Nornir 0.15.0 ``jinja_env`` configuration honored
+and sourced using ``config.get`` execution module function, as a result
+``jinja_env`` configuration can be specified in Master configuration or proxy
+pillar. However, to be sourced from master, ``pillar_opts`` should be set to True
+in master configuration.
+
+Sample Master ``jinja_env`` configuration::
+
+    pillar_opts: true
+    jinja_env:
+      lstrip_blocks: true
+      trim_blocks: true
+
+Sample proxy minion pillar ``jinja_env`` configuration::
+
+    proxy:
+      proxytype: nornir
+
+    jinja_env:
+      lstrip_blocks: false
+      trim_blocks: false
 
 Nornir runners
 --------------
@@ -466,6 +502,7 @@ def init(opts, loader=None, init_queues=True):
         hosts=opts["pillar"].get("hosts"),
         groups=opts["pillar"].get("groups"),
         defaults=opts["pillar"].get("defaults"),
+        user_defined=opts["pillar"].get("configuration"),
     )
     opts["multiprocessing"] = opts["proxy"].get("multiprocessing", True)
     opts["process_count_max"] = opts["proxy"].get("process_count_max", -1)
@@ -498,6 +535,7 @@ def init(opts, loader=None, init_queues=True):
             },
         },
     )
+    user_defined_config = opts["pillar"].get("configuration", {})
     nornir_data["salt_download_lock"] = multiprocessing.Lock()
     nornir_data["tf_index_lock"] = multiprocessing.Lock()
     nornir_data["nornir_workers"] = opts["proxy"].get("nornir_workers", 3)
@@ -508,6 +546,7 @@ def init(opts, loader=None, init_queues=True):
                     logging={"enabled": False},
                     runner=copy.deepcopy(runner_config),
                     inventory=copy.deepcopy(inventory_config),
+                    user_defined=copy.deepcopy(user_defined_config),
                 ),
                 "connections_lock": multiprocessing.Lock(),
                 "is_busy": multiprocessing.Event(),
@@ -1070,6 +1109,40 @@ def _fire_events(result):
             )
 
 
+def _load_job_data(job_data, saltenv="base"):
+    """
+    Helper function to process and load job data.
+
+    :param job_data: (str, list or dict) data to process
+    :param saltenv: (str) salt environment
+    :param return: string, dict or list containing loaded job data
+    """
+    ret = job_data
+    # handle job_data="salt://path/to/file.xyz"
+    if isinstance(job_data, str):
+        if _is_url(job_data):
+            return __salt__["slsutil.renderer"](path=job_data, saltenv=saltenv)
+        else:
+            return __salt__["slsutil.renderer"](string=job_data, saltenv=saltenv)
+    # handle job_data='["salt://path/to/file.xyz"]'
+    elif isinstance(job_data, list):
+        ret = [
+            _load_job_data(i, saltenv) if isinstance(i, str) else i for i in job_data
+        ]
+    # handle job_data='{"foo": "salt://path/to/file.xyz"}'
+    elif isinstance(job_data, dict):
+        ret = {
+            k: _load_job_data(v, saltenv) if isinstance(v, str) else v
+            for k, v in job_data.items()
+        }
+    log.debug(
+        "Nornir-proxy MAIN PID {} worker thread, loaded job data '{}'".format(
+            os.getpid(), type(job_data)
+        )
+    )
+    return ret
+
+
 @_use_loader_context
 def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     """
@@ -1085,9 +1158,11 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     :param ignore_keys: (list or str) key names to ignore rendering for
     :return: dictionary of failed hosts
     """
+    # extract and form attributes
     context = kwargs.pop("context", {})
     saltenv = kwargs.pop("saltenv", "base")
     defaults = kwargs.pop("defaults", {})
+    job_data = kwargs.pop("job_data", [])
     template_engine = kwargs.pop("template_engine", "jinja")
     render = render.split(",") if isinstance(render, str) else render
     ignore_keys = (
@@ -1095,8 +1170,18 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     )
     hosts_failed_prep = {}  # dictionary keyed by host name and error message
 
+    # update __opts__ dictionary with jinja_env params
+    if "jinja_env" not in __opts__:
+        __opts__["jinja_env"] = __salt__["config.get"](
+            key="jinja_env", default={}, omit_grains=True
+        )
+
+    # populate context job_data and opts
+    context["job_data"] = _load_job_data(job_data, saltenv)
+    context["opts"] = __opts__
+
     def __render(data):
-        # do initial data rendering
+        # do initial data rendering for cli content
         ret = __salt__["file.apply_template_on_contents"](
             contents=data,
             template=template_engine,
@@ -1120,6 +1205,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
     for host_name, host_object in hosts.inventory.hosts.items():
         context.update({"host": host_object})
         host_object.data["__task__"] = {}
+        host_object.data["job_data"] = context["job_data"]
         for key in render:
             if not kwargs.get(key) or key in ignore_keys:
                 continue
@@ -1181,7 +1267,7 @@ def _download_files(download, kwargs):
         kwargs[key] = content
 
         log.debug(
-            "Nornir-proxy MAIN PID {} worker thread, donwloaded '{}' data from Master".format(
+            "Nornir-proxy MAIN PID {} worker thread, downloaded '{}' data from Master".format(
                 os.getpid(), key
             )
         )
@@ -1487,12 +1573,14 @@ def _refresh_nornir(loader_, workers_only=False, **kwargs):
 
 def _rm_tasks_data_from_hosts(hosts):
     """
-    Helper function to remove __task__ data from hosts inventory produced by rendering.
+    Helper function to remove __task__ and job_data data from hosts
+    inventory produced by rendering.
 
     :param hosts: (obj) Nornir object
     """
     for host_name, host_object in hosts.inventory.hosts.items():
         _ = host_object.data.pop("__task__", None)
+        _ = host_object.data.pop("job_data", None)
 
 
 def _update_worker_connections(hosts, wkr_data):
@@ -1941,6 +2029,9 @@ def nr_version():
         "nornir-utils": "",
         "tabulate": "",
         "xmltodict": "",
+        "puresnmp": "",
+        "pygnmi": "",
+        "pynetbox": "",
         "pyyaml": "",
         "jmespath": "",
         "jinja2": "",
@@ -1950,7 +2041,6 @@ def nr_version():
         "lxml": "",
         "psutil": "",
         "salt": "",
-        "pygnmi": "",
         "ttp-templates": "",
         "ntc-templates": "",
         "pyats": "",

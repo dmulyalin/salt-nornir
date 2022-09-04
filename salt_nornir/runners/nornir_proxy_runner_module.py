@@ -1060,7 +1060,7 @@ def diagram(*args, **kwargs):
         retrieve previously saved devices show commands output
     :param last: (int) ``last`` argument value for ``nr.file read`` function, default value is 1
     :param Fx: (str) Nornir filter functions to filter list of devices (hosts) to get output from
-    :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by 
+    :param tgt: (str) SaltStack Nornir Proxy Minions to target, targets all of them by
         default - ``proxy:proxytype:nornir``
     :param tgt_type: (str) SaltStack targeting type to use, default is ``pillar``
     :param job_retry: (int) how many times to retry if no results returned from all minions, default 0
