@@ -972,6 +972,8 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 | `nr.nc`_        | Function to work with devices using NETCONF       | ncclient (default),|
 |                 |                                                   | scrapli_netconf    |
 +-----------------+---------------------------------------------------+--------------------+
+| `nr.netbox`_    | Integration with Netbox DCIM                      |                    |
++-----------------+---------------------------------------------------+--------------------+
 | `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.task`_      | Function to run any Nornir task plugin            |                    |
@@ -1036,6 +1038,11 @@ nr.nc
 +++++
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nc
+
+nr.netbox
++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.netbox
 
 nr.nornir
 +++++++++
@@ -2882,7 +2889,7 @@ def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
 
-    This execution module use Nornir-Salt ``netbox_tasks`` task plugin,
+    This execution module uses Nornir-Salt ``netbox_tasks`` task plugin
     that contains individual task functions to work with Netbox.
 
     :param task: (str) name of Netbox task function to run
@@ -2894,13 +2901,12 @@ def netbox(*args, **kwargs):
     * ``dir`` - returns a list of supported tasks functions
     * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
-    * ``sync_interfaces`` - sync device interfaces data to Netbox
 
     Sample usage::
 
         salt nrp1 nr.netbox dir
         salt nrp1 nr.netbox sync_from FB="ceos1"
-        salt nrp1 nr.netbox task="sync_to_netbox" FB="ceos1"
+        salt nrp1 nr.netbox task="sync_to" FB="ceos1"
     """
     kwargs["task_name"] = args[0] if args else kwargs.pop("task")
     return __proxy__["nornir.execute_job"](
