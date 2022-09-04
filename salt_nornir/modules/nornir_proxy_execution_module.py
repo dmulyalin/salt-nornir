@@ -2921,7 +2921,7 @@ def netbox(*args, **kwargs):
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
 
     This execution module uses Nornir-Salt 
-    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>_` 
+    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>`_ 
     collection that contains individual task functions to work with Netbox.
 
     :param task: (str) name of Netbox task function to run
