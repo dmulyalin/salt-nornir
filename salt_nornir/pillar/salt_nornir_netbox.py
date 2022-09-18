@@ -173,9 +173,10 @@ Sourcing Data from Netbox
 
 salt_nornir_netbox external pillar retrieves data from Netbox using several 
 methods. By default none of the methods turned on. All of the methods can be 
-used separately or simultaneously following order below.
+used separately or simultaneously, if used simultaneously processing follows
+order below.
 
-**(1)** If ``use_minion_id_device`` is True, configuration context data of 
+**(Method-1)** If ``use_minion_id_device`` is True, configuration context data of 
 device with name equal to proxy minion id merged into proxy minion pillar. 
 Sample Netbox device configuration context data that contains Salt-Nornir 
 proxy minion pillar data::
@@ -205,11 +206,11 @@ proxy minion pillar data::
   
 Above data merged with Salt-Nornir Proxy Minion pillar. 
 
-**(2)** If ``use_minion_id_tag`` set to True, devices that have tag attached with value set 
+**(Method-2)** If ``use_minion_id_tag`` set to True, devices that have tag attached with value set 
 equal to minion-id retrieved from Netbox and processed to merge their data into 
 proxy minion pillar Salt-Nornir hosts
 
-**(3)** If ``use_hosts_filters`` is True, devices queried from Netbox using filters from
+**(Method-3)** If ``use_hosts_filters`` is True, devices queried from Netbox using filters from
 ``salt_nornir_netbox.hosts_filters`` list and processed to merge their data into proxy 
 minion pillar Salt-Nornir hosts. If ``use_pillar`` set to True, Proxy Minion
 pillar can be used to define filters list under ``salt_nornir_netbox_pillar.hosts_filters``
