@@ -262,7 +262,7 @@ following these rules:
    device has no platform associated and no platform given in configuration context ``nornir`` 
    section, KeyError raised and device excluded from pillar data
 4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir`` s
-   ection, ``hostname`` value set equal to device primary IPv4 address, if primary IPv4 
+   action, ``hostname`` value set equal to device primary IPv4 address, if primary IPv4 
    address is not defined, primary IPv6 address used, if no primary IPv6 address defined,
    device name is used as a ``hostname`` in assumption that device name is a valid FQDN
 5. If ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's data 
@@ -296,29 +296,59 @@ Alternatively, secrets plugins configuration can be defined in Salt-Nornir
 Proxy Minion pillar if Master's ext_pillar configuration has ``use_pillar``
 set to True.
 
-Any of inventory keys can use value of URL like string in one of the formats:
+Any of inventory keys can use value of URL string in one of the formats:
 
-1. ``nb://<secre-plugin-name>/<device-name>/<secret-role>/<secret-name>``
-2. ``nb://<secre-plugin-name>/<secret-role>/<secret-name>``
-3. ``nb://<secre-plugin-name>/<secret-name>``
-4. ``nb://<secret-name>``
+1. ``nb://<secre-plugin-name>/<device-name>/<secret-role>/<secret-name>`` - 
+   fully qualified path to particular key, can be used to source 
+   secrets from any devices, secrets plugins or secrets roles
+2. ``nb://<secre-plugin-name>/<secret-role>/<secret-name>`` - ``device-name`` 
+   assumed to be equal to the value of ``secrets.secret_device`` 
+   parameter if it is given, otherwise Netbox device name is used as such
+3. ``nb://<secre-plugin-name>/<secret-name>`` - same rule applied for 
+   ``device-name`` as in case 2, but secret searched ignoring ``secret-role`` 
+   and if secret with given name defined under multiple roles, the first 
+   one returned by Netbox is used as a secret value.
+4. ``nb://<secret-name>`` - salt_nornir_netbox attempts to search for 
+   given ``secret-name``across all plugins and secret roles, uses same 
+   rule for ``device-name`` as in case 2
 
 salt_nornir_netbox recursively iterates over entire data sourced from Netbox
-and attempts to resolve keys using specified secrets URLs using this rules:
+and attempts to resolve keys using specified secrets URLs.
 
-**Case-1** above - sort of fully qualified path to particular key, can be used to
-source secrets from any devices, secrets plugins and secrets roles.
+For example, this is how secrets defined in Netbox:
 
-**Case-2** above - ``device-name`` assumed to be equal to the value of 
-``secrets.secret_device`` parameter if it is given, otherwise Netbox
-device name is used as such
+.. image:: ./_images/netbox_secrets.png
 
-**Case-3** above - same rule applied for ``device-name`` as in **Case-2**,
-but secret serached ignoring ``secret-role`` and if secret with given name defined
-under multiple roles, the first one returned by Netbox is used as a secret value.
+Sample configuration context data of ``fceos4`` device could be::
 
-**Case-4** above - salt_nornir_netbox attempts to search for given ``secret-name``
-across all plugins and secret roles, uses same rule for ``device-name`` as in **Case-2**
+    secrets:
+      bgp: nb://netbox_secretstore/keymaster-1/BGP/peers_pass
+      secret1: nb://netbox_secretstore/fceos4/SaltSecrets/secret1
+      secret2: nb://netbox_secretstore/SaltSecrets/secret2
+      secret3: nb://netbox_secretstore/secret3
+      secret4: nb://secret4
+      
+Above secrets would be resolved to this::
+
+    secrets:
+      bgp: 123456bgppeer        <--- resolves to key id 187
+      secret1: secret1_value    <--- resolves to key id 178
+      secret2: secret2_value    <--- resolves to key id 179
+      secret3: secret3_value    <--- resolves to key id 180
+      secret4: secret4_value    <--- resolves to key id 181
+      
+salt_nornir_netbox iterates over all key's values and resolves
+them accordingly.
+
+Reference
++++++++++
+
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox.ext_pillar
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._process_device
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._resolve_secrets
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._resolve_secret
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._fetch_device_secrets
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._netbox_secretstore_get_session_key
 """
 import logging
 import requests
@@ -338,16 +368,18 @@ __virtualname__ = "salt_nornir_netbox"
 
 RUNTIME_VARS = {"devices_done": set(), "secrets": {}}
 
+
 def __virtual__():
     if HAS_LIBS:
         return __virtualname__
     return False
 
+
 def _netbox_secretstore_get_session_key(params):
     """
     Function to retrieve netbox_secretstore session key
     """
-    if "nb_secretstore_session_key" not in RUNTIME_VARS: 
+    if "nb_secretstore_session_key" not in RUNTIME_VARS:
         url = params["url"] + "/api/plugins/netbox_secretstore/get-session-key/"
         token = "Token " + params["token"]
         # read private key content from file
@@ -356,14 +388,12 @@ def _netbox_secretstore_get_session_key(params):
             private_key = kf.read().strip()
         # send request to netbox
         req = requests.post(
-            url, 
-            headers={
-                "authorization": token
-            }, 
+            url,
+            headers={"authorization": token},
             json={
                 "private_key": private_key,
                 "preserve_key": True,
-            }
+            },
         )
         if req.status_code == 200:
             RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
@@ -371,27 +401,27 @@ def _netbox_secretstore_get_session_key(params):
             raise RuntimeError(
                 f"salt_nornir_netbox failed to get netbox_secretstore session-key, "
                 f"status-code '{req.status_code}', reason '{req.reason}', response "
-                f"content '{req.text}'" 
+                f"content '{req.text}'"
             )
-                
-    log.debug("salt_nornir_netbox obtained netbox-secretsore session key")      
-    
+
+    log.debug("salt_nornir_netbox obtained netbox-secretsore session key")
+
     return RUNTIME_VARS["nb_secretstore_session_key"]
-    
-        
+
+
 def _fetch_device_secrets(device_name, params):
     """
     Function to retrieve all secret values for given device from all
     configured Netbox secret plugins.
-    
+
     :param device_name: string, name of device to retrieve secrets for
-    :param params: dictionary with salt-nornir-netbox parameters
+    :param params: dictionary with salt_nornir_netbox parameters
     """
     if device_name in RUNTIME_VARS["secrets"]:
         return RUNTIME_VARS["secrets"][device_name]
-    
+
     RUNTIME_VARS["secrets"].setdefault(device_name, {})
-    
+
     # retrieve device secrets
     for plugin_name in params.get("secrets", {}).get("plugins", {}).keys():
         if plugin_name == "netbox_secretstore":
@@ -401,12 +431,12 @@ def _fetch_device_secrets(device_name, params):
             # retrieve all device secrets
             req = requests.get(
                 url,
-                headers = {
+                headers={
                     "X-Session-Key": session_key,
                     "authorization": token,
                 },
-                params={"device": device_name}
-            )    
+                params={"device": device_name},
+            )
             if req.status_code == 200:
                 RUNTIME_VARS["secrets"][device_name][plugin_name] = [
                     {
@@ -420,26 +450,29 @@ def _fetch_device_secrets(device_name, params):
                 raise RuntimeError(
                     f"salt_nornir_netbox failed to retrieve '{device_name}' device secrets "
                     f"from '{req.url}', status-code '{req.status_code}', reason '{req.reason}', "
-                    f"response content '{req.text}'" 
+                    f"response content '{req.text}'"
                 )
-                
-    log.debug(f"salt_nornir_netbox retrieved '{device_name}' device secrets") 
-    
+
+    log.debug(f"salt_nornir_netbox retrieved '{device_name}' device secrets")
+
     return RUNTIME_VARS["secrets"][device_name]
 
 
 def _resolve_secret(device_name, secret_path, params, strict=False):
     """
     Function to retrieve netbox_secretstore secret value at secret_path.
-    
+
     :param device_name: string, name of device to retrieve secret for
-    :param secret_path: string, path to the secret in one of format:
-        - nb://<plugin-name>/<device-name>/<secret-role>/<secret-name> 
-        - nb://<plugin-name>/<secret-role>/<secret-name> 
-        - nb://<plugin-name>/<secret-name> 
-        - nb://<secret-name>
-    :param params: dictionary with salt-nornir-netbox parameters
+    :param secret_path: string, path to the secret in one of the supported formats
+    :param params: dictionary with salt_nornir_netbox parameters
     :param strict: bool, if True raise KeyError if no secret found, return None otherwise
+
+    Supported secret key path formats:
+
+    - ``nb://<plugin-name>/<device-name>/<secret-role>/<secret-name>``
+    - ``nb://<plugin-name>/<secret-role>/<secret-name>``
+    - ``nb://<plugin-name>/<secret-name>``
+    - ``nb://<secret-name>``
     """
     # retrieve secret plugin, device, role and name from secret_path
     path_items = [i.strip() for i in secret_path.split("/") if i.strip()]
@@ -455,7 +488,7 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
     elif len(path_items) == 4:
         secret_plugin = path_items[1]
         secret_role = path_items[2]
-        secret_name = path_items[3]      
+        secret_name = path_items[3]
     # handle nb://<plugin-name>/<secret-name> case
     elif len(path_items) == 3:
         secret_plugin = path_items[1]
@@ -464,7 +497,9 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
     elif len(path_items) == 2:
         secret_name = path_items[1]
     # get all secrets dictionary for given secret device
-    secret_device_name = secret_device or params["secrets"].get("secret_device") or device_name
+    secret_device_name = (
+        secret_device or params["secrets"].get("secret_device") or device_name
+    )
     device_secrets = _fetch_device_secrets(secret_device_name, params)
     # find secret
     for plugin_name, secrets in device_secrets.items():
@@ -494,12 +529,12 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
 
 def _resolve_secrets(data, device_name, params):
     """
-    Recursive function to iterate over data dictionary and resolve secrets using 
-    Netbox secret plugins, retrieving secrets for given device by device_name. 
-    Designed so to add capability to process data for one device, while retrieving 
+    Recursive function to iterate over data dictionary and resolve secrets using
+    Netbox secret plugins, retrieving secrets for given device by device_name.
+    Designed so to add capability to process data for one device, while retrieving
     keys from other device to simplify secrets management on Netbox side - all keys
-    can be recorded under single, master device, instead of individual devices. 
-    
+    can be recorded under single, master device, instead of individual devices.
+
     :param device_name: string, name of device to retrieve secret for
     :param data: dictionary, containing key with values to be resolved
     :param params: salt_nornir_netbox configuration parameters
@@ -511,15 +546,15 @@ def _resolve_secrets(data, device_name, params):
             data[k] = _resolve_secrets(data[k], device_name, params)
     elif isinstance(data, list):
         for index, i in enumerate(data):
-             data[index] = _resolve_secrets(i, device_name, params)    
+            data[index] = _resolve_secrets(i, device_name, params)
     return data
-            
-            
+
+
 def _process_device(device, inventory, params, nb):
     """
     Helper function to extract data to form Nornir host entry out
     of Netbox device entry.
-    
+
     :param device: pynetbox device object
     :param inventory: Nornir inventory dictionary to update with host details
     :param params: salt_nornir_netbox configuration parameters dictionary
@@ -529,12 +564,12 @@ def _process_device(device, inventory, params, nb):
     name = nornir_data.get("name", device.name)
     if name in RUNTIME_VARS["devices_done"]:
         return
-    host_add_netbox_data = params.get("host_add_netbox_data", False)    
+    host_add_netbox_data = params.get("host_add_netbox_data", False)
     resolve_secrets = params.get("secrets", {}).get("resolve_secrets", False)
     fetch_username = params.get("secrets", {}).get("fetch_username", False)
     fetch_password = params.get("secrets", {}).get("fetch_password", False)
     host = inventory["hosts"].pop(name, {})
-    host.update(nornir_data)    
+    host.update(nornir_data)
     # add platform if not provided in device config context
     if not host.get("platform"):
         if device.platform:
@@ -545,13 +580,9 @@ def _process_device(device, inventory, params, nb):
     # add hostname if not provided in config context
     if not host.get("hostname"):
         if device.primary_ip4:
-            host["hostname"] = str(
-                ipaddress.IPv4Interface(device.primary_ip4).ip
-            )
+            host["hostname"] = str(ipaddress.IPv4Interface(device.primary_ip4).ip)
         elif device.primary_ip6:
-            host["hostname"] = str(
-                ipaddress.IPv6Interface(device.primary_ip6).ip
-            )                        
+            host["hostname"] = str(ipaddress.IPv6Interface(device.primary_ip6).ip)
         else:
             host["hostname"] = name
     # save device data under host data
@@ -565,17 +596,11 @@ def _process_device(device, inventory, params, nb):
     # retrieve device secrets
     if fetch_username:
         host["username"] = _resolve_secret(
-            name, 
-            host.get("username", "nb://username"), 
-            params, 
-            strict=True
+            name, host.get("username", "nb://username"), params, strict=True
         )
     if fetch_password:
         host["password"] = _resolve_secret(
-            name, 
-            host.get("password", "nb://password"), 
-            params, 
-            strict=True
+            name, host.get("password", "nb://password"), params, strict=True
         )
     if resolve_secrets:
         _resolve_secrets(host, name, params)
@@ -583,19 +608,19 @@ def _process_device(device, inventory, params, nb):
     inventory["hosts"][name] = host
     # add device as processed
     RUNTIME_VARS["devices_done"].add(name)
-    
-                
+
+
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     """
-    Salt-Nornir-Netbox External Pillar
-    
+    Salt Nornir Netbox External Pillar
+
     :param minion_id: proxy minion id
     :param pillar: proxy minion pillar data
     :param args: list of any additional argument
     :param kwargs: dictionary of any additional argument
     """
-    ret= {}
-    
+    ret = {}
+
     # check proxy minion pillar type is "nornir", skip otherwise
     if not pillar.get("proxy", {}).get("proxytype") == "nornir":
         return ret
@@ -612,7 +637,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     use_minion_id_tag = params.get("use_minion_id_tag", False)
     use_hosts_filters = params.get("use_hosts_filters", False)
     resolve_secrets = params.get("secrets", {}).get("resolve_secrets", False)
-    
+
     try:
         nb = pynetbox.api(url=url, token=token)
         # request status to verify that Netbox is reachable,
@@ -653,7 +678,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                         f"salt_nornir_netbox error while processing device '{host_name}' "
                         f"from '{minion_id}' config context data: {e}"
                     )
-            
+
     # source devices list using tag value equal to minion id
     if use_minion_id_tag is True:
         ret.setdefault("hosts", {})
@@ -668,7 +693,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                     f"salt_nornir_netbox error while retrieving devices by "
                     f"tag '{minion_id}': {e}"
                 )
-            
+
     # retrieve devices using hosts filters
     if use_hosts_filters:
         ret.setdefault("hosts", {})
@@ -676,9 +701,9 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             devices_by_filter = nb.dcim.devices.filter(**filter_item)
             while True:
                 try:
-                    _process_device(next(devices_by_filter), ret, params, nb)    
+                    _process_device(next(devices_by_filter), ret, params, nb)
                 except StopIteration:
-                    break                
+                    break
                 except Exception as e:
                     log.exception(
                         f"salt_nornir_netbox error while retrieving devices "

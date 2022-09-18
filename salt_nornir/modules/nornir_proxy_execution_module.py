@@ -1237,15 +1237,15 @@ def cli(*args, **kwargs):
          salt nrp1 nr.cli "show clock" use_ps=True cutoff=60 initial_sleep=10
 
     Plugins details:
-    
-    * ``netmiko`` - uses `netmiko_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_commands.html>`_ 
+
+    * ``netmiko`` - uses `netmiko_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_commands.html>`_
       Nornir-Salt Task plugin, ``nr.cli`` uses this plugin by default
-    * ``scrapli`` - uses `scrapli_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_commands.html>`_ 
-      Nornir-Salt Task plugin    
-    * ``napalm`` - uses `napalm_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_send_commands.html>`_ 
-      Nornir-Salt Task plugin    
-    * ``pyats`` - uses `pyats_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_commands.html>`_ 
-      Nornir-Salt Task plugin    
+    * ``scrapli`` - uses `scrapli_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_commands.html>`_
+      Nornir-Salt Task plugin
+    * ``napalm`` - uses `napalm_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_send_commands.html>`_
+      Nornir-Salt Task plugin
+    * ``pyats`` - uses `pyats_send_commands <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_commands.html>`_
+      Nornir-Salt Task plugin
     * ``use_ps`` - enables promptless mode of interaction with device's CLI, uses
       `netmiko_send_commands_ps <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_command_ps.html>`_
       Nornir-Salt task plugin
@@ -1335,16 +1335,16 @@ def cfg(*args, **kwargs):
         need to send exit command as part of configuration commands as well.
 
     Plugins details:
-    
-    * ``napalm`` - uses `napalm_configure <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_configure.html>`_ 
+
+    * ``napalm`` - uses `napalm_configure <https://nornir-salt.readthedocs.io/en/latest/Tasks/napalm_configure.html>`_
       Nornir-Salt Task plugin, ``nr.cfg`` uses this plugin by default
-    * ``netmiko`` - uses `netmiko_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_config.html>`_ 
+    * ``netmiko`` - uses `netmiko_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/netmiko_send_config.html>`_
       Nornir-Salt Task plugin
-    * ``scrapli`` - uses `scrapli_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_config.html>`_ 
-      Nornir-Salt Task plugin    
-    * ``pyats`` - uses `pyats_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_config.html>`_ 
-      Nornir-Salt Task plugin    
-        
+    * ``scrapli`` - uses `scrapli_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_send_config.html>`_
+      Nornir-Salt Task plugin
+    * ``pyats`` - uses `pyats_send_config <https://nornir-salt.readthedocs.io/en/latest/Tasks/pyats_send_config.html>`_
+      Nornir-Salt Task plugin
+
     For configuration rendering purposes, in addition to normal `context variables
     <https://docs.saltstack.com/en/latest/ref/states/vars.html>`_
     template engine loaded with additional context variable `host`, to access Nornir host
@@ -1885,12 +1885,12 @@ def nc(*args, **kwargs):
     :param method_name: (str) name of method to provide docstring for, used only by ``help`` call
 
     Plugins details:
-    
-    * ``ncclient`` - uses `ncclient_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/ncclient_call.html>`_ 
+
+    * ``ncclient`` - uses `ncclient_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/ncclient_call.html>`_
       Nornir-Salt Task plugin, ``nr.nc`` uses this plugin by default
-    * ``scrapli`` - uses `scrapli_netconf_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_netconf_call.html>`_ 
+    * ``scrapli`` - uses `scrapli_netconf_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/scrapli_netconf_call.html>`_
       Nornir-Salt Task plugin
-    
+
     Special ``call`` arguments/methods:
 
     * ``dir`` - returns methods supported by Ncclient connection manager object::
@@ -2221,8 +2221,8 @@ def http(*args, **kwargs):
     :param url: (str) full or partial URL to send request to
     :param kwargs: (dict) any other kwargs to use with requests.<method> call
 
-    This function uses Nornir-Salt 
-    `http_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/http_call.html>`_ 
+    This function uses Nornir-Salt
+    `http_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/http_call.html>`_
     task plugin, refer its documentation for additional details.
 
     Sample usage::
@@ -2704,7 +2704,7 @@ def gnmi(call, *args, **kwargs):
 
     Available gNMI plugin names:
 
-    * ``pygnmi`` - uses `pygnmi_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/pygnmi_call.html>`_ 
+    * ``pygnmi`` - uses `pygnmi_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/pygnmi_call.html>`_
       Nornir-Salt Task plugin that relies on `PyGNMI library <https://pypi.org/project/pygnmi/>`_
       to interact with devices.
 
@@ -2845,7 +2845,7 @@ def snmp(call, *args, **kwargs):
     Available SNMP plugin names:
 
     * ``puresnmp`` - uses `puresnmp_call <https://nornir-salt.readthedocs.io/en/latest/Tasks/puresnmp_call.html>`_
-        Nornir-Salt Task plugin that relies on `puresnmp library <https://github.com/exhuma/puresnmp>`_ 
+        Nornir-Salt Task plugin that relies on `puresnmp library <https://github.com/exhuma/puresnmp>`_
         to interact with devices.
 
     Sample usage of ``puresnmp`` plugin, ``plugin="puresnmp"``::
@@ -2921,8 +2921,8 @@ def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
 
-    This execution module uses Nornir-Salt 
-    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>`_ 
+    This execution module uses Nornir-Salt
+    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>`_
     collection that contains individual task functions to work with Netbox.
 
     :param task: (str) name of Netbox task function to run
