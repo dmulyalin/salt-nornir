@@ -5,6 +5,8 @@ import pytest
 import socket
 import requests
 
+from netbox_data import NB_URL, netbox_device_data_keys
+
 log = logging.getLogger(__name__)
 
 try:
@@ -25,24 +27,8 @@ if HAS_SALT:
         "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
     )
     
-# check if has access to always on sandbox IOSXR device
-iosxr_sandbox_router = "sandbox-iosxr-1.cisco.com" 
-s = socket.socket()
-s.settimeout(5)
-try:
-    status = s.connect_ex((iosxr_sandbox_router, 830))
-    has_sandbox_iosxr = True
-except:
-    log.exception("Failed to check iosxr_sandbox_router connection.")
-    has_sandbox_iosxr = False
-s.close()
-skip_if_not_has_sandbox_iosxr = pytest.mark.skipif(
-    has_sandbox_iosxr == False,
-    reason="Has no connection to {} router".format(iosxr_sandbox_router),
-)
-
 # check if Netbox endpoint reachable
-netbox_url = "http://192.168.64.200:8000/api"
+netbox_url = NB_URL + "/api"
 try:
     response = requests.get(netbox_url)
     has_netbox = response.status_code == 200
@@ -182,13 +168,6 @@ def test_netbox_sync_from_with_data_key():
     
 @skip_if_not_has_netbox
 def test_netbox_sync_from_with_data_key_as_none():
-    netbox_keys = [
-        'airflow', 'asset_tag', 'cluster', 'comments', 'config_context', 'created', 'custom_fields',
-        'device_type', 'display', 'face', 'id', 'last_updated', 'local_context_data', 'location',
-        'name', 'parent_device', 'platform', 'position', 'primary_ip', 'primary_ip4', 'primary_ip6',
-        'rack', 'serial', 'site', 'status', 'tags', 'tenant', 'url', 'vc_position', 'vc_priority',
-        'virtual_chassis'
-    ]
     ret = client.cmd(
         tgt="nrp1", 
         fun="nr.netbox", 
@@ -212,7 +191,7 @@ def test_netbox_sync_from_with_data_key_as_none():
     pprint.pprint(inventory)
     assert ret["nrp1"]["ceos1"]["sync_from"]["status"] == True
     assert ret["nrp1"]["ceos2"]["sync_from"]["status"] == False
-    assert all(k in inventory["nrp1"]["hosts"]["ceos1"]["data"] for k in netbox_keys)
+    assert all(k in inventory["nrp1"]["hosts"]["ceos1"]["data"] for k in netbox_device_data_keys)
     # any because ceos2 data has location key in it
-    assert any(k not in inventory["nrp1"]["hosts"]["ceos2"]["data"] for k in netbox_keys)
+    assert any(k not in inventory["nrp1"]["hosts"]["ceos2"]["data"] for k in netbox_device_data_keys)
     

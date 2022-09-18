@@ -2034,7 +2034,7 @@ hosts:
     port: 5400
     groups:
     - eos_params
-    
+        
 groups:
   eos_params:
     connection_options:
@@ -2055,3 +2055,18 @@ defaults:
     device_info:
       model: cEOS_foobar
       version: "foobar.199.42"
+      
+salt_nornir_netbox_pillar:
+  use_minion_id_device: True
+  use_minion_id_tag: True
+  use_hosts_filters: True
+  host_add_netbox_data: netbox
+  hosts_filters: 
+    - name__ic: "fceos5"
+  secrets:
+    resolve_secrets: True
+    fetch_username: True
+    fetch_password: True
+    plugins:
+      netbox_secretstore:
+        private_key: /etc/salt/netbox_secretstore_private.key

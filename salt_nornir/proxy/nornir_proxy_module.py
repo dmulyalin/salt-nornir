@@ -1545,10 +1545,6 @@ def _refresh_nornir(loader_, workers_only=False, **kwargs):
     else:
         return False
 
-    # refresh all modules
-    __salt__["saltutil.sync_all"]()
-    # refresh in memory pillar
-    __salt__["saltutil.refresh_pillar"]()
     # get latest pillar data from master
     __opts__["pillar"] = __salt__["pillar.items"]()
     __opts__["proxy"] = __opts__["pillar"]["proxy"]

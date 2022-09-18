@@ -12,6 +12,7 @@ Welcome to salt-nornir's documentation!
    Nornir Execution Module
    Nornir Runner Module
    Nornir State Module
+   Nornir Netbox Pillar Module
    FAQ
    Use Cases
    Pillar and Inventory Examples

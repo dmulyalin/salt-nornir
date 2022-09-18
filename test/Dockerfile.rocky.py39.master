@@ -16,7 +16,10 @@ COPY salt_nornir/ /tmp/salt_nornir/
 COPY nornir_salt/ /tmp/nornir_salt/
 RUN python3 -m pip install /tmp/nornir_salt/.[prodmin] --upgrade 
 RUN python3 -m pip install /tmp/salt_nornir/.[prodmin] --upgrade 
-RUN python3 -m pip install N2G 
+# add N2G for nr.diagram runner testing
+RUN python3 -m pip install N2G
+# add pynetbox for salt_nornir_netbox testing
+RUN python3 -m pip install pynetbox==6.6.2
 
 # start salt-master and salt-api
 COPY salt_nornir/test/master_start.sh /tmp/master_start.sh

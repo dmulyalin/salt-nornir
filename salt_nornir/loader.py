@@ -33,3 +33,10 @@ def runner_dirs():
     Return a list of paths from where salt should load proxy-minion modules
     """
     return [os.path.join(PKG_DIR, "runners")]
+
+
+def pillar_dirs():
+    """
+    Return a list of paths from where salt should load pillar modules
+    """
+    return [os.path.join(PKG_DIR, "pillar")]

@@ -2,9 +2,8 @@ configuration:
   netbox:
     instances:
       prod_in_user_defined_config:
-        token: 0123456789abcdef0123456789abcdef01234567
+        token: 6ab1cb37719fc2871fd62cfcb16e556d4353436c
         url: http://192.168.64.200:8000/
-
 defaults:
   data:
     credentials:
@@ -51,9 +50,9 @@ groups:
               - wrong
               url: http://192.168.64.200:8000/
             production:
+              default: true
               token: 0123456789abcdef0123456789abcdef01234567
               url: http://192.168.64.200:8000/
-              default: True
         password: admin
         username: admin
       pygnmi:
@@ -220,3 +219,8 @@ nornir:
 proxy:
   multiprocessing: true
   proxytype: nornir
+salt_nornir_netbox_pillar:
+  host_add_netbox_data: salt_nornir_netbox_pillar_test
+  hosts_filters:
+  - name: ceos1
+  use_hosts_filters: true

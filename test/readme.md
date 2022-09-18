@@ -8,7 +8,8 @@
 8. [Working with environment](#working-with-environment)
 9. [Running tests](#running-tests)
 10. [Setting up Jupyter LAB](#setting-up-jupyter-lab)
-11. [Troubleshooting](#troubleshooting)
+11. [Adding Netbox Container](#adding-netbox-container)
+12. [Troubleshooting](#troubleshooting)
 
 # Testing and Development environment for Salt-Nornir Proxy Minion
 
@@ -192,6 +193,81 @@ kill -9 <jupyter lab pid>
 cd /
 nohup jupyter lab --allow-root --ip=<your host ip> --port=8888
 ```
+
+## Adding Netbox Container
+
+To test functions related to integration with Netbox need to 
+spun up Netbox container from 
+[netbox-docker repository](https://github.com/netbox-community/netbox-docker)
+
+To test secrets need to add netbox-secretstore plugin to netbox-docker 
+container deployment following 
+[documentation instructions](https://github.com/netbox-community/netbox-docker/wiki/Using-Netbox-Plugins)
+
+Once Netbox instance is up and running, need to update file 
+`salt_nornir/test/pytest/netbox_data.py` with correct URL.
+
+To prepare Netbox for testing need to populate it with data, it is 
+automatically done on Pytest invocation or can be done manually running
+the script:
+
+```
+python3 salt_nornir/test/pytest/netbox_data.py
+```
+
+Running netbox_data script will prompt user for input to decide on what to do.
+For example, to clean and re-populate Netbox can use option 3:
+
+```
+[root@salt-master pytest]# python3 netbox_data.py 
+Select what to do with Netbox:
+1 - cleanup
+2 - populate
+3 - cleanup first, next populate
+[1,2,3]: 3
+INFO:__main__:netbox_data: deleting netbox_secretstore secrets
+INFO:__main__:netbox_data obtained netbox-secretsore session key
+INFO:__main__:netbox_data: deleting netbox_secretstore secret roles
+INFO:__main__:netbox_data obtained netbox-secretsore session key
+INFO:__main__:netbox_data: deleting devices
+INFO:__main__:netbox_data: deleting ip addresses
+INFO:__main__:netbox_data: delete device roles
+INFO:__main__:netbox_data: deleting device types
+INFO:__main__:netbox_data: deleting platforms
+INFO:__main__:netbox_data: deleting manufacturers
+INFO:__main__:netbox_data: deleting tags
+INFO:__main__:netbox_data: deleting racks
+INFO:__main__:netbox_data: deleting sites
+INFO:__main__:netbox_data: deleting regions
+INFO:__main__:netbox_data: deleting tenants
+INFO:__main__:netbox_data: creating regions
+INFO:__main__:netbox_data: creating tenants
+INFO:__main__:netbox_data: creating sites
+INFO:__main__:netbox_data: creating racks
+INFO:__main__:netbox_data: creating manufacturers
+INFO:__main__:netbox_data: creating device types
+INFO:__main__:netbox_data: creating device roles
+INFO:__main__:netbox_data: creating platforms
+INFO:__main__:netbox_data: creating ip addresses
+INFO:__main__:netbox_data: creating tags
+INFO:__main__:netbox_data: creating devices
+INFO:__main__:netbox_data: creating interfaces
+INFO:__main__:netbox_data: associating primary ip adresses to devices
+INFO:__main__:netbox_data: creating netbox_secretstore secret roles
+INFO:__main__:netbox_data obtained netbox-secretsore session key
+INFO:__main__:netbox_data: creating netbox_secretstore secrets
+INFO:__main__:netbox_data obtained netbox-secretsore session key
+[root@salt-master pytest]# 
+```
+
+Test environment configured to use default netbox-docker credentials of:
+
+- Username: admin
+- Password: admin
+- API Token: 0123456789abcdef0123456789abcdef01234567
+
+If any of above changes, need to make sure to adjust respective `netbox_data.py`
+sript variables.
 
 ## Troubleshooting
 

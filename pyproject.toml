@@ -186,3 +186,4 @@ dataprocessor = [
 "proxy_dirs" = "salt_nornir.loader:proxy_dirs"
 "states_dirs" = "salt_nornir.loader:states_dirs"
 "runner_dirs" = "salt_nornir.loader:runner_dirs"
+"pillar_dirs" = "salt_nornir.loader:pillar_dirs"

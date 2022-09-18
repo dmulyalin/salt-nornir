@@ -38,3 +38,21 @@ pillar_opts: true
 jinja_env:
   lstrip_blocks: true
   trim_blocks: true
+  
+ext_pillar:
+  - salt_nornir_netbox:
+      url: 'http://192.168.64.200:8000'
+      token: '6ab1cb37719fc2871fd62cfcb16e556d4353436c'  
+      use_minion_id_device: False
+      use_minion_id_tag: False
+      use_hosts_filters: False
+      use_pillar: True
+      host_add_netbox_data: False
+      secrets:
+        resolve_secrets: True
+        fetch_username: False
+        fetch_password: False
+        secret_device: keymaster-1
+        plugins:
+          netbox_secretstore:
+            private_key: /etc/salt/netbox_secretstore_private.key
