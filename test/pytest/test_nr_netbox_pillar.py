@@ -232,6 +232,54 @@ class TestProxyNRP3:
             "fceos4 platform is wrong, should be arista_eos"
         )
         
+    def test_host_add_interfaces(self, nrp3_inventory):
+        """
+        fceos4 and fceos5 should have interfaces added to their inventory.
+        """
+        fceos4_intfs = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["interfaces"]
+        fceos5_intfs = nrp3_inventory["nrp3"]["hosts"]["fceos5"]["data"]["interfaces"]
+        assert len(fceos4_intfs) > 0, "fceos4 data does not have interfaces"
+        assert len(fceos5_intfs) > 0, "fceos5 data does not have interfaces"
+        assert isinstance(fceos4_intfs, dict), "fceos4 interfaces data not a dictionary"
+        assert isinstance(fceos5_intfs, dict), "fceos5 interfaces data not a dictionary"
+
+    def test_host_add_interfaces_ip(self, nrp3_inventory):
+        """
+        fceos4 and fceos5 should have interfaces added to their inventory with their IP addresses.
+        """
+        fceos4_intfs = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["interfaces"]
+        fceos5_intfs = nrp3_inventory["nrp3"]["hosts"]["fceos5"]["data"]["interfaces"]
+        assert isinstance(fceos4_intfs["loopback0"]["ip_addresses"], list), "fceos4 Lo0 ip addresses data not a list"
+        assert isinstance(fceos5_intfs["loopback0"]["ip_addresses"], list), "fceos4 Lo0 ip addresses data not a list"
+        assert len(fceos4_intfs["eth9.19"]["ip_addresses"]) == 1, "fceos4 eth19.9 ip addresses not retrieved"
+        assert isinstance(fceos4_intfs["eth9.19"]["ip_addresses"][0], dict), "fceos4 eth19.9 ip addresses not list of dictionaries"
+        assert isinstance(fceos4_intfs["eth8.18"]["parent"]["name"], str), "fceos4 eth8.18 'parent' parameter not a string"
+        assert isinstance(fceos4_intfs["eth8.18"]["vrf"]["name"], str), "fceos4 eth8.18 'vrf' parameter not a string"  
+        assert len(fceos4_intfs["eth1.11"]["ip_addresses"]) == 2, "fceos4 eth1.11 not having two ip adresses"
+        
+    def test_host_add_interfaces_check_vlans(self, nrp3_inventory):
+        """
+        fceos4 eth201 should have taged vlans list
+        """
+        fceos4_intfs = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["interfaces"]
+        assert len(fceos4_intfs["eth201"]["tagged_vlans"]) > 0, "fceos4 eth201 has no 'tagged_vlans' parameter"  
+        assert isinstance(fceos4_intfs["eth201"]["tagged_vlans"], list), "fceos4 eth201 'tagged_vlans' are not a list"  
+        assert isinstance(fceos4_intfs["eth201"]["untagged_vlan"], dict), "fceos4 eth201 'untagged_vlan' are not a dict"  
+        
+    def test_host_add_connections(self, nrp3_inventory):
+        """
+        fceos4 and fceos5 have a number of connection in between, this test
+        is to verify connections data sourced from netbox
+        """
+        fceos4_conns = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"]
+        fceos5_conns = nrp3_inventory["nrp3"]["hosts"]["fceos5"]["data"]["connections"]        
+        assert isinstance(fceos4_conns, dict), "fceos4 connections data is not a dictionary"
+        assert isinstance(fceos5_conns, dict), "fceos5 connections data is not a dictionary"
+        assert all("remote_device" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_device"
+        assert all("remote_device" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_device"
+        assert all("remote_interface" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_interface"
+        assert all("remote_interface" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_interface"
+        
 @skip_if_not_has_netbox
 class TestProxyNRP1:  
     
@@ -254,7 +302,7 @@ class TestProxyNRP1:
                 pprint.pprint(ret)
                 return ret
         else:
-            raise RuntimeError(f"Failed to retrieve nrp3 inventory: {ret}")
+            raise RuntimeError(f"Failed to retrieve nrp1 inventory: {ret}")
         
     def test_host_add_netbox_data(self, nrp1_inventory):
         """

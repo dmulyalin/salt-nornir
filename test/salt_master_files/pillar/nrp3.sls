@@ -2061,6 +2061,9 @@ salt_nornir_netbox_pillar:
   use_minion_id_tag: True
   use_hosts_filters: True
   host_add_netbox_data: netbox
+  host_add_interfaces: True
+  host_add_interfaces_ip: True
+  host_add_connections: True
   hosts_filters: 
     - name__ic: "fceos5"
   secrets:

@@ -133,25 +133,126 @@ platforms = [
 ip_addresses = [
     {"address": "1.0.1.4/32"},
     {"address": "1.0.1.5/32"},
+    {"address": "1.0.100.1/32"},
+]
+# add more ip addresses
+ip_addresses.extend(
+    [
+        {"address": f"1.0.10.{i}/32"}
+        for i in range(1, 11)
+    ]
+)
+
+vlans = [
+    {"name": f"VLAN_{i}", "vid": 100 + i}
+    for i in range(1,6)
 ]
 
 interfaces = [
     {"name": "loopback0", "device": {"name": "fceos4"}, "type": "virtual"},
-    {"name": "loopback0", "device": {"name": "fceos5"}, "type": "virtual"}
+    {"name": "loopback0", "device": {"name": "fceos5"}, "type": "virtual"},
+    {"name": "Port-Channel1", "device": {"name": "fceos4"}, "type": "lag", "description": "Main uplink interface"},   
+    {"name": "eth101", "device": {"name": "fceos4"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "lag": {"name": "Port-Channel1"}},
+    {"name": "eth102", "device": {"name": "fceos4"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "lag": {"name": "Port-Channel1"}},
+    {"name": "eth201", "device": {"name": "fceos4"}, "type": "1000base-t", "mode": "tagged", "tagged_vlans": [102,103,104,105], "untagged_vlan": 101},
 ]
 
-primary_ip_adress_to_devices = [
+# add more interfaces
+interfaces.extend(
+    [    
+        {"name": f"eth{i}", "device": {"name": "fceos4"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "description": f"Interface {i} description"}
+        for i in range(1, 11)
+    ]
+)
+interfaces.extend(
+    [    
+        {"name": f"eth{i}", "device": {"name": "fceos5"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "description": f"Interface {i} description"}
+        for i in range(1, 11)
+    ]
+)
+# add sub-interfaces
+interfaces.extend(
+    [    
+        {"name": f"eth{i}.1{i}", "device": {"name": "fceos4"}, "type": "virtual", 
+         "mtu": 1500, "mode": "tagged", "parent": {"name": f"eth{i}"}, "description": f"Sub-Interface {i} description"}
+        for i in range(1, 11)
+    ]
+)
+
+console_server_ports = [
+    {"name": "ConsoleServerPort1", "device": {"name": "fceos5"}},
+    {"name": "ConsoleServerPort2", "device": {"name": "fceos5"}},
+]
+
+console_ports = [
+    {"name": "ConsolePort1", "device": {"name": "fceos4"}},
+    {"name": "ConsolePort2", "device": {"name": "fceos4"}},
+]
+
+vrfs = [
+    {"name": "MGMT"},
+    {"name": "CUST1-Flinch34"},
+    {"name": "OOB_CTRL"},
+    {"name": "Signalling"},
+    {"name": "Voice"},
+]
+
+ip_adress_to_devices = [
     {
         "address": "1.0.1.4/32",
         "interface": "loopback0",
-        "device": "fceos4"
+        "device": "fceos4",
+        "role": "loopback",
+        "primary_device_ip": True,
     },
     {
         "address": "1.0.1.5/32",
         "interface": "loopback0",
-        "device": "fceos5"
+        "device": "fceos5",
+        "role": "loopback",
+        "primary_device_ip": True,
     },
+    {"address": f"1.0.100.1/32", "interface": f"eth1.11", "device": "fceos4", "vrf": {"name": vrfs[1]["name"]}},
 ]
+# associate IP addresses to subinterfaces
+ip_adress_to_devices.extend(
+    [
+        {"address": f"1.0.10.{i}/32", "interface": f"eth{i}.1{i}", "device": "fceos4", "vrf": {"name": vrfs[min(i, 4)]["name"]}}
+        for i in range(1, 11)
+    ]
+)
+
+# create interface connections
+# supported teminaton types - "dcim.consoleport", "dcim.interface", "dcim.consoleserverport" etc.
+connections = [
+    {
+        "type": "cat6a",
+        "a_terminations": [{"device": "fceos4", "interface": f"eth{i}", "termination_type": "dcim.interface"}],
+        "b_terminations": [{"device": "fceos5", "interface": f"eth{i}", "termination_type": "dcim.interface"}],
+        "status": "connected",
+        "tenant": {"slug": "saltnornir"},
+    }
+    for i in range(1, 11)
+]
+# add console connections
+connections.extend(
+    [
+        {
+            "type": "cat6a",
+            "a_terminations": [{"device": "fceos4", "interface": "ConsolePort1", "termination_type": "dcim.consoleport"}],
+            "b_terminations": [{"device": "fceos5", "interface": "ConsoleServerPort1", "termination_type": "dcim.consoleserverport"}],
+            "status": "connected",
+            "tenant": {"slug": "saltnornir"},
+        },
+        {
+            "type": "cat6a",
+            "a_terminations": [{"device": "fceos4", "interface": "ConsolePort2", "termination_type": "dcim.consoleport"}],
+            "b_terminations": [{"device": "fceos5", "interface": "ConsoleServerPort2", "termination_type": "dcim.consoleserverport"}],
+            "status": "connected",
+            "tenant": {"slug": "saltnornir"},
+        },
+    ]
+)
 
 devices = [
     {
@@ -355,6 +456,7 @@ netbox_secretsotre_secrets = [
     },     
 ]
 
+
 def _netbox_secretstore_get_session_key():
     """
     Function to retrieve netbox_secretstore session key
@@ -471,13 +573,68 @@ def create_ip_addresses():
         except Exception as e:
             log.error(f"netbox_data: creating ip address '{ip_address}' error '{e}'") 
 
+def create_vrfs():
+    log.info("netbox_data: creating vrfs")
+    for vrf in vrfs:
+        try:
+            nb.ipam.vrfs.create(**vrf)
+        except Exception as e:
+            log.error(f"netbox_data: creating vrf '{vrf}' error '{e}'") 
+            
+def create_vlans():
+    log.info("netbox_data: creating vlans")
+    for vlan in vlans:
+        try:
+            nb.ipam.vlans.create(**vlan)
+        except Exception as e:
+            log.error(f"netbox_data: creating vlan '{vlan}' error '{e}'") 
+            
 def create_interfaces():
     log.info("netbox_data: creating interfaces")
+    # create parent interfaces
     for interface in interfaces:
+        # skip child interfaces
+        if "parent" in interface:
+            continue        
         try:
+            if "tagged_vlans" in interface:
+                for index, vid in enumerate(interface["tagged_vlans"]):
+                    nb_vlan = nb.ipam.vlans.get(vid=str(vid))
+                    interface["tagged_vlans"][index] = nb_vlan.id
+            if "untagged_vlan" in interface:
+                nb_vlan = nb.ipam.vlans.get(vid=str(interface["untagged_vlan"]))
+                interface["untagged_vlan"] = nb_vlan.id
             nb.dcim.interfaces.create(**interface)
         except Exception as e:
             log.error(f"netbox_data: creating interface '{interface}' error '{e}'") 
+    # create child interfaces
+    log.info("netbox_data: creating child interfaces")
+    for interface in interfaces:
+        # skip non child interfaces
+        if "parent" not in interface:
+            continue  
+        try:
+            nb_parent_intf = nb.dcim.interfaces.get(name=interface["parent"]["name"], device=interface["device"]["name"])
+            interface["parent"] = nb_parent_intf.id
+            nb.dcim.interfaces.create(**interface)
+        except Exception as e:
+            log.error(f"netbox_data: creating interface '{interface}' error '{e}'") 
+        
+def create_console_server_ports():
+    log.info("netbox_data: creating console server ports")
+    for port in console_server_ports:    
+        try:
+            nb.dcim.console_server_ports.create(**port)
+        except Exception as e:
+            log.error(f"netbox_data: creating console server port '{port}' error '{e}'") 
+
+def create_console_ports():
+    log.info("netbox_data: creating console ports")
+    for port in console_ports:    
+        try:
+            nb.dcim.console_ports.create(**port)
+        except Exception as e:
+            log.error(f"netbox_data: creating console port '{port}' error '{e}'") 
             
 def create_devices():
     log.info("netbox_data: creating devices")
@@ -488,18 +645,85 @@ def create_devices():
         except Exception as e:
             log.error(f"netbox_data: creating device '{device}' error '{e}'") 
 
-def associate_primary_ip_adress_to_devices():
+def associate_ip_adress_to_devices():
+    """Function to associate IP adresses to device intefaces and to associate vrfs to interfaces and ip adresses"""
     log.info("netbox_data: associating primary ip adresses to devices")
-    for i in primary_ip_adress_to_devices:
+    for i in ip_adress_to_devices:
         device = nb.dcim.devices.get(name=i["device"])
         interface = nb.dcim.interfaces.get(name=i["interface"], device=i["device"])
         ip = nb.ipam.ip_addresses.get(address=i["address"])
         ip.assigned_object_id = interface.id
         ip.assigned_object_type = "dcim.interface"
+        if i.get("vrf"):
+            vrf = nb.ipam.vrfs.get(name=i["vrf"]["name"])
+            ip.vrf = vrf.id
+            interface.vrf = vrf.id
+            interface.save()
         ip.save()
-        device.primary_ip4 = ip.id
-        device.save()
+        if i.get("primary_device_ip"):
+            device.primary_ip4 = ip.id
+            device.save()
+            
+# {
+#     "type": "cat6a",
+#     "a_terminations": [{"device": "fceos4", "interface": f"eth{i}", "termination_type": "dcim.interface"}],
+#     "b_terminations": [{"device": "fceos5", "interface": f"eth{i}", "termination_type": "dcim.interface"}],
+#     "status": "active",
+#     "tenant": {"slug": "saltnornir"},
+# }
+def create_connections():
+    log.info("netbox_data: creatig connections")
+    for connection in connections:
+        
+        a_termination_type = connection["a_terminations"][0]["termination_type"]
+        if a_termination_type == "dcim.interface":
+            nb_interface_a = nb.dcim.interfaces.get(
+                device=connection["a_terminations"][0]["device"],
+                name=connection["a_terminations"][0]["interface"],
+            )
+        elif a_termination_type == "dcim.consoleport":
+            nb_interface_a = nb.dcim.console_ports.get(
+                device=connection["a_terminations"][0]["device"],
+                name=connection["a_terminations"][0]["interface"],
+            )
+        elif a_termination_type == "dcim.consoleserverport":
+            nb_interface_a = nb.dcim.console_server_ports.get(
+                device=connection["a_terminations"][0]["device"],
+                name=connection["a_terminations"][0]["interface"],
+            )
+        else:
+            raise ValueError(f"Unsupported a_termination_type '{a_termination_type}'")
 
+        b_termination_type = connection["b_terminations"][0]["termination_type"]
+        if b_termination_type == "dcim.interface":
+            nb_interface_b = nb.dcim.interfaces.get(
+                device=connection["b_terminations"][0]["device"],
+                name=connection["b_terminations"][0]["interface"],
+            )
+        elif b_termination_type == "dcim.consoleport":
+            nb_interface_b = nb.dcim.console_ports.get(
+                device=connection["b_terminations"][0]["device"],
+                name=connection["b_terminations"][0]["interface"],
+            )
+        elif b_termination_type == "dcim.consoleserverport":
+            nb_interface_b = nb.dcim.console_server_ports.get(
+                device=connection["b_terminations"][0]["device"],
+                name=connection["b_terminations"][0]["interface"],
+            )
+        else:
+            raise ValueError(f"Unsupported b_termination_type '{b_termination_type}'")
+            
+        connection["a_terminations"] = [{
+            "object_type": connection["a_terminations"][0]["termination_type"],
+            "object_id": nb_interface_a.id
+        }]
+        connection["b_terminations"] = [{
+            "object_type": connection["b_terminations"][0]["termination_type"],
+            "object_id": nb_interface_b.id
+        }]
+        nb.dcim.cables.create(**connection)
+        
+        
 def create_netbox_secretsotre_roles():
     log.info("netbox_data: creating netbox_secretstore secret roles")
     session_key = _netbox_secretstore_get_session_key()
@@ -640,6 +864,26 @@ def delete_ip_addresses():
         except Exception as e:
             log.error(f"netbox_data: deleting ip address '{ip_address}' error '{e}'") 
             
+def delete_vrfs():
+    log.info("netbox_data: deleting vrfs")
+    for vrf in vrfs:
+        try:
+            vrf_nb = nb.ipam.vrfs.get(name=vrf["name"])
+            if vrf_nb:
+                vrf_nb.delete()
+        except Exception as e:
+            log.error(f"netbox_data: deleting vrf '{vrf}' error '{e}'") 
+ 
+def delete_vlans():
+    log.info("netbox_data: deleting vlans")
+    for vlan in vlans:
+        try:
+            vlan_nb = nb.ipam.vlans.get(name=vlan["name"])
+            if vlan_nb:
+                vlan_nb.delete()
+        except Exception as e:
+            log.error(f"netbox_data: deleting vlan '{vlan}' error '{e}'") 
+            
 def delete_device_roles():
     log.info("netbox_data: delete device roles")
     for device_role in device_roles:
@@ -723,6 +967,15 @@ def delete_tenants():
         except Exception as e:
             log.error(f"netbox_data: deleting tenant '{tenant}' error '{e}'")    
     
+def delete_connections():
+    log.info("netbox_data: deleting all connections")
+    try:
+        nb_connections = nb.dcim.cables.all()
+        for i in nb_connections:
+            i.delete()
+    except Exception as e:
+        log.error(f"netbox_data: deleting all connections error '{e}'")    
+        
 def delete_sites():
     log.info("netbox_data: deleting sites")
     for site in sites:
@@ -738,6 +991,8 @@ def clean_up_netbox():
     delete_netbox_secretsotre_roles()
     delete_devices()
     delete_ip_addresses()
+    delete_vrfs()
+    delete_vlans()
     delete_device_roles()
     delete_device_types()
     delete_platforms()
@@ -746,6 +1001,7 @@ def clean_up_netbox():
     delete_racks()
     delete_sites()
     delete_regions()
+    delete_connections()
     delete_tenants()
     
 def populate_netbox():
@@ -757,11 +1013,16 @@ def populate_netbox():
     create_device_types()
     create_device_roles()
     create_platforms()
+    create_vrfs()
     create_ip_addresses()
     create_tags()
     create_devices()
+    create_vlans()
     create_interfaces()
-    associate_primary_ip_adress_to_devices()
+    create_console_server_ports()
+    create_console_ports()
+    associate_ip_adress_to_devices()
+    create_connections()
     create_netbox_secretsotre_roles()
     create_netbox_secretsotre_secrets()
     
