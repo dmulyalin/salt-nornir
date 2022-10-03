@@ -74,7 +74,7 @@ class ModelExecCommonArgs(model_ffun_fx_filters):
     headers_exclude: Optional[Union[StrictStr, List[StrictStr]]]
     sortby: Optional[StrictStr]
     reverse: Optional[StrictBool]
-    tests: Optional[Union[List[List[StrictStr]], List[Dict]]]
+    tests: Optional[Union[List[List[StrictStr]], List[Dict], List[StrictStr]]]
     failed_only: Optional[StrictBool]
     remove_tasks: Optional[StrictBool]
     tf: Optional[StrictStr]
@@ -112,8 +112,11 @@ class model_exec_nr_cli(ModelExecCommonArgs):
             values.get("args")
             or values.get("commands")
             or values.get("filename")
+            # ttp template's inputs contains cli commands
             or values.get("run_ttp")
-        ), "No CLI commands, filename or run_ttp provided"
+            # TestsProcessor adds cli commands from tests
+            or values.get("tests")
+        ), "No CLI commands, filename, run_ttp or tests to run provided"
         return values
 
 

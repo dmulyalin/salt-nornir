@@ -159,7 +159,7 @@ All supported processors executed in this order::
    * - `jmespath`_
      - uses JMESPath library to run query against structured results data
    * - `job_data`_
-     - Job data, string, list or dictionry to load using `slsutil.rendered` function
+     - Job data, string, list or dictionary to load using `slsutil.rendered` function
    * - `match`_
      - Filters text output using Nornir-Salt DataProcessor match function
    * - `ntfsm`_
@@ -547,14 +547,14 @@ Sample usage::
 job_data
 ++++++++
 
-Any arbitrary data to load and make available withi template under ``job_data`` key. Uses
+Any arbitrary data to load and make available within template under ``job_data`` key. Uses
 `slsutil.renderer <https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.slsutil.html#salt.modules.slsutil.renderer>`_
 execution module function. In addition, ``job_data`` key added to Nornir host' ``data["__task__"]``
 dictionary to make loaded data available to task plugins.
 
 Supported functions: ``nr.task, nr.cfg, nr.cfg_gen, nr.nc, nr.do, nr.http, nr.cli, nr.gnmi, nr.snmp``
 
-Main purpose of ``job_data`` is to load any arbitrary data from any of suppoted URLs -
+Main purpose of ``job_data`` is to load any arbitrary data from any of supported URLs -
 salt://, http://, https://, ftp://, s3://, swift:// and file:// (proxy minion
 local filesystem) - rendering and serializing the content using ``slsutil.renderer`` function.
 That way proxy minion pillar can contain only information required to connect
@@ -593,8 +593,8 @@ And ``/etc/salt/data/syslog.json`` file content is::
         "bufered_size": "64242"
     }
 
-``job_data`` content temporarily saved into host's inventory data 
-for task execution and removed afterwards. Example of how to access 
+``job_data`` content temporarily saved into host's inventory data
+for task execution and removed afterwards. Example of how to access
 ``job_data`` within Nornir task function::
 
     from nornir.core.task import Result, Task
@@ -1097,7 +1097,7 @@ log = logging.getLogger(__name__)
 
 # import salt libs, wrapping it in try/except for docs to generate
 try:
-    from salt.exceptions import CommandExecutionError
+    from salt.exceptions import CommandExecutionError, SaltRenderError
 except:
     log.error("Nornir Execution Module - failed importing SALT libraries")
 
@@ -1579,10 +1579,10 @@ def test(*args, **kwargs):
 
     Sample usage with inline arguments::
 
-        salt np1 nr.test "show run | inc ntp" contains "1.1.1.1" FB="*host-1"
-        salt np1 nr.test "show run | inc ntp" contains "1.1.1.1" --output=table
-        salt np1 nr.test "show run | inc ntp" contains "1.1.1.1" table=brief
-        salt np1 nr.test commands='["show run | inc ntp"]' test=contains pattern="1.1.1.1"
+        salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" FB="*host-1"
+        salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" --output=table
+        salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" table=brief
+        salt nrp1 nr.test commands='["show run | inc ntp"]' test=contains pattern="1.1.1.1" cli='{"enable": True}'
 
     Sample usage with a suite of test cases::
 
@@ -1649,8 +1649,8 @@ def test(*args, **kwargs):
     ``cli`` keyword passed on to ``nr.cli`` function.
 
     List of arguments in a test suite that can refer to a text file to source from one of
-    supported URL schemes: salt://, http://, https://, ftp://, s3://, swift:// and file://
-    (local filesystem), for example ``salt://path/to/file.txt``:
+    supported URL schemes: ``salt://``, ``http://``, ``https://``, ``ftp://``, ``s3://``,
+    ``swift://`` and ``file://`` (local filesystem), for example ``salt://path/to/file.txt``:
 
     * ``pattern`` - content of the file rendered and used to run the tests together with
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
@@ -1679,8 +1679,84 @@ def test(*args, **kwargs):
 
     .. warning:: for ``wait_timeout`` feature to work, test result must contain ``success`` field,
        otherwise test outcome evaluates to False.
+
+    **Using Tests Suite Jinja2 Templates**
+
+    Starting with Salt-Nornir version 0.16.0 support added to dynamically
+    render hosts' tests suites from hosts' data using Jinja2 templates of
+    YAML formatted strings.
+
+    .. note:: tests rendering done by Nornir-Salt using Jinja2 directly
+        and loaded using PyYAML module, SaltStack rendering and templating
+        system not used.
+
+    Sample test suite Jinja2 template::
+
+        - task: "show version"
+          test: contains
+          pattern: "{{ host.software_version }}"
+          name: check ceos version
+
+        {% for interface in host.interfaces_test %}
+        - task: "show interface {{ interface.name }}"
+          test: contains_lines
+          pattern:
+            - {{ interface.admin_status }}
+            - {{ interface.line_status }}
+            - {{ interface.mtu }}
+            - {{ interface.description }}
+          name: check interface {{ interface.name }} status
+        {% endfor %}
+
+    Given hosts' Nornir inventory data content::
+
+        hosts:
+          ceos1:
+            data:
+              interfaces_test:
+              - admin_status: is up
+                description: Description
+                line_status: line protocol is up
+                mtu: IP MTU 9200
+                name: Ethernet1
+              - admin_status: is up
+                description: Description
+                line_status: line protocol is up
+                mtu: IP MTU 65535
+                name: Loopback1
+              software_version: cEOS
+          ceos2:
+            data:
+              software_version: cEOS
+
+    Test suite template rendered using individual host's data
+    forming per-host test suite. CLI show commands to collect
+    from host device automatically extracted from per-host
+    test suite. For example, for above data these are commands
+    collected from devices:
+
+    - **ceos1** - "show version", "show interface Ethernet1", "show interface Ethernet2"
+    - **ceos2** - "show version"
+
+    Collected show commands output tested using rendered test
+    suite on a per-host basis, producing these sample results::
+
+        [root@salt-master /]# salt nrp1 nr.test suite="salt://tests/test_suite_template.j2" table=brief
+        nrp1:
+            +----+--------+----------------------------------+----------+-------------+
+            |    | host   | name                             | result   | exception   |
+            +====+========+==================================+==========+=============+
+            |  0 | ceos2  | check ceos version               | PASS     |             |
+            +----+--------+----------------------------------+----------+-------------+
+            |  1 | ceos1  | check ceos version               | PASS     |             |
+            +----+--------+----------------------------------+----------+-------------+
+            |  2 | ceos1  | check interface Ethernet1 status | PASS     |             |
+            +----+--------+----------------------------------+----------+-------------+
+            |  3 | ceos1  | check interface Loopback1 status | PASS     |             |
+            +----+--------+----------------------------------+----------+-------------+
     """
     # extract attributes
+    kwargs = {k: v for k, v in kwargs.items() if not str(k).startswith("__")}
     commands = args[0] if args else kwargs.pop("commands", [])
     test = args[1] if len(args) > 1 else kwargs.pop("test", None)
     pattern = args[2] if len(args) > 2 else kwargs.pop("pattern", "")
@@ -1692,6 +1768,7 @@ def test(*args, **kwargs):
     subset = (
         [i.strip() for i in subset.split(",")] if isinstance(subset, str) else subset
     )
+    cli_kwargs = kwargs.pop("cli", {})
     table = kwargs.pop("table", {})  # table
     headers = kwargs.pop("headers", "keys")  # table
     sortby = kwargs.pop("sortby", None)  # table
@@ -1699,38 +1776,57 @@ def test(*args, **kwargs):
     dump = kwargs.pop("dump", False)  # dump final test results
     test_results = []
     filtered_suite = []
-    cli_not_command_tasks = ["run_ttp"]
 
     # check if need to download pattern file from salt master
     if _is_url(pattern):
         pattern = __salt__["cp.get_url"](pattern, dest=None, saltenv=saltenv)
 
     # if test suite provided, download it from master and render it
-    if isinstance(suite, str) and suite.startswith("salt://"):
+    if isinstance(suite, str) and _is_url(suite):
         suite_name = suite
-        suite = __salt__["slsutil.renderer"](suite)
+        suite = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
         if not suite:
             raise CommandExecutionError(
-                "Suite file '{}' not on master; path correct?".format(suite_name)
+                f"Suite file '{suite_name}' not found or empty, is path correct?"
             )
+        # load suite YAML
+        try:
+            suite = __salt__["slsutil.renderer"](string=suite, default_renderer="yaml")
+        except SaltRenderError:
+            # ignore render error, use suite text as is
+            suite = [suite]
     # if test suite is a list use it as is
     elif isinstance(suite, list) and suite != []:
         pass
     # use inline test and commands
     elif test and commands:
-        suite.append(
-            {
-                "test": test,
-                "task": commands[0] if len(commands) == 1 else commands,
-                "name": name,
-                **{k: v for k, v in kwargs.items() if not str(k).startswith("__")},
-            }
-        )
+        test_dict = {
+            "test": test,
+            "task": commands[0] if len(commands) == 1 else commands,
+            "name": name,
+            **kwargs,
+        }
+        # clean up kwargs from test related items
+        for k in ["schema", "function_file", "use_all_tasks", "add_host"]:
+            _ = kwargs.pop(k, None)
+        # add pattern content
+        if test == "cerberus":
+            test_dict.setdefault("schema", pattern)
+        elif test == "custom":
+            test_dict.setdefault("function_text", pattern)
+        else:
+            test_dict.setdefault("pattern", pattern)
+        suite.append(test_dict)
     else:
         raise CommandExecutionError("No test suite or inline test&commands provided.")
 
     # filter suite items and check if need to dowload any files from master
     for item in suite:
+        # use string suite as is
+        if isinstance(item, str):
+            filtered_suite.append(item)
+            continue
+
         # check if need to filter test case
         if subset and not any(map(lambda m: fnmatch.fnmatch(item["name"], m), subset)):
             continue
@@ -1738,9 +1834,7 @@ def test(*args, **kwargs):
         # check if item contains task to do
         if "task" not in item:
             log.warning(
-                "nr.test skipping test item as it has no 'task' defined: {}".format(
-                    item
-                )
+                f"nr.test skipping test item as it has no 'task' defined: {item}"
             )
             continue
 
@@ -1754,56 +1848,45 @@ def test(*args, **kwargs):
             item["schema"] = __salt__["cp.get_url"](
                 item["schema"], dest=None, saltenv=saltenv
             )
-            item["schema"] = __salt__["slsutil.renderer"](item["schema"])
+            item["schema"] = __salt__["slsutil.renderer"](
+                item["schema"], default_renderer="yaml"
+            )
         # check if function file given
         elif _is_url(item.get("function_file")):
             item["function_text"] = __salt__["cp.get_url"](
                 item.pop("function_file"), dest=None, saltenv=saltenv
             )
 
-        # use pattern content otherwise
-        elif item["test"] == "cerberus":
-            item.setdefault("schema", pattern)
-        elif item["test"] == "custom":
-            item.setdefault("function_text", pattern)
-        else:
-            item.setdefault("pattern", pattern)
-
         filtered_suite.append(item)
 
     # validate tests suite
-    _ = modelTestsProcessorSuite(tests=filtered_suite)
+    if isinstance(filtered_suite[0], dict):
+        _ = modelTestsProcessorSuite(tests=filtered_suite)
 
     # run test items in a suite
     for test_item in filtered_suite:
-        wait_timeout = int(test_item.get("wait_timeout", 0))
-        wait_interval = int(test_item.get("wait_interval", 10))
+        wait_timeout = 0
+        test_cli_kwargs = {}
+        if isinstance(test_item, dict):
+            wait_timeout = int(test_item.get("wait_timeout", 0))
+            wait_interval = int(test_item.get("wait_interval", 10))
+            test_cli_kwargs = test_item.pop("cli", {})
         # form arguments for nr.cli call
-        cli_keys = [
-            "failed_only",
-            "remove_tasks",
-            "plugin",
-            "event_failed",
-            "event_progress",
-            "use_ps",
-        ]
         cli_kwargs = {
             "add_details": kwargs.get("add_details", True),
-            **{k: v for k, v in kwargs.items() if k.startswith("F") or k in cli_keys},
-            **test_item.pop("cli", {}),
+            **kwargs,
+            **cli_kwargs,
+            **test_cli_kwargs,
             "to_dict": False,
             "tests": [test_item],
             "identity": _form_identity(kwargs, "test"),
+            "render": [],
+            "build_per_host_tests": True,
         }
-        # check if task is not command e.g. "task: run_ttp"
-        if test_item["task"] not in cli_not_command_tasks:
-            cli_kwargs["commands"] = test_item["task"]
         # implement wait protocol
         if wait_timeout > 0:
             log.debug(
-                "nr.test running nr.cli -'{}', with wait_timeout '{}s'".format(
-                    cli_kwargs, wait_timeout
-                )
+                f"nr.test running nr.cli -'{cli_kwargs}', with wait_timeout '{wait_timeout}s'"
             )
             stime = time.time()
             test_run_attempts = 0

@@ -3,7 +3,7 @@ configuration:
     instances:
       prod_in_user_defined_config:
         token: 6ab1cb37719fc2871fd62cfcb16e556d4353436c
-        url: http://192.168.64.200:8000/
+        url: http://192.168.75.200:8000/
 defaults:
   data:
     credentials:
@@ -34,7 +34,7 @@ groups:
             port: 80
             transport: http
         platform: eos
-      ncclient:
+      napalm_huawei_vrp.huawei_vrp"ncclient:
         extras:
           allow_agent: false
           hostkey_verify: false
@@ -43,16 +43,16 @@ groups:
         extras:
           instances:
             dev:
-              url: http://192.168.64.200:8000/
+              url: http://192.168.75.200:8000/
             dev_wrong:
               auth:
               - username
               - wrong
-              url: http://192.168.64.200:8000/
+              url: http://192.168.75.200:8000/
             production:
               default: true
               token: 0123456789abcdef0123456789abcdef01234567
-              url: http://192.168.64.200:8000/
+              url: http://192.168.75.200:8000/
         password: admin
         username: admin
       pygnmi:
@@ -112,7 +112,19 @@ hosts:
                   username: nornir
               os: eos
     data:
+      interfaces_test:
+      - admin_status: is up
+        description: Description
+        line_status: line protocol is up
+        mtu: IP MTU 9200
+        name: Ethernet1
+      - admin_status: is up
+        description: Description
+        line_status: line protocol is up
+        mtu: IP MTU 65535
+        name: Loopback1
       location: North West Hall DC1
+      software_version: cEOS
       syslog:
       - 1.1.1.1
       - 2.2.2.2

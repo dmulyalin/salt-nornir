@@ -1,0 +1,15 @@
+- task: "show version"
+  test: contains
+  pattern: "{{ host.software_version }}"
+  name: check ceos version
+  
+{% for interface in host.interfaces_test %}
+- task: "show interface {{ interface.name }}"
+  test: contains_lines
+  pattern: 
+    - {{ interface.admin_status }}
+    - {{ interface.line_status }}
+    - {{ interface.mtu }}
+    - {{ interface.description }}
+  name: check interface {{ interface.name }} status
+{% endfor %}

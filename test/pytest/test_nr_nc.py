@@ -617,8 +617,7 @@ def test_scrapli_netconf_edit_config_call():
         assert isinstance(data["edit_config"], str)
         assert len(data["edit_config"]) > 0
         assert "ok" in data["edit_config"]
-
-
+        
 def test_scrapli_netconf_transaction_target_running():
     """
     Test transaction edit_config method call
@@ -838,7 +837,6 @@ def test_scrapli_transaction_edit_config_running_iosxe_always_on():
         assert "edit_config" in data["transaction"][0]
         assert "validate" in data["transaction"][1]
         
-# test_scrapli_transaction_edit_config_running_iosxe_always_on()
 
 @skip_if_not_has_sandbox_iosxr_latest_1_netconf
 def test_ncclient_transaction_edit_config_iosxr_always_on():
@@ -906,7 +904,7 @@ def test_scrapli_transaction_edit_config_invalid_iosxr_always_on():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
     for host_name, data in ret["nrp2"].items():
         assert "transaction" in data, "No 'transaction' output from '{}'".format(host_name)
         assert isinstance(data["transaction"], list)
@@ -915,8 +913,7 @@ def test_scrapli_transaction_edit_config_invalid_iosxr_always_on():
         assert "error" in data["transaction"][1] and "fatal" in data["transaction"][1]["error"]
         assert "discard_changes" in data["transaction"][2] and "<ok/>" in data["transaction"][2]["discard_changes"]
         
-# test_scrapli_transaction_edit_config_invalid_iosxr_always_on()
-
+        
 @skip_if_not_has_sandbox_iosxr_latest_1_netconf
 def test_scrapli_transaction_edit_config_iosxr_always_on():
     ret = client.cmd(
@@ -931,7 +928,7 @@ def test_scrapli_transaction_edit_config_iosxr_always_on():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
     for host_name, data in ret["nrp2"].items():
         assert "transaction" in data, "No 'transaction' output from '{}'".format(host_name)
         assert isinstance(data["transaction"], list)
@@ -939,9 +936,8 @@ def test_scrapli_transaction_edit_config_iosxr_always_on():
         assert "discard_changes" in data["transaction"][0] and "<ok/>" in data["transaction"][0]["discard_changes"]
         assert "edit_config" in data["transaction"][1] and "<ok/>" in data["transaction"][1]["edit_config"]
         assert "validate" in data["transaction"][2] and "<ok/>" in data["transaction"][2]["validate"]
-        assert "commit" in data["transaction"][3] and "<ok/>" in data["transaction"][3]["commit"]
-        
-# test_scrapli_transaction_edit_config_iosxr_always_on()
+        assert "commit_confirmed" in data["transaction"][3] and "<ok/>" in data["transaction"][3]["commit_confirmed"]
+        assert "commit" in data["transaction"][4] and "<ok/>" in data["transaction"][4]["commit"]
 
 
 @skip_if_not_has_sandbox_nxos_latest_1_netconf
@@ -954,7 +950,7 @@ def test_ncclient_transaction_edit_config_nxos_always_on():
             "config": "salt://rpc/edit_config_nxos_openconf_interface.xml",
             "FB": "nxos1",
             "plugin": "ncclient",
-            "confirmed": False, # confirmed does not work well with NXOS for some reason, consequetive commits by scrapli are failing
+            "confirmed": False, # confirmed does not work well with NXOS for some reason, consequetive commits by Ncclient are failing
         },
         tgt_type="glob",
         timeout=60,
@@ -986,7 +982,7 @@ def test_scrapli_transaction_edit_config_nxos_always_on():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
+    pprint.pprint(ret)
     for host_name, data in ret["nrp2"].items():
         assert "transaction" in data, "No 'transaction' output from '{}'".format(host_name)
         assert isinstance(data["transaction"], list)
@@ -994,10 +990,8 @@ def test_scrapli_transaction_edit_config_nxos_always_on():
         assert "discard_changes" in data["transaction"][0] and "<ok/>" in data["transaction"][0]["discard_changes"]
         assert "edit_config" in data["transaction"][1] and "<ok/>" in data["transaction"][1]["edit_config"]
         assert "validate" in data["transaction"][2] and "<ok/>" in data["transaction"][2]["validate"]
-        assert "commit" in data["transaction"][3] and "<ok/>" in data["transaction"][3]["commit"]
-        
-# test_scrapli_transaction_edit_config_nxos_always_on()
-
+        assert "commit_confirmed" in data["transaction"][3] and "<ok/>" in data["transaction"][3]["commit_confirmed"]
+        assert "commit" in data["transaction"][4] and "<ok/>" in data["transaction"][4]["commit"]
 
 def test_scrapli_server_capabilities_glob_filter():
     ret = client.cmd(

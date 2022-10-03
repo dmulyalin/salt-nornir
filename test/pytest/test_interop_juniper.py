@@ -19,6 +19,7 @@ import pprint
 import pytest
 import yaml
 import random
+import socket 
 
 log = logging.getLogger(__name__)
 
@@ -36,9 +37,10 @@ if HAS_SALT:
     client = salt.client.LocalClient()
 
 test_proxy_id = "nrp2"
-junos_test_device_params = """
+JUNOS_DEVICE_IP = "192.168.1.220"
+junos_test_device_params = f"""
 name: vSRX-1
-hostname: 192.168.1.220
+hostname: {JUNOS_DEVICE_IP}
 username: nornir
 password: nornir123
 platform: juniper
@@ -72,9 +74,27 @@ connection_options:
       optional_args:
         auto_probe: 0
         config_private: False
-data: {}
+data: {{}}
 groups: []
 """
+
+# check if junos endpoint reachable
+s = socket.socket()
+s.settimeout(5)
+try:
+    status = s.connect_ex((JUNOS_DEVICE_IP, 22))
+except:
+    log.exception("Failed to check junos connection.")
+    status = 1
+if status == 0:
+    has_junos_device = True
+else:
+    has_junos_device = False
+s.close()
+skip_if_not_junos_device = pytest.mark.skipif(
+    has_junos_device == False,
+    reason="Has no connection to {} juniper device".format(JUNOS_DEVICE_IP),
+)
 
 
 def add_juniper_hosts():
@@ -101,9 +121,11 @@ def enable_netconf():
     )    
     pprint.pprint(ret)
     
-add_juniper_hosts()
-enable_netconf()
+if has_junos_device:
+    add_juniper_hosts()
+    enable_netconf()
 
+@skip_if_not_junos_device
 class TestJunosNrCli:        
     def test_cli_command(self):
         ret = client.cmd(
@@ -141,6 +163,7 @@ class TestJunosNrCli:
             assert "unknown command" not in data["configure"]["result"]
             assert r"test\nbanner\nstring\n" in data["configure"]["result"]
             
+@skip_if_not_junos_device
 class TestJunosNrCfg:      
     def test_netmiko_config_inline_multiline(self):
         rand_id = random.randint(0, 10000)
@@ -177,6 +200,7 @@ class TestJunosNrCfg:
     def test_netmiko_config_commit_confirmed(self):
         pass
         
+@skip_if_not_junos_device
 class TestJunosNrNc:        
     def test_ncclient_dir_call(self):
         ret = client.cmd(

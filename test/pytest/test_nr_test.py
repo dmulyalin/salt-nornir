@@ -453,20 +453,21 @@ def test_nr_test_inline_contains_with_render():
 
 def test_nr_test_inline_contains_failure():
     """
-    This test should produce an error as tests must be a list of lists
+    This test should produce an error as tests must be a list of strings
+    that can render to list of dictionaries.
     """
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
         kwarg={
-            "tests": ["", "contains", "NTP"]
+            "tests": ["foo", "contains", "NTP"]
         },
         tgt_type="glob",
         timeout=60,
     )
     assert "Traceback (most recent call last)" in ret["nrp1"]
-    assert "value is not a valid" in ret["nrp1"]
+    assert "ValueError: " in ret["nrp1"]
 
         
 def test_nr_test_dump():
@@ -645,23 +646,25 @@ def test_nr_test_all_tasks_failed():
     assert "Traceback" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.nr_test"]
     assert "Traceback" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.nr_test"]
                                                
-def test_nr_test_test_has_no_results_to_tes():
+def test_nr_test_test_has_empty_command_to_test():
+    """
+    Expect TestsProcessor to skip test that has empty task/command
+    """
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
-        arg=["show clock"],
         kwarg={
-            "tests": [["show clock", "contains", "local", "test1"], ["foo", "contains", "bar", "test2"]],
+            "tests": [["show clock", "contains", "local", "test1"], ["", "contains", "bar", "test2"]],
             "add_details": True,
         },
         tgt_type="glob",
         timeout=60,
     )    
     pprint.pprint(ret)
-    assert ret["nrp1"]["ceos1"]["test2"]["result"] == "ERROR"
-    assert ret["nrp1"]["ceos1"]["test2"]["failed"] == True
-    assert ret["nrp1"]["ceos2"]["test2"]["result"] == "ERROR"
-    assert ret["nrp1"]["ceos2"]["test2"]["failed"] == True
+    assert len(ret["nrp1"]["ceos1"]) == 1
+    assert len(ret["nrp1"]["ceos2"]) == 1
+    assert ret["nrp1"]["ceos1"]["test1"]["result"] == "PASS"
+    assert ret["nrp1"]["ceos2"]["test1"]["result"] == "PASS"
     
 def test_nr_test_validate_suite():
     """Test to run test suite with wrong test name"""
@@ -677,3 +680,23 @@ def test_nr_test_validate_suite():
     )    
     pprint.pprint(ret)
     assert "ValidationError" in ret["nrp1"]
+    
+def test_nr_test_jinja2_template_suite():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template.j2"
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]) == 4, "Expected 4 test items to return"
+    assert all([i["result"] == "PASS" for i in ret["nrp1"]])
+    assert len([i for i in ret["nrp1"] if i["name"] == "check ceos version"]) == 2, "expected two show version check tests"
+    assert len(
+        [i for i in ret["nrp1"] if "check interface" in i["name"] and i["host"] == "ceos1"]
+    ) == 2, "expected two ceos1 interface check tests"
+    

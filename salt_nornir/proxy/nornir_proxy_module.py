@@ -493,7 +493,7 @@ def init(opts, loader=None, init_queues=True):
 
     :param opts: (dict) proxy minion options
     :param loader: (obj) SaltStack loader context object
-    :param init_queues: (bool) if True, initialises multiprocessing queues,
+    :param init_queues: (bool) if True, initializes multiprocessing queues,
         set to False if "nr.nornir refresh workers_only=True" called
     """
     # validate Salt-Nornir minion configuration
@@ -1291,6 +1291,7 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
     tf = kwargs.pop("tf", None)  # to file
     tf_skip_failed = kwargs.pop("tf_skip_failed", False)  # to file
     tests = kwargs.pop("tests", None)  # tests
+    build_per_host_tests = kwargs.pop("build_per_host_tests", True)  # tests
     remove_tasks = kwargs.pop("remove_tasks", True)  # tests and/or run_ttp
     failed_only = kwargs.pop("failed_only", False)  # tests
     diff = kwargs.pop("diff", "")  # diff processor
@@ -1367,7 +1368,12 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
         processors.append(DataProcessor([{"fun": "ntfsm"}]))
     if tests:
         processors.append(
-            TestsProcessor(tests, remove_tasks=remove_tasks, failed_only=failed_only)
+            TestsProcessor(
+                tests,
+                remove_tasks=remove_tasks,
+                failed_only=failed_only,
+                build_per_host_tests=build_per_host_tests,
+            )
         )
     if diff:
         processors.append(

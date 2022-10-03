@@ -130,7 +130,7 @@ class TestProxyNRP3:
                 
         this test is to verify above secrets resolved
         """
-        secrets = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["netbox"]["local_context_data"]["secrets"]
+        secrets = nrp3_inventory["nrp3"]["hosts"]["fceos4"]["data"]["netbox"]["config_context"]["secrets"]
         assert secrets["bgp"] == "123456bgppeer", "fceos4 bgp secret is wrong"
         assert secrets["secret1"] == "secret1_value", "fceos4 secret1 secret is wrong"
         assert secrets["secret2"] == "secret2_value", "fceos4 secret2 secret is wrong"

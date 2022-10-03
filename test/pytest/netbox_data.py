@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-NB_URL = "http://192.168.64.200:8000/"
+NB_URL = "http://192.168.75.200:8000/"
 NB_USERNAME = "admin"
 NB_PASSWORD = "admin"
 NB_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"
@@ -46,6 +46,13 @@ def slugify(name):
 
 # list of netbox deice inventory keys to verify device data retrieved from Netbox
 netbox_device_data_keys = [
+    'airflow', 'asset_tag', 'config_context', 'custom_field_data',
+    'device_type', 'last_updated', 'location', 'name', 'platform', 
+    'position', 'primary_ip4', 'primary_ip6', 'rack', 'serial', 
+    'site', 'status', 'tags', 'tenant',
+]
+
+netbox_tasks_device_data_keys = [
     'airflow', 'asset_tag', 'cluster', 'comments', 'config_context', 'created', 'custom_fields',
     'device_type', 'display', 'face', 'id', 'last_updated', 'local_context_data', 'location',
     'name', 'parent_device', 'platform', 'position', 'primary_ip', 'primary_ip4', 'primary_ip6',

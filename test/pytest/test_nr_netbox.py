@@ -5,7 +5,7 @@ import pytest
 import socket
 import requests
 
-from netbox_data import NB_URL, netbox_device_data_keys
+from netbox_data import NB_URL, netbox_tasks_device_data_keys
 
 log = logging.getLogger(__name__)
 
@@ -191,7 +191,11 @@ def test_netbox_sync_from_with_data_key_as_none():
     pprint.pprint(inventory)
     assert ret["nrp1"]["ceos1"]["sync_from"]["status"] == True
     assert ret["nrp1"]["ceos2"]["sync_from"]["status"] == False
-    assert all(k in inventory["nrp1"]["hosts"]["ceos1"]["data"] for k in netbox_device_data_keys)
-    # any because ceos2 data has location key in it
-    assert any(k not in inventory["nrp1"]["hosts"]["ceos2"]["data"] for k in netbox_device_data_keys)
+    for k in netbox_tasks_device_data_keys:
+        assert k in inventory["nrp1"]["hosts"]["ceos1"]["data"], f"ceos1 has no key '{k}'"
+    for k in netbox_tasks_device_data_keys:
+        # skip because ceos2 data has location key in it
+        if k in ["location"]:
+            continue
+        assert k not in inventory["nrp1"]["hosts"]["ceos2"]["data"], f"ceos2 has key '{k}'"
     
