@@ -9,7 +9,7 @@
 
 # Salt Nornir
 
-Repository to store Nornir based SaltStack modules:
+Nornir centered SaltStack modules:
 
 - salt-nornir proxy minion module
 - salt-nornir execution module
@@ -30,17 +30,17 @@ Python and Plugins.
 Nornir Proxy acts as a bridge between SaltStack and a wide set of open
 source network automation libraries.
 
-# Key Features
+# Features
 
-- **CLI** Manage your devices over SSH or Telnet using Netmiko, Scrapli, Cisco Genie/PyATS or NAPALM
-- **NETCONF** management of network devices one command away using Ncclient or Scrapli-Netconf
-- **HTTP API**/**RESTCONF** Interact with devices using Python requests library, automate your networking fleet using 
+- **CLI** management of devices over SSH or Telnet using Netmiko, Scrapli, Cisco Genie/PyATS or NAPALM
+- **NETCONF** management of network devices using Ncclient or Scrapli-Netconf
+- **HTTP API**/**RESTCONF** interact with devices using Python requests library
 - **gNMI** device management supported thanks to integration with PyGNMI library
-- **SNMPv1/2/3** Capability to manage device using puresnmp library
-- **Data Processing** with the help of NTC-Templates, TTP, Jmespath, lxml, xmltodict
-- **Network Testing** to test network state and configuration using SSH, Netconf, gNMI, HTTP or SNMP
-- **Python** is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
-- **API** Integrate with anythingusing SaltStack and Nornir Python API or SaltStack HTTP API
+- **SNMPv1/2/3** support to manage device using puresnmp library
+- **Data Processing** using NTC-Templates, TTP, Jmespath, lxml, xmltodict libraries
+- **Network Testing** of state and configuration via SSH, Netconf, gNMI, HTTP or SNMP
+- **Python** is a first class citizen - write plugins, modules, scripts, codify work flows
+- **API** integrate with anything using SaltStack and Nornir Python API or SaltStack HTTP API
 - **Netbox** Source of Truth inventory integration for infrastructure management
 
 # Communication and discussion
