@@ -15,6 +15,7 @@ Repository to store Nornir based SaltStack modules:
 - salt-nornir execution module
 - salt-nornir state module
 - salt-nornir runner module
+- salt-nornir Netbox pillar module
 
 Nornir Proxy Minion helps to manage network devices at scale, refer to
 [documentation](https://salt-nornir.readthedocs.io/en/latest/index.html)
@@ -31,16 +32,16 @@ source network automation libraries.
 
 # Key Features
 
-- Manage your devices over SSH or Telnet **CLI** using Netmiko 170+ drivers, Scrapli, Cisco Genie/PyATS or NAPALM
+- **CLI** Manage your devices over SSH or Telnet using Netmiko, Scrapli, Cisco Genie/PyATS or NAPALM
 - **NETCONF** management of network devices one command away using Ncclient or Scrapli-Netconf
-- Interact with any **HTTP API** using Python requests library, automate your networking fleet using **RESTCONF**
+- **HTTP API**/**RESTCONF** Interact with devices using Python requests library, automate your networking fleet using 
 - **gNMI** device management supported thanks to integration with PyGNMI library
-- Capability to manage device over **SNMPv1/2/3** using puresnmp library
-- Results data processing with the help of NTC-Templates, TTP, Jmespath, lxml, xmltodict
-- Addresses overwhelming set of use cases from simple data retrieval and parsing to infrastructure provisioning, testing, orchestration and self-healing
-- Python is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
-- Integrate anything with anything, all you can do via CLI supported by SaltStack and Nornir Python API or SaltStack REST API
-- Well tested - 570 tests for `salt-nornir` and `nornir-salt` packages combined as of release 0.14.0
+- **SNMPv1/2/3** Capability to manage device using puresnmp library
+- **Data Processing** with the help of NTC-Templates, TTP, Jmespath, lxml, xmltodict
+- **Network Testing** to test network state and configuration using SSH, Netconf, gNMI, HTTP or SNMP
+- **Python** is a first class citizen, need something special - write your own plugins, modules, scripts, codify your work flows
+- **API** Integrate with anythingusing SaltStack and Nornir Python API or SaltStack HTTP API
+- **Netbox** Source of Truth inventory integration for infrastructure management
 
 # Communication and discussion
 
