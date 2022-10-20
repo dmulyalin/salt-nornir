@@ -929,6 +929,7 @@ def _host_add_interfaces(device, host, params):
         intf_dict[intf.pop("name")] = intf
     # save data into Nornir host's inventory
     dk = host_add_interfaces if isinstance(host_add_interfaces, str) else "interfaces"
+    host.setdefault("data", {})
     host["data"][dk] = intf_dict
 
 
@@ -1016,6 +1017,7 @@ def _host_add_connections(device, host, params):
     cables_dict = {}
     while cables:
         cable = cables.pop()
+        # extract CableTerminationType items
         terminations = cable.pop("terminations")
         local_interface_index = None
         # map interface ID to interface data
@@ -1037,7 +1039,7 @@ def _host_add_connections(device, host, params):
                 f"salt_nornir_netbox '{device['name']}' device, failed to find local "
                 f"interface for connection '{cable}', terminations '{terminations}'"
             )
-
+        # extract interface termiantion
         local_interface = terminations.pop(local_interface_index)
         remote_interface = terminations.pop()
 
@@ -1045,12 +1047,15 @@ def _host_add_connections(device, host, params):
             **cable,
             "remote_device": remote_interface["_device"]["name"],
             "remote_interface": remote_interface["interface"]["name"],
+            "termination_type": local_interface["termination_type"]["model"],
+            "remote_termination_type": remote_interface["termination_type"]["model"],
         }
 
     # save data into Nornir host's inventory
     dk = (
         host_add_connections if isinstance(host_add_connections, str) else "connections"
     )
+    host.setdefault("data", {})
     host["data"][dk] = cables_dict
 
 

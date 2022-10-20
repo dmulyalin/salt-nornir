@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "salt_nornir"
-version = "0.16.0"
+version = "0.16.1"
 description = "Salt-Nornir Proxy Minion SaltStack Modules"
 authors = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
 maintainers = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
@@ -179,6 +179,9 @@ dataprocessor = [
     "ttp-templates",
     "xmltodict",
     "lxml"
+]
+netbox = [
+    "pynetbox"
 ]
 
 [tool.poetry.plugins."salt.loader"]

@@ -1091,6 +1091,7 @@ from salt_nornir.pydantic_models import (
     model_exec_nr_do_action,
     model_exec_nr_snmp,
 )
+from salt_nornir.netbox_utils import netbox_tasks
 
 log = logging.getLogger(__name__)
 
@@ -2637,8 +2638,8 @@ def nornir_fun(fun, *args, **kwargs):
     * ``kill`` - executes immediate shutdown of Nornir Proxy Minion process and child processes
     * ``shutdown`` - gracefully shutdowns Nornir Proxy Minion process and child processes
     * ``inventory`` - interact with Nornir Process inventory data, using ``InventoryFun`` function,
-      by default, for ``read_host, read, read_inventory, list_hosts`` operations any Nornir worker
-      can respond, for other, non-read operations targets all Nornir workers
+      by default, for ``read_host, read, read_inventory, list_hosts, list_hosts_platforms`` operations any
+      Nornir worker can respond, for other, non-read operations targets all Nornir workers
     * ``stats`` - returns statistics about Nornir proxy process, accepts ``stat`` argument of stat
       name to return
     * ``version`` - returns a report of Nornir related packages installed versions
@@ -2696,7 +2697,13 @@ def nornir_fun(fun, *args, **kwargs):
     if fun == "inventory":
         kwargs.setdefault("call", args[0] if args else "read_inventory")
         # make sure by default targets all workers for non read operations
-        if kwargs["call"] not in ["read_host", "read", "read_inventory", "list_hosts"]:
+        if kwargs["call"] not in [
+            "read_host",
+            "read",
+            "read_inventory",
+            "list_hosts",
+            "list_hosts_platforms",
+        ]:
             kwargs.setdefault("worker", "all")
         return task(plugin="inventory", **kwargs)
     elif fun == "stats":
@@ -3024,7 +3031,22 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox sync_from FB="ceos1"
         salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
     """
-    kwargs["task_name"] = args[0] if args else kwargs.pop("task")
+    task_name = args[0] if args else kwargs.pop("task")
+    kwargs["task_name"] = task_name
+    if task_name in netbox_tasks:
+        ret = []
+        # get a list of tasks to execute
+        tasks_list = netbox_tasks[task_name]["tasks"](
+            hosts=nornir_fun("inventory", "list_hosts_platforms")
+        )
+        # execute tasks to retrieve data from hosts
+        for task_data in tasks_list:
+            ret.append(
+                globals()[task_data["fun"]](
+                    *task_data.get("args", []), **task_data.get("kwargs", {})
+                )
+            )
+        return ret
     return __proxy__["nornir.execute_job"](
         task_fun="nornir_salt.plugins.tasks.netbox_tasks",
         kwargs=kwargs,
