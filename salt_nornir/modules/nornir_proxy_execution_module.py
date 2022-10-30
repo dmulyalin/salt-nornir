@@ -1099,6 +1099,7 @@ log = logging.getLogger(__name__)
 # import salt libs, wrapping it in try/except for docs to generate
 try:
     from salt.exceptions import CommandExecutionError, SaltRenderError
+    from salt.utils.yamldumper import safe_dump as yaml_safe_dump
 except:
     log.error("Nornir Execution Module - failed importing SALT libraries")
 
@@ -1545,6 +1546,8 @@ def test(*args, **kwargs):
         ``pattern`` value used as a pattern for containment check.
     :param function_file: (str) path to text file on salt master with function content
         to use for ``custom`` function test
+    :param dry_run: (bool) if True, returns produced per-host tests suites content only,
+        no tests performed
     :param saltenv: (str) name of salt environment to download function_file from
     :param suite: (list or str) list of dictionaries with test items or path to file on
         salt-master with a list of test item dictionaries
@@ -1766,9 +1769,7 @@ def test(*args, **kwargs):
     saltenv = kwargs.pop("saltenv", "base")
     suite = kwargs.pop("suite", [])
     subset = kwargs.pop("subset", [])
-    subset = (
-        [i.strip() for i in subset.split(",")] if isinstance(subset, str) else subset
-    )
+    dry_run = kwargs.pop("dry_run", False)
     cli_kwargs = kwargs.pop("cli", {})
     table = kwargs.pop("table", {})  # table
     headers = kwargs.pop("headers", "keys")  # table
@@ -1778,38 +1779,55 @@ def test(*args, **kwargs):
     test_results = []
     filtered_suite = []
 
-    # check if need to download pattern file from salt master
-    if _is_url(pattern):
-        pattern = __salt__["cp.get_url"](pattern, dest=None, saltenv=saltenv)
-
     # if test suite provided, download it from master and render it
     if isinstance(suite, str) and _is_url(suite):
-        suite_name = suite
-        suite = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
-        if not suite:
+        # download suite content
+        suite_content = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
+        if not suite_content:
             raise CommandExecutionError(
-                f"Suite file '{suite_name}' not found or empty, is path correct?"
+                f"Tests suite '{suite}' file download failed"
             )
-        # load suite YAML
-        try:
-            suite = __salt__["slsutil.renderer"](string=suite, default_renderer="yaml")
-        except SaltRenderError:
-            # ignore render error, use suite text as is
-            suite = [suite]
-    # if test suite is a list use it as is
-    elif isinstance(suite, list) and suite != []:
+        # render tests suite on a per-host basis
+        per_host_suite = cfg_gen(
+            config=suite_content,
+            saltenv=saltenv,
+            **{k: v for k, v in kwargs.items() if k in FFun_functions}
+        )
+        # process cfg_gen results
+        loaded_suite = {}
+        for host_name, v in per_host_suite.items():
+            v = v["salt_cfg_gen"]
+            if "Traceback" in v:
+                raise CommandExecutionError(
+                    f"Tests suite '{suite}' rendering failed for '{host_name}', "
+                    f"error:\n{v}"
+                )
+            else:
+                loaded_suite[host_name] = __salt__["slsutil.renderer"](
+                    string=v, 
+                    default_renderer="yaml"
+                ) 
+        suite = loaded_suite
+    # if test suite is a list or dict - use it as is
+    elif isinstance(suite, (list, dict)) and suite:
         pass
     # use inline test and commands
     elif test and commands:
+        # form test dictionary
         test_dict = {
             "test": test,
             "task": commands[0] if len(commands) == 1 else commands,
             "name": name,
-            **kwargs,
+            **kwargs
         }
+        
         # clean up kwargs from test related items
         for k in ["schema", "function_file", "use_all_tasks", "add_host"]:
             _ = kwargs.pop(k, None)
+            
+        # check if need to download pattern file from salt master
+        if _is_url(pattern):
+            pattern = __salt__["cp.get_url"](pattern, dest=None, saltenv=saltenv)
         # add pattern content
         if test == "cerberus":
             test_dict.setdefault("schema", pattern)
@@ -1817,107 +1835,73 @@ def test(*args, **kwargs):
             test_dict.setdefault("function_text", pattern)
         else:
             test_dict.setdefault("pattern", pattern)
-        suite.append(test_dict)
+            
+        # render test dictionary on a per-host basis
+        per_host_suite = cfg_gen(
+            config=yaml_safe_dump([test_dict]),
+            saltenv=saltenv,
+            **{k: v for k, v in kwargs.items() if k in FFun_functions}
+        )
+        # process cfg_gen results
+        loaded_suite = {}
+        for host_name, v in per_host_suite.items():
+            v = v["salt_cfg_gen"]
+            if "Traceback" in v:
+                raise CommandExecutionError(
+                    f"Tests suite '{suite}' rendering failed for '{host_name}', "
+                    f"error:\n{v}"
+                )
+            else:
+                loaded_suite[host_name] = __salt__["slsutil.renderer"](
+                    string=v, 
+                    default_renderer="yaml"
+                ) 
+        suite = loaded_suite
     else:
         raise CommandExecutionError("No test suite or inline test&commands provided.")
 
-    # filter suite items and check if need to dowload any files from master
-    for item in suite:
-        # use string suite as is
-        if isinstance(item, str):
-            filtered_suite.append(item)
-            continue
-
-        # check if need to filter test case
-        if subset and not any(map(lambda m: fnmatch.fnmatch(item["name"], m), subset)):
-            continue
-
-        # check if item contains task to do
-        if "task" not in item:
-            log.warning(
-                f"nr.test skipping test item as it has no 'task' defined: {item}"
-            )
-            continue
-
-        # see if item's pattern referring to file
-        if _is_url(item.get("pattern")):
-            item["pattern"] = __salt__["cp.get_url"](
-                item["pattern"], dest=None, saltenv=saltenv
-            )
-        # check if cerberus schema referring to file
-        elif _is_url(item.get("schema")):
-            item["schema"] = __salt__["cp.get_url"](
-                item["schema"], dest=None, saltenv=saltenv
-            )
-            item["schema"] = __salt__["slsutil.renderer"](
-                item["schema"], default_renderer="yaml"
-            )
-        # check if function file given
-        elif _is_url(item.get("function_file")):
-            item["function_text"] = __salt__["cp.get_url"](
-                item.pop("function_file"), dest=None, saltenv=saltenv
-            )
-
-        filtered_suite.append(item)
-
     # validate tests suite
-    if isinstance(filtered_suite[0], dict):
-        _ = modelTestsProcessorSuite(tests=filtered_suite)
-
-    # run test items in a suite
-    for test_item in filtered_suite:
-        wait_timeout = 0
-        test_cli_kwargs = {}
-        if isinstance(test_item, dict):
-            wait_timeout = int(test_item.get("wait_timeout", 0))
-            wait_interval = int(test_item.get("wait_interval", 10))
-            test_cli_kwargs = test_item.pop("cli", {})
-        # form arguments for nr.cli call
-        cli_kwargs = {
-            "add_details": kwargs.get("add_details", True),
-            **kwargs,
-            **cli_kwargs,
-            **test_cli_kwargs,
-            "to_dict": False,
-            "tests": [test_item],
-            "identity": _form_identity(kwargs, "test"),
-            "render": [],
-            "build_per_host_tests": True,
-        }
-        # implement wait protocol
-        if wait_timeout > 0:
-            log.debug(
-                f"nr.test running nr.cli -'{cli_kwargs}', with wait_timeout '{wait_timeout}s'"
-            )
-            stime = time.time()
-            test_run_attempts = 0
-            while (time.time() - stime) < wait_timeout:
-                res = cli(**cli_kwargs)
-                test_run_attempts += 1
-                if all(i.get("success", False) for i in res):
-                    if isinstance(res, list):
-                        test_results.extend(res)
-                    else:
-                        test_results.append(res)
-                    break
-                time.sleep(wait_interval)
-            else:
-                for i in res:
-                    excpt = str(i.get("exception", ""))
-                    i["exception"] = (
-                        f"{wait_timeout}s wait timeout expired,"
-                        f"test run attempts {test_run_attempts}\n{excpt}"
+    _ = modelTestsProcessorSuite(tests=filtered_suite)
+        
+    # do dry run - return produced tests suite only
+    if dry_run:
+        return suite
+    
+    # load files contents for suite that is a list of test items
+    if isinstance(suite, list):
+        for index, item in enumerate(suite):
+            for k in ["pattern", "schema", "function_file"]:
+                if _is_url(item.get(k)):
+                    item[k] = __salt__["cp.get_url"](
+                        item[k], dest=None, saltenv=saltenv
                     )
-                    i["failed"] = True
-                    i["success"] = False
-                test_results.extend(res)
-        else:
-            log.debug("nr.test running nr.cli -'{}'".format(cli_kwargs))
-            res = cli(**cli_kwargs)
-            if isinstance(res, list):
-                test_results.extend(res)
-            else:
-                test_results.append(res)
+                    if k == "function_file":
+                        item["function_text"] = item.pop(k)
+            suite[index] = item   
+     # load files contents for suite that is a per-host dict of test items
+    elif isinstance(suite, dict):
+        for host_name in suite.keys():
+            for index, item in enumerate(suite[host_name]):
+                for k in ["pattern", "schema", "function_file"]:
+                    if _is_url(item.get(k)):
+                        item[k] = __salt__["cp.get_url"](
+                            item[k], dest=None, saltenv=saltenv
+                        )
+                        if k == "function_file":
+                            item["function_text"] = item.pop(k)
+                suite[host_name][index] = item      
+    
+    # run tests in one go
+    cli_kwargs = {
+        "add_details": kwargs.get("add_details", True),
+        **kwargs,
+        "to_dict": False,
+        "tests": suite,
+        "identity": _form_identity(kwargs, "test"),
+        "render": [],
+        "subset": subset,
+    }
+    test_results = cli(**cli_kwargs)
 
     # format results to table if requested to do so
     if table:
@@ -3024,31 +3008,82 @@ def netbox(*args, **kwargs):
     * ``dir`` - returns a list of supported tasks functions
     * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
+    * ``query`` - send ``XYZ_list`` Netbox GraphQL API query to retrieve data
 
+    For ``query`` function to work, need to define Netbox token and url 
+    parameters in master's configuration ``ext_pillar`` section::
+    
+        ext_pillar:
+          - salt_nornir_netbox:
+              url: 'http://192.168.115.129:8000'
+              token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
+        
     Sample usage::
 
         salt nrp1 nr.netbox dir
         salt nrp1 nr.netbox sync_from FB="ceos1"
         salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
+        salt nrp1 nr.netbox query subject=device filt='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
     """
     task_name = args[0] if args else kwargs.pop("task")
-    kwargs["task_name"] = task_name
+    
+    # check if need to run task from netbox_utils
     if task_name in netbox_tasks:
         ret = []
-        # get a list of tasks to execute
-        tasks_list = netbox_tasks[task_name]["tasks"](
-            hosts=nornir_fun("inventory", "list_hosts_platforms")
-        )
-        # execute tasks to retrieve data from hosts
-        for task_data in tasks_list:
-            ret.append(
-                globals()[task_data["fun"]](
-                    *task_data.get("args", []), **task_data.get("kwargs", {})
-                )
+        # if tasks given, get a list of tasks and run them
+        if "tasks" in netbox_tasks[task_name]:
+            tasks_list = netbox_tasks[task_name]["tasks"](
+                hosts=nornir_fun("inventory", "list_hosts_platforms")
             )
-        return ret
-    return __proxy__["nornir.execute_job"](
-        task_fun="nornir_salt.plugins.tasks.netbox_tasks",
-        kwargs=kwargs,
-        identity=_form_identity(kwargs, "netbox"),
-    )
+            # execute tasks to retrieve data from hosts
+            for task_data in tasks_list:
+                ret.append(
+                    globals()[task_data["fun"]](
+                        *task_data.get("args", []), **task_data.get("kwargs", {})
+                    )
+                )
+            return ret
+        # run netbox_utils function directly
+        else:
+            # get salt_nornir_netbox pillar configuration 
+            for i in __salt__["config.get"](
+                key="ext_pillar", 
+                omit_pillar=True, 
+                omit_opts=True, 
+                omit_grains=True, 
+                omit_master=False,
+                default=[],
+            ):
+                if "salt_nornir_netbox" in i:
+                    master_params = i["salt_nornir_netbox"]
+                    if master_params.get("use_pillar") is True:
+                        pillar_params = __salt__["config.get"](
+                            key="salt_nornir_netbox_pillar",
+                            omit_pillar=False,
+                            omit_opts=True,
+                            omit_master=True,
+                            omit_grains=True,
+                        )
+                        kwargs["params"] = {**master_params, **pillar_params}
+                    else:
+                        kwargs["params"] = master_params
+                    break
+            else:
+                raise CommandExecutionError(
+                    "Failed to find salt_nornir_netbox pillar configuration"
+                )
+            return netbox_tasks[task_name]["fun"](
+                **{
+                    k: v 
+                    for k, v in kwargs.items() 
+                    if not k.startswith("_")
+                }
+            )
+    # run tasks from netbox_tasks task plugin
+    else:    
+        kwargs["task_name"] = task_name
+        return __proxy__["nornir.execute_job"](
+            task_fun="nornir_salt.plugins.tasks.netbox_tasks",
+            kwargs=kwargs,
+            identity=_form_identity(kwargs, "netbox"),
+        )

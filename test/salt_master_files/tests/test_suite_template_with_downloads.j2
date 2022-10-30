@@ -1,0 +1,11 @@
+- task: "show version"
+  test: contains
+  pattern: "{{ host.software_version }}"
+  name: check ceos version
+  
+- test: custom
+  function_file: "salt://tests/cust_fun_3.py"
+  name: test_cust_fun_3
+  task: 
+    - show clock
+    - show ip int brief

@@ -1,6 +1,11 @@
+import logging
+
+log = logging.getLogger(__name__)
+
 def run(result):
     """Function to test use_all_tasks=True"""
     ret = []
+        
     for item in result:
         if item.result == None:
             continue

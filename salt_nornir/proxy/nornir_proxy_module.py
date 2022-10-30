@@ -1235,7 +1235,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
                 "Nornir-proxy MAIN PID {} worker thread, rendered '{}' '{}' data for '{}' host".format(
                     os.getpid(), key, type(value), host_name
                 )
-            )
+            )                
             host_object.data["__task__"][key] = rendered
 
     # clean up kwargs from render keys to force tasks to use hosts's __task__ attribute
@@ -1291,7 +1291,7 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
     tf = kwargs.pop("tf", None)  # to file
     tf_skip_failed = kwargs.pop("tf_skip_failed", False)  # to file
     tests = kwargs.pop("tests", None)  # tests
-    build_per_host_tests = kwargs.pop("build_per_host_tests", True)  # tests
+    subset = kwargs.pop("subset", [])  # tests
     remove_tasks = kwargs.pop("remove_tasks", True)  # tests and/or run_ttp
     failed_only = kwargs.pop("failed_only", False)  # tests
     diff = kwargs.pop("diff", "")  # diff processor
@@ -1369,10 +1369,12 @@ def _add_processors(kwargs, loader, identity, nr, worker_id):
     if tests:
         processors.append(
             TestsProcessor(
-                tests,
+                tests=tests,
                 remove_tasks=remove_tasks,
                 failed_only=failed_only,
-                build_per_host_tests=build_per_host_tests,
+                build_per_host_tests=True,
+                subset=subset,
+                render_tests=False,
             )
         )
     if diff:

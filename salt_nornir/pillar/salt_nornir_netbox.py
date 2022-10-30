@@ -655,6 +655,8 @@ import logging
 import requests
 import json
 
+from salt_nornir.netbox_utils import nb_graphql
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = "salt_nornir_netbox"
@@ -664,49 +666,6 @@ RUNTIME_VARS = {"devices_done": set(), "secrets": {}}
 
 def __virtual__():
     return __virtualname__
-
-
-def _nb_graphql(subject, filt, fields, params):
-    """
-    Helper function to send query to Netbox GraphQL API and
-    return results
-
-    :param subject: string, subject to return data for e.g. device, interface, ip_address
-    :param filt: dictionary of key-value pairs to filter by
-    :param fields: list of data fields to return
-    :param params: dictionary with salt_nornir_netbox parameters
-    """
-    # form GraphQL query string
-    filters = []
-    for k, v in filt.items():
-        if isinstance(v, (list, set, tuple)):
-            items = ", ".join(f'"{i}"' for i in v)
-            filters.append(f"{k}: [{items}]")
-        else:
-            filters.append(f'{k}: "{v}"')
-    filters = ", ".join(filters)
-    fields = " ".join(fields)
-    query = f"query {{{subject}_list({filters}) {{ {fields} }}}}"
-    log.debug(f"salt_nornir_netbox sending GraphQL query '{query}'")
-    # send request to Netbox GraphQL API
-    req = requests.get(
-        url=f"{params['url']}/graphql",
-        headers={
-            "content-cype": "application/json",
-            "accept": "application/json",
-            "authorization": f"Token {params['token']}",
-        },
-        params={"query": query},
-    )
-    if req.status_code == 200:
-        return req.json()["data"][f"{subject}_list"]
-    else:
-        log.error(
-            f"salt_nornir_netbox Netbox GraphQL query failed, query '{query}', "
-            f"URL '{req.url}', status-code '{req.status_code}', reason '{req.reason}', "
-            f"response content '{req.text}'"
-        )
-        return None
 
 
 def _netbox_secretstore_get_session_key(params):
@@ -921,7 +880,7 @@ def _host_add_interfaces(device, host, params):
         intf_fields.append(
             "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
         )
-    interfaces = _nb_graphql("interface", filt, intf_fields, params)
+    interfaces = nb_graphql("interface", filt, intf_fields, params)
     # transform interfaces list to dictionary keyed by interfaces names
     intf_dict = {}
     while interfaces:
@@ -958,7 +917,7 @@ def _host_add_connections(device, host, params):
         "custom_fields",
         "terminations {termination_id termination_type {model} _device {name}}",
     ]
-    cables = _nb_graphql("cable", filt, cable_fields, params)
+    cables = nb_graphql("cable", filt, cable_fields, params)
 
     # iterate over cables to form a list of termination interfaces to retrieve
     interface_ids = []
@@ -977,7 +936,7 @@ def _host_add_connections(device, host, params):
 
     # retrieve interfaces and ports from Netbox
     interfaces = (
-        _nb_graphql(
+        nb_graphql(
             subject="interface",
             filt={"device": device_names, "id": interface_ids},
             fields=["name", "id", "device {name}"],
@@ -987,7 +946,7 @@ def _host_add_connections(device, host, params):
         else []
     )
     console_ports = (
-        _nb_graphql(
+        nb_graphql(
             subject="console_port",
             filt={"device": device_names, "id": console_port_ids},
             fields=["name", "id", "device {name}"],
@@ -997,7 +956,7 @@ def _host_add_connections(device, host, params):
         else []
     )
     console_server_ports = (
-        _nb_graphql(
+        nb_graphql(
             subject="console_server_port",
             filt={"device": device_names, "id": console_server_port_ids},
             fields=["name", "id", "device {name}"],
@@ -1182,7 +1141,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
     try:
         # request dummy device to verify that Netbox GraphQL API is reachable
-        _ = _nb_graphql("device", {"name": "__dummy__"}, ["id"], params)
+        _ = nb_graphql("device", {"name": "__dummy__"}, ["id"], params)
     except Exception as e:
         log.exception(
             f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
@@ -1193,7 +1152,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
     # source proxy minion pillar from config context
     if use_minion_id_device is True:
-        minion_nb = _nb_graphql(
+        minion_nb = nb_graphql(
             "device", {"name": minion_id}, ["config_context"], params
         )
         if not minion_nb:
@@ -1212,7 +1171,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 )
             # process hosts one by one
             for host_name, host_data in ret.get("hosts", {}).items():
-                device = _nb_graphql(
+                device = nb_graphql(
                     "device", {"name": host_name}, device_fields, params
                 )
                 try:
@@ -1228,7 +1187,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if use_minion_id_tag is True:
         ret.setdefault("hosts", {})
         filt = {"tag": minion_id}
-        devices_by_tag = _nb_graphql("device", filt, device_fields, params)
+        devices_by_tag = nb_graphql("device", filt, device_fields, params)
         while devices_by_tag:
             device = devices_by_tag.pop()
             try:
@@ -1243,7 +1202,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if use_hosts_filters:
         ret.setdefault("hosts", {})
         for filter_item in params.get("hosts_filters") or []:
-            devices_by_filter = _nb_graphql(
+            devices_by_filter = nb_graphql(
                 "device", filter_item, device_fields, params
             )
             while devices_by_filter:

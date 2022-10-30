@@ -467,7 +467,7 @@ def test_nr_test_inline_contains_failure():
         timeout=60,
     )
     assert "Traceback (most recent call last)" in ret["nrp1"]
-    assert "ValueError: " in ret["nrp1"]
+    assert "ValidationError" in ret["nrp1"]
 
         
 def test_nr_test_dump():
@@ -499,16 +499,6 @@ def test_nr_test_dump():
 
 def test_nr_test_sortby_and_reverse():
 
-    ret = client.cmd(
-        tgt="nrp1",
-        fun="nr.test",
-        arg=[],
-        kwarg={
-            "suite": "salt://tests/test_suite_1.txt", "table": "brief",
-        },
-        tgt_type="glob",
-        timeout=60,
-    )
     ret_sortby_host = client.cmd(
         tgt="nrp1",
         fun="nr.test",
@@ -532,15 +522,9 @@ def test_nr_test_sortby_and_reverse():
         tgt_type="glob",
         timeout=60,
     )
-    # pprint.pprint(ret)
-    # pprint.pprint(ret_sortby_host)    
-    # pprint.pprint(ret_sortby_host_reverse)
+    print(ret_sortby_host["nrp1"])    
+    print(ret_sortby_host_reverse["nrp1"])
     
-    assert (
-        "0 | ceos1" in ret["nrp1"] and "1 | ceos2" in ret["nrp1"]
-        or
-        "0 | ceos2" in ret["nrp1"] and "1 | ceos1" in ret["nrp1"]
-    )
     assert "0 | ceos1" in ret_sortby_host["nrp1"] and "1 | ceos1" in ret_sortby_host["nrp1"]
     assert "0 | ceos2" in ret_sortby_host_reverse["nrp1"] and "1 | ceos2" in ret_sortby_host_reverse["nrp1"]
     
@@ -590,26 +574,26 @@ def test_nr_test_with_run_ttp():
 # test_nr_test_with_run_ttp()
 
 
-def test_nr_test_wait_timeout():
-    ret = client.cmd(
-        tgt="nrp1",
-        fun="nr.test",
-        kwarg={
-            "suite": "salt://tests/test_nr_test_wait_timeout.txt",
-        },
-        tgt_type="glob",
-        timeout=60,
-    )    
-    # pprint.pprint(ret)
-    for i in ret["nrp1"]:
-        if i["name"] == "Check if has 1.1.1.1/32 route":
-            assert i["success"] == False
-            assert i["failed"] == True
-            assert "wait timeout expired" in i["exception"] and "test run attempts" in i["exception"]
-        elif i["name"] == "Check if has correct version":
-            assert i["success"] == True
-            assert i["failed"] == False
-            assert i["exception"] == None
+# def test_nr_test_wait_timeout():
+#     ret = client.cmd(
+#         tgt="nrp1",
+#         fun="nr.test",
+#         kwarg={
+#             "suite": "salt://tests/test_nr_test_wait_timeout.txt",
+#         },
+#         tgt_type="glob",
+#         timeout=60,
+#     )    
+#     # pprint.pprint(ret)
+#     for i in ret["nrp1"]:
+#         if i["name"] == "Check if has 1.1.1.1/32 route":
+#             assert i["success"] == False
+#             assert i["failed"] == True
+#             assert "wait timeout expired" in i["exception"] and "test run attempts" in i["exception"]
+#         elif i["name"] == "Check if has correct version":
+#             assert i["success"] == True
+#             assert i["failed"] == False
+#             assert i["exception"] == None
             
 # test_nr_test_wait_timeout()
 
@@ -687,16 +671,33 @@ def test_nr_test_jinja2_template_suite():
         fun="nr.test",
         arg=[],
         kwarg={
-            "suite": "salt://tests/test_suite_template.j2"
+            "suite": "salt://tests/test_suite_template.j2",
+            "FB": "ceos1"
         },
         tgt_type="glob",
         timeout=60,
     ) 
     pprint.pprint(ret)
-    assert len(ret["nrp1"]) == 4, "Expected 4 test items to return"
+    assert len(ret["nrp1"]) == 3, "Expected 3 test items to return"
     assert all([i["result"] == "PASS" for i in ret["nrp1"]])
-    assert len([i for i in ret["nrp1"] if i["name"] == "check ceos version"]) == 2, "expected two show version check tests"
+    assert len([i for i in ret["nrp1"] if i["name"] == "check ceos version"]) == 1, "expected one show version check tests"
     assert len(
         [i for i in ret["nrp1"] if "check interface" in i["name"] and i["host"] == "ceos1"]
     ) == 2, "expected two ceos1 interface check tests"
     
+def test_nr_test_jinja2_template_suite_rendering_fail():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template.j2",
+            "FB": "ceos2"
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert "Traceback" in ret["nrp1"]
+    assert "ERROR" in ret["nrp1"]
+    assert "rendering failed for 'ceos2'" in ret["nrp1"]

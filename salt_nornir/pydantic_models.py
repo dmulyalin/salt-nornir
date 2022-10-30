@@ -74,7 +74,13 @@ class ModelExecCommonArgs(model_ffun_fx_filters):
     headers_exclude: Optional[Union[StrictStr, List[StrictStr]]]
     sortby: Optional[StrictStr]
     reverse: Optional[StrictBool]
-    tests: Optional[Union[List[List[StrictStr]], List[Dict], List[StrictStr]]]
+    tests: Optional[
+        Union[
+            List[List[StrictStr]], 
+            List[Dict], 
+            Dict[StrictStr, List[Dict]]
+        ]
+    ]
     failed_only: Optional[StrictBool]
     remove_tasks: Optional[StrictBool]
     tf: Optional[StrictStr]
