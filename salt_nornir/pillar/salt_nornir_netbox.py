@@ -60,6 +60,7 @@ Sample external pillar Salt Master configuration::
           host_add_netbox_data: True
           host_add_interfaces: True
           host_add_interfaces_ip: True
+          host_add_interfaces_inventory_items: True
           host_add_connections: True
           secrets:
             resolve_secrets: True
@@ -567,6 +568,9 @@ Sample device interfaces data retrieved from Netbox::
 If ``host_add_interfaces_ip`` parameter set to True, interface IP addresses
 retrieved from Netbox as well.
 
+If ``host_add_interfaces_inventory_items`` parameter set to True, interface 
+inventory items retrieved from Netbox too.
+
 Interface IP addresses combined into a list and added under ``ip_addresses``
 key in interface data::
 
@@ -594,6 +598,19 @@ key in interface data::
                   status: ACTIVE
                   tags: []
                   tenant: null
+              inventory_items:
+                - asset_tag: null
+                  custom_fields: {}
+                  description: ''
+                  label: ''
+                  manufacturer:
+                    name: Cisco
+                  name: SFP-1G-T
+                  part_id: ''
+                  role:
+                    name: Transceiver
+                  serial: ''
+                  tags: []
 
 Sourcing Connections Data
 +++++++++++++++++++++++++
@@ -655,7 +672,7 @@ import logging
 import requests
 import json
 
-from salt_nornir.netbox_utils import nb_graphql
+from salt_nornir.netbox_utils import nb_graphql, get_interfaces, get_connections
 
 log = logging.getLogger(__name__)
 
@@ -853,43 +870,19 @@ def _host_add_interfaces(device, host, params):
     :param params: dictionary with salt_nornir_netbox parameters
     """
     host_add_interfaces = params["host_add_interfaces"]
-    host_add_interfaces_ip = params.get("host_add_interfaces_ip", False)
-    filt = {"device": device["name"]}
-    intf_fields = [
-        "name",
-        "enabled",
-        "description",
-        "mtu",
-        "parent {name}",
-        "mac_address",
-        "mode",
-        "untagged_vlan {vid name}",
-        "vrf {name}",
-        "tagged_vlans {vid name}",
-        "tags {name}",
-        "custom_fields",
-        "last_updated",
-        "bridge {name}",
-        "child_interfaces {name}",
-        "bridge_interfaces {name}",
-        "member_interfaces {name}",
-        "wwn",
-    ]
-    # add IP addresses to interfaces
-    if host_add_interfaces_ip:
-        intf_fields.append(
-            "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
-        )
-    interfaces = nb_graphql("interface", filt, intf_fields, params)
-    # transform interfaces list to dictionary keyed by interfaces names
-    intf_dict = {}
-    while interfaces:
-        intf = interfaces.pop()
-        intf_dict[intf.pop("name")] = intf
+
+    interfaces = get_interfaces(
+        device_name=device["name"], 
+        params=params, 
+        add_ip=params.get("host_add_interfaces_ip", False),
+        add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
+        add_inventory_items=False
+    )
+
     # save data into Nornir host's inventory
     dk = host_add_interfaces if isinstance(host_add_interfaces, str) else "interfaces"
     host.setdefault("data", {})
-    host["data"][dk] = intf_dict
+    host["data"][dk] = interfaces
 
 
 def _host_add_connections(device, host, params):
@@ -903,119 +896,17 @@ def _host_add_connections(device, host, params):
     """
     host_add_connections = params["host_add_connections"]
 
-    # retrieve full list of device cables
-    filt = {"device": device["name"]}
-    cable_fields = [
-        "type",
-        "status",
-        "tenant {name}",
-        "label",
-        "tags {name}",
-        "length",
-        "length_unit",
-        "last_updated",
-        "custom_fields",
-        "terminations {termination_id termination_type {model} _device {name}}",
-    ]
-    cables = nb_graphql("cable", filt, cable_fields, params)
-
-    # iterate over cables to form a list of termination interfaces to retrieve
-    interface_ids = []
-    console_port_ids = []
-    console_server_port_ids = []
-    device_names = set()
-    for cable in cables:
-        for i in cable["terminations"]:
-            device_names.add(i["_device"]["name"])
-            if i["termination_type"]["model"] == "interface":
-                interface_ids.append(i["termination_id"])
-            elif i["termination_type"]["model"] == "consoleport":
-                console_port_ids.append(i["termination_id"])
-            elif i["termination_type"]["model"] == "consoleserverport":
-                console_server_port_ids.append(i["termination_id"])
-
-    # retrieve interfaces and ports from Netbox
-    interfaces = (
-        nb_graphql(
-            subject="interface",
-            filt={"device": device_names, "id": interface_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if interface_ids
-        else []
+    cables = get_connections(
+        device_name=device["name"], 
+        params=params, 
     )
-    console_ports = (
-        nb_graphql(
-            subject="console_port",
-            filt={"device": device_names, "id": console_port_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if console_port_ids
-        else []
-    )
-    console_server_ports = (
-        nb_graphql(
-            subject="console_server_port",
-            filt={"device": device_names, "id": console_server_port_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if console_server_port_ids
-        else []
-    )
-
-    # transform termination points data into dictionaries keyed by IDs
-    interfaces = {str(i.pop("id")): i for i in interfaces}
-    console_ports = {str(i.pop("id")): i for i in console_ports}
-    console_server_ports = {str(i.pop("id")): i for i in console_server_ports}
-
-    # process cables list to make cables ditionary keyed
-    # by local interface name with connection details
-    cables_dict = {}
-    while cables:
-        cable = cables.pop()
-        # extract CableTerminationType items
-        terminations = cable.pop("terminations")
-        local_interface_index = None
-        # map interface ID to interface data
-        for index, i in enumerate(terminations):
-            termination_type = i["termination_type"]["model"]
-            termination_id = str(i["termination_id"])
-            # record local interface index
-            if i["_device"]["name"] == device["name"]:
-                local_interface_index = index
-            # retieve interfaces details
-            if termination_type == "interface":
-                i["interface"] = interfaces[termination_id]
-            elif termination_type == "consoleport":
-                i["interface"] = console_ports[termination_id]
-            elif termination_type == "consoleserverport":
-                i["interface"] = console_server_ports[termination_id]
-        if local_interface_index is None:
-            raise KeyError(
-                f"salt_nornir_netbox '{device['name']}' device, failed to find local "
-                f"interface for connection '{cable}', terminations '{terminations}'"
-            )
-        # extract interface termiantion
-        local_interface = terminations.pop(local_interface_index)
-        remote_interface = terminations.pop()
-
-        cables_dict[local_interface["interface"]["name"]] = {
-            **cable,
-            "remote_device": remote_interface["_device"]["name"],
-            "remote_interface": remote_interface["interface"]["name"],
-            "termination_type": local_interface["termination_type"]["model"],
-            "remote_termination_type": remote_interface["termination_type"]["model"],
-        }
-
+    
     # save data into Nornir host's inventory
     dk = (
         host_add_connections if isinstance(host_add_connections, str) else "connections"
     )
     host.setdefault("data", {})
-    host["data"][dk] = cables_dict
+    host["data"][dk] = cables
 
 
 def _process_device(device, inventory, params):
