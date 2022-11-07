@@ -1,0 +1,481 @@
+!! IOS XR Configuration 7.1.1
+!! Last configuration change at Sun Nov 26 20:31:00 2022 by nornir
+!
+hostname iosxr1
+!
+fpd auto-upgrade enable
+!
+logging file LOGGING path /var/logging maxfilesize 2048 severity notifications
+logging archive
+ device harddisk
+ severity debug
+ file-size 20
+ frequency daily
+ threshold 100
+ archive-size 2048
+ archive-length 28
+!
+logging console disable
+logging buffered 2097157
+logging buffered informational
+logging 10.123.123.221 vrf MGMT
+logging source-interface MgmtEth0/RP0/CPU0/0 vrf MGMT
+domain vrf MGMT name-server 10.123.1.11
+domain vrf MGMT name-server 10.123.1.14
+domain vrf MGMT lookup source-interface MgmtEth0/RP0/CPU0/0
+domain name saltlab.nornir.lab
+tacacs source-interface MgmtEth0/RP0/CPU0/0 vrf MGMT
+!
+username nornir
+ group root-lr
+ group cisco-support
+ secret 5 $dcvsd3243rfwAo$4pDvfddf6675FZuY3u/Aen2fsdf&6dsdfg/
+!
+aaa group server tacacs+ TACACS
+ vrf MGMT
+ server-private 10.1.2.3 port 49
+  key 7 sdfdsjdsmdsklvjdsfvmds12434124dsds
+  timeout 30
+ !
+ server-private 10.3.2.1 port 49
+  key 7 sdvdslksdvflksdm435345fds;kfsda;lfk;34543
+  timeout 30
+ !
+!
+aaa authorization exec default group TACACS local
+aaa authorization commands default group TACACS none
+aaa authentication login default group TACACS local
+!
+grpc
+ vrf MGMT
+ port 124346
+ tls-mutual
+ address-family ipv4
+!
+vrf MGMT
+ address-family ipv4 unicast
+ !
+ address-family ipv6 unicast
+ !
+!
+vrf CONTROL
+ rd 10.1.2.123:1
+ description "CONTROL traffic VRF"
+ address-family ipv4 unicast
+  import route-policy control_rpl_import
+  export route-policy control_rpl_export
+  !
+  import route-target
+   123:1
+   321:1
+  !
+  export route-target
+   123:1
+   321:1
+ !
+ address-family ipv6 unicast
+ !
+!
+vrf DATA
+ rd 10.1.2.123:2
+ description "DATA traffic VRF"
+ address-family ipv4 unicast
+  import route-policy data_rpl_import
+  export route-policy data_rpl_export
+  !
+  import route-target
+   444:1
+  !
+  export route-target
+   444:1
+   555:1
+ !
+ address-family ipv6 unicast
+  import route-target
+   444:1
+  !
+  export route-target
+   444:1
+   555:1
+  !
+ !
+!
+ntp
+ server vrf MGMT 10.11.22.33 source MgmtEth0/RP0/CPU0/0
+ server 1.2.3.44
+!
+interface Loopback0
+ description Router ID
+ ipv4 address 11.22.33.44 255.255.255.255
+ ipv6 address fd80::1:2:3:3/128
+ ipv6 address fd80::1:2:3:4/128
+!
+interface MgmtEth0/RP0/CPU0/0
+ description OOB MGMT Access
+ mtu 1234
+ service-policy input mgmt_in_qos
+ service-policy output mgmt_out_qos
+ ipv4 access-group mgmt_v4_acl_in ingress
+ ipv4 access-group mgmt_v4_acl_ouy egress
+ ipv6 access-group mgmt_v6_acl_in ingress
+ ipv6 access-group mgmt_v6_acl_out egress
+ load-interval 30
+ arp timeout 10
+ vrf MGMT
+ ipv4 address 10.123.222.1 255.255.255.0
+ ipv6 address fd50:10:123:222::1/64
+ lldp
+  enable
+ !
+!
+interface HundredGigE0/0/0/0
+ description Uplink connection
+ mtu 9192
+!
+interface HundredGigE0/0/0/0.501
+ description OSPF Peering"
+ vrf DATA
+ ipv4 address 10.123.222.1 255.255.255.252
+ ipv6 address fd50:123:1::1/120
+ encapsulation dot1q 501
+!
+interface Bundle-Ether1
+ description WEST EPPINGTHON L2 Circuit Bundle
+ mtu 9214
+ lacp mode active
+ lacp period short
+ bundle lacp-fallback timeout 5
+ bundle minimum-active links 1
+!
+interface Bundle-Ether1.200 l2transport
+ description OFFICE Network
+ encapsulation dot1q 200
+ rewrite ingress tag pop 1 symmetric
+!
+interface TenGigE0/0/0/42
+ description ELO ISP FCS1234456#
+ bundle id 1 mode active
+ lacp period short
+ lldp
+  enable
+  transmit disable
+ !
+!
+interface BVI200
+ description EPPINGHTHON office subnet
+ mtu 1700
+ vrf DATA
+ ipv4 address 10.231.2.2 255.255.255.0
+ ipv6 address fd51:231:2::2/64
+ ipv4 access-group OFFICE_IN_v4 ingress
+ ipv6 access-group OFFICE_IN_v6 ingress
+!
+router vrrp
+ interface BVI200
+  address-family ipv4
+   vrrp 1
+    priority 200
+    address 10.231.2.1
+    text-authentication qwerty123
+   !
+  !
+  address-family ipv6
+   vrrp 1
+    priority 200
+    address global fd51:231:2::1
+    address linklocal autoconfig
+   !
+  !
+ !
+!
+dhcp ipv4
+ profile OFFICE relay
+  helper-address vrf OFFICE 10.33.72.5
+ !
+ interface BVI200 relay profile OFFICE
+ interface BVI200 relay information option format-type circuit-id format-string "%s" l2-interface
+ !
+!
+ssh timeout 99
+ssh server rate-limit 50
+ssh server session-limit 20
+ssh server v2
+ssh server vrf MGMT
+ssh server vrf default
+!
+l2vpn
+ bridge group OFFICE
+  bridge-domain DATA
+   description "Eppinghthon office Network"
+   interface Bundle-Ether1.200
+   interface Bundle-Ether2.200
+   !
+   routed interface BVI200
+   !
+   evi 2001
+   !
+  !
+ !
+ bridge group 123
+  bridge-domain 123
+   description Some Description
+   multicast-source ipv4
+   igmp snooping profile VLAN123
+   !
+   evi 1231
+   !
+  !
+ !
+!
+router vrrp
+ interface BVI777
+  address-family ipv4
+   vrrp 1
+    priority 100
+    address 10.1.2.3
+    text-authentication sddsa4334r
+   !
+  !
+  address-family ipv6
+   vrrp 1
+    priority 100
+    address global fd80:1:2:3::4
+    address linklocal autoconfig
+   !
+  !
+ !
+!
+dhcp ipv4
+ profile DATA relay
+  helper-address vrf MGMT 10.22.3.4
+ !
+ profile OFFICE relay
+  helper-address vrf MGMT 10.3.2.1
+  helper-address vrf DATA 10.3.2.2
+  helper-address vrf DATA 10.3.2.3
+  relay information option
+ !
+ interface BVI200 relay profile DATA
+ interface BVI200 relay information option format-type circuit-id format-string "%s" l2-interface
+ interface HundredGigE0/0/0/0.501 relay profile OFFICE
+ interface HundredGigE0/0/0/0.501 relay information option format-type circuit-id format-string "%s" l2-interface
+!
+router bgp 65100
+ bgp router-id 11.22.33.44
+ bgp log neighbor changes detail
+ ibgp policy out enforce-modifications
+ bgp bestpath as-path multipath-relax
+ address-family ipv4 unicast
+  maximum-paths eibgp 32
+  redistribute connected
+ !
+ address-family vpnv4 unicast
+ !
+ address-family l2vpn evpn
+  bgp implicit-import
+ !
+ neighbor-group OFFICE
+  timers 10 30
+  password encrypted qwerqdqq32er23d332
+  description "OFFICE Network"
+  address-family ipv4 unicast
+   send-community-ebgp
+   route-policy OFFICE_IN in
+   route-policy OFFICE_OUT out
+   soft-reconfiguration inbound always
+  !
+ !
+ neighbor-group DATA
+  bfd fast-detect
+  bfd multiplier 3
+  bfd minimum-interval 3000
+  password encrypted qwerqdqq32er23d332
+  description "DATA Switches"
+  address-family ipv4 unicast
+   multipath
+   route-policy DATA_IN in
+   route-policy DATA_OUT out
+   soft-reconfiguration inbound always
+  !
+ !
+ neighbor 10.100.0.1
+  remote-as 65100
+  use neighbor-group OFFICE
+  description "R1"
+ !
+ neighbor 10.100.1.0/24
+  remote-as 65200
+  use neighbor-group DATA
+  description "OFFICE SW"
+  update-source Loopback1
+ !
+ vrf DATA
+  address-family ipv4 unicast
+   maximum-paths eibgp 32
+   redistribute connected
+  !
+  address-family ipv6 unicast
+   maximum-paths eibgp 32
+  !
+  neighbor 10.200.0.1
+   remote-as 65100
+   use neighbor-group DATA
+   description "DATA Devices"
+   address-family ipv4 unicast
+    route-policy VRF_DATA_IN in
+    route-policy VRF_DATA_OUT out
+   !
+  !
+  neighbor 10.200.0.2
+   remote-as 65300
+   use neighbor-group DATA
+   description "DATA Devices" 
+   address-family ipv4 unicast
+    route-policy VRF_DATA_IN in
+    route-policy VRF_DATA_OUT out
+    route-reflector-client
+   !
+  !
+ !
+!
+evpn
+ evi 1234
+  bgp
+   route-target import 1:2
+   route-target export 1:2
+  !
+  advertise-mac
+  !
+ !
+ evi 4321
+  bgp
+   route-target import 2:3
+   route-target export 2:3
+  !
+  advertise-mac
+  !
+ !
+ group 1
+  core interface HundredGigE0/7/0/0
+  core interface HundredGigE0/15/0/1
+  core interface HundredGigE0/1/0/2
+ !
+ interface HundredGigE0/7/0/0
+  ethernet-segment
+   identifier type 0 11.22.33.00.00.00.00.00.00
+  !
+ !
+ interface HundredGigE0/15/0/1
+  ethernet-segment
+   identifier type 0 11.22.44.00.00.00.00.01.00
+  !
+ !
+ interface HundredGigE0/1/0/2
+  ethernet-segment
+   identifier type 0 11.22.55.00.00.00.00.02.00
+  !
+ !
+!
+multicast-routing
+ address-family ipv4
+  interface all enable
+ !
+!
+router igmp
+ interface BVI1
+  version 2
+ !
+ interface BVI2
+  version 2
+ !
+ interface BVI3
+  version 2
+ !
+ interface BVI4
+  version 2
+ !
+!
+router pim
+ address-family ipv4
+  sg-expiry-timer 300
+  rp-address 10.123.3.3 MULTICAST-GROUPS-ACL
+  interface BVI1
+   enable
+  !
+  interface BVI2
+   enable
+  !
+  interface BVI3
+   enable
+  !
+  interface BVI4
+   enable
+  !
+ !
+!
+igmp snooping profile VLAN1
+!
+igmp snooping profile VLAN2
+!
+igmp snooping profile VLAN3
+!
+ipsla
+ hw-timestamp disable
+ responder
+  twamp
+   timeout 200
+  !
+ !
+ server twamp
+  timer inactivity 200
+ !
+!
+router isis 1
+ is-type level-2-only
+ net 49.0001.0123.0004.0005.00
+ log adjacency changes
+ log pdu drops
+ address-family ipv4 unicast
+  metric-style wide
+  advertise link attributes
+  maximum-paths 32
+  router-id Loopback0
+  segment-routing mpls sr-prefer
+  segment-routing prefix-sid-map advertise-local
+  spf prefix-priority critical tag 2123
+ !
+ address-family ipv6 unicast
+  metric-style wide
+  advertise link attributes
+  maximum-paths 32
+  router-id Loopback0
+  single-topology
+  segment-routing mpls
+  spf prefix-priority critical tag 2123
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+   prefix-sid index 4123 explicit-null
+  !
+  address-family ipv6 unicast
+   prefix-sid index 4321 explicit-null
+  !
+ !
+ interface HundredGigE0/15/0/24
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+ interface HundredGigE0/15/0/25
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+  !
+ !
+!
+end

@@ -1090,6 +1090,7 @@ from salt_nornir.pydantic_models import (
     model_exec_nr_gnmi,
     model_exec_nr_do_action,
     model_exec_nr_snmp,
+    model_exec_nr_netbox
 )
 from salt_nornir.netbox_utils import netbox_tasks
 
@@ -2991,6 +2992,7 @@ def snmp(call, *args, **kwargs):
     )
 
 
+@ValidateFuncArgs(model_exec_nr_netbox)
 def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
@@ -3009,7 +3011,10 @@ def netbox(*args, **kwargs):
     * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
     * ``query`` - send ``XYZ_list`` Netbox GraphQL API query to retrieve data
-
+    * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
+        ``add_ip`` and ``add_inventory_items`` arguments
+    * ``get_connections`` - queries device interface connections from Netbox
+    
     For ``query`` function to work, need to define Netbox token and url 
     parameters in master's configuration ``ext_pillar`` section::
     
@@ -3023,7 +3028,9 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox dir
         salt nrp1 nr.netbox sync_from FB="ceos1"
         salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
-        salt nrp1 nr.netbox query subject=device filt='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
+        salt nrp1 nr.netbox query subject="device" filt='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
+        salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
+        salt nrp1 nr.netbox get_connections device_name="ceos1"
     """
     task_name = args[0] if args else kwargs.pop("task")
     

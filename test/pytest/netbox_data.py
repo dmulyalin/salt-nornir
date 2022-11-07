@@ -164,6 +164,15 @@ interfaces = [
     {"name": "eth201", "device": {"name": "fceos4"}, "type": "1000base-t", "mode": "tagged", "tagged_vlans": [102,103,104,105], "untagged_vlan": 101},
 ]
 
+inventory_items_roles = [
+    {"name": "Transceiver", "slug": "transceiver", "color": "ff0000"}
+]
+
+inventory_items = [
+    {"name": "SFP-1G-T", "device": {"name": "fceos4"}, "role": {"slug": "transceiver"}, "component_type": "dcim.interface", "component": {"name": "eth1"}},
+    {"name": "SFP-1G-T", "device": {"name": "fceos4"}, "role": {"slug": "transceiver"}, "component_type": "dcim.interface", "component": {"name": "eth3"}}
+]
+     
 # add more interfaces
 interfaces.extend(
     [    
@@ -779,6 +788,31 @@ def create_netbox_secretsotre_secrets():
                 f"content '{req.text}'" 
             )        
 
+def create_inventory_items_roles():
+    log.info("netbox_data: creating inventory items roles")
+    for role in inventory_items_roles:
+        try:
+            nb.dcim.inventory_item_roles.create(**role)
+        except Exception as e:
+            log.error(f"netbox_data: creating inventory item role '{role}' error '{e}'") 
+        
+    
+def create_inventory_items():
+    log.info("netbox_data: creating inventory items")
+    for item in inventory_items:
+        component = item.pop("component")
+        interface = nb.dcim.interfaces.get(
+            device=item["device"]["name"],
+            name=component["name"],
+        )
+        try:
+            nb.dcim.inventory_items.create(
+                **item,
+                component_id=interface.id
+            )
+        except Exception as e:
+            log.error(f"netbox_data: creating inventory item '{item}' error '{e}'") 
+            
 def delete_netbox_secretstore_secrets():
     log.info("netbox_data: deleting netbox_secretstore secrets")
     session_key = _netbox_secretstore_get_session_key()
@@ -993,6 +1027,15 @@ def delete_sites():
         except Exception as e:
             log.error(f"netbox_data: deleting site '{site}' error '{e}'")   
             
+def delete_inventory_items_roles():
+    log.info("netbox_data: deleting inventory items roles")
+    for role in inventory_items_roles:
+        try:
+            nb_role = nb.dcim.inventory_item_roles.get(name=role["name"])
+            nb_role.delete()
+        except Exception as e:
+            log.error(f"netbox_data: deleting inventory item role '{role}' error '{e}'")     
+    
 def clean_up_netbox():
     delete_netbox_secretstore_secrets()
     delete_netbox_secretsotre_roles()
@@ -1010,6 +1053,7 @@ def clean_up_netbox():
     delete_regions()
     delete_connections()
     delete_tenants()
+    delete_inventory_items_roles()
     
 def populate_netbox():
     create_regions()
@@ -1026,6 +1070,8 @@ def populate_netbox():
     create_devices()
     create_vlans()
     create_interfaces()
+    create_inventory_items_roles()
+    create_inventory_items()
     create_console_server_ports()
     create_console_ports()
     associate_ip_adress_to_devices()

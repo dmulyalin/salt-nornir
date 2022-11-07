@@ -199,3 +199,64 @@ def test_netbox_sync_from_with_data_key_as_none():
             continue
         assert k not in inventory["nrp1"]["hosts"]["ceos2"]["data"], f"ceos2 has key '{k}'"
     
+    
+@skip_if_not_has_netbox
+def test_netbox_query():
+    ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.netbox", 
+        arg=["query"], 
+        kwarg={
+            "subject": "device",
+            "filt": {"name": "ceos1"},
+            "fields": ["name", "platform {name}", "primary_ip4 {address}", "status"],
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert ret["nrp1"][0]["name"] == "ceos1"
+    assert ret["nrp1"][0]["status"] == "ACTIVE"
+    assert ret["nrp1"][0]["platform"]["name"] == "Arista cEOS"
+    
+    
+@skip_if_not_has_netbox
+def test_netbox_get_interfaces():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={
+            "add_ip": True,
+            "add_inventory_items": True,
+            "device_name": "fceos4"
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    # check if inventory items added
+    assert len(ret["nrp3"]["eth1"]["inventory_items"]) > 0, "No inventory items returned for fceos4 eth1 interface"
+    assert all(k in ret["nrp3"]["eth1"]["inventory_items"][0] for k in ["name", "role", "manufacturer"])
+    assert len(ret["nrp3"]["eth3"]["inventory_items"]) > 0, "No inventory items returned for fceos4 eth1 interface"
+    assert all(k in ret["nrp3"]["eth3"]["inventory_items"][0] for k in ["name", "role", "manufacturer"])
+    # check if ip addresses added
+    assert len(ret["nrp3"]["loopback0"]["ip_addresses"]) > 0, "No ip addresses returned for fceos4 loopback0 interface"
+    assert all(k in ret["nrp3"]["loopback0"]["ip_addresses"][0] for k in ["address", "role", "status"])
+
+@skip_if_not_has_netbox
+def test_netbox_get_connections():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_connections"], 
+        kwarg={
+            "device_name": "fceos4"
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert len(ret["nrp3"]) > 0, "No connections returned for fceos4"
+    assert all(k in ret["nrp3"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
+    assert all(k in ret["nrp3"]["eth8"] for k in ["status", "type", "tenant", "length"])

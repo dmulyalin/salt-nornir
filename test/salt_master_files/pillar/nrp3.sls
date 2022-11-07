@@ -2034,7 +2034,12 @@ hosts:
     port: 5400
     groups:
     - eos_params
-        
+  iosxr1:
+    hostname: 10.0.1.10
+    port: 7777
+    groups:
+    - xr_params
+    
 groups:
   eos_params:
     connection_options:
@@ -2046,6 +2051,10 @@ groups:
     password: nornir
     username: nornir
     platform: arista_eos
+  xr_params:
+    password: nornir
+    username: nornir
+    platform: cisco_xr   
     
 nornir:
   actions: {}

@@ -510,7 +510,45 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
                 assert "oids" in values, f"Method '{call}' requires 'oids' argument"
         return values
 
+class EnumNrNetboxTasks(str, Enum):
+    dir_ = "dir"
+    sync_from = "sync_from"
+    sync_to = "sync_to"
+    query = "query"
+    get_interfaces = "get_interfaces"
+    get_connections = "get_connections"
+    
+class model_exec_nr_netbox(ModelExecCommonArgs):
+    """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""
+    
+    args: Optional[List[StrictStr]]
+    task: Optional[EnumNrNetboxTasks]
+    subject: Optional[StrictStr]
+    filt: Optional[Dict[StrictStr, StrictStr]]
+    fields: Optional[List[StrictStr]]
+    device_name: Optional[Union[StrictStr, List[StrictStr]]]
+    add_ip: Optional[StrictBool]
+    add_inventory_items: Optional[StrictBool]
+    via: Optional[StrictStr]
+        
+    class Config:
+        extra = "allow"
 
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        task_name = values["args"][0] if values.get("args") else values.get("task")
+        if not task_name:
+            raise CommandExecutionError(
+                "No arguments or 'task' argument provided to source task name"
+            )
+        if not any(task_name == i.value for i in EnumNrNetboxTasks):
+            raise CommandExecutionError(
+                "Unsupported task '{}', supported {}".format(
+                    task_name, ", ".join([i.value for i in EnumNrNetboxTasks])
+                )
+            )
+        return values
+    
 class StateWorkflowOptions(BaseModel):
     fail_if_any_host_fail_any_step: Optional[List[StrictStr]]
     fail_if_any_host_fail_all_step: Optional[List[StrictStr]]
@@ -778,7 +816,7 @@ class SaltNornirExecutionFunctions(BaseModel):
     nornir_fun: model_exec_nr_nornir_fun
     gnmi: model_exec_nr_gnmi
     snmp: model_exec_nr_snmp
-
+    netbox: model_exec_nr_netbox
 
 class SaltNornirStateFunctions(BaseModel):
     task: model_exec_nr_task

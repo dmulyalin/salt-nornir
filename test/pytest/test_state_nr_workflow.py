@@ -62,7 +62,13 @@ def test_state_nr_workflow():
     # verify first run
     for v in ret_1st["nrp1"].values():
         assert v["result"] == True
-        assert len(v["changes"]["details"]) == 6
+        assert len(v["changes"]["details"]) == 5
+        # check steps content is correct
+        assert "pre_check_if_logging_configured" in v["changes"]["details"][0]
+        assert "save_configuration_before" in v["changes"]["details"][1]
+        assert "apply_logging_config" in v["changes"]["details"][2]
+        assert "post_check_if_logging_configured" in v["changes"]["details"][3]
+        assert "save_configuration_after" in v["changes"]["details"][4]
         for host_name, steps in v["changes"]["summary"].items():
             assert len(steps) == 7  # check that did 7 steps including test tasks commands output
             assert (
@@ -76,7 +82,9 @@ def test_state_nr_workflow():
     # verify second run
     for v in ret_2nd["nrp1"].values():
         assert v["result"] == True
-        assert len(v["changes"]["details"]) == 6
+        assert len(v["changes"]["details"]) == 1
+        # check steps content is correct
+        assert "pre_check_if_logging_configured" in v["changes"]["details"][0]
         for host_name, steps in v["changes"]["summary"].items():
             assert len(steps) == 2  # check that did 1 step - 1st pre-check
             assert (

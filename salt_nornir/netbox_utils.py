@@ -4,7 +4,12 @@ Netbox Utils
 
 Collection of functions for Salt-Nornir to interact with Netbox.
 
+Reference
++++++++++
 
+.. autofunction:: salt_nornir.netbox_utils.nb_graphql
+.. autofunction:: salt_nornir.netbox_utils.get_interfaces
+.. autofunction:: salt_nornir.netbox_utils.get_connections
 """
 import logging
 import json

@@ -876,7 +876,6 @@ def _host_add_interfaces(device, host, params):
         params=params, 
         add_ip=params.get("host_add_interfaces_ip", False),
         add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
-        add_inventory_items=False
     )
 
     # save data into Nornir host's inventory
