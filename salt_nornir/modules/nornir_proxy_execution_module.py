@@ -2859,8 +2859,8 @@ def gnmi(call, *args, **kwargs):
           - "openconfig-interfaces:interfaces/interface[name=Loopback35]"
           - "openconfig-interfaces:interfaces/interface[name=Loopback36]"
 
-    ``salt://path/to/set_args.txt`` content will render to a dictionary supplied to
-    ``set`` call as a ``**kwargs``.
+    ``salt://path/to/set_args.txt`` content will be rendered to a dictionary and 
+    supplied to ``set`` call as ``**kwargs``.
 
     ``pygnmi`` plugin order of operation for above case is ``delete -> replace -> update``
     """
@@ -2996,6 +2996,8 @@ def snmp(call, *args, **kwargs):
 def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
+    
+    Why? Because data is the key.
 
     This execution module uses Nornir-Salt
     `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>`_
@@ -3012,11 +3014,12 @@ def netbox(*args, **kwargs):
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
     * ``query`` - send ``XYZ_list`` Netbox GraphQL API query to retrieve data
     * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
-        ``add_ip`` and ``add_inventory_items`` arguments
-    * ``get_connections`` - queries device interface connections from Netbox
+        ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and 
+        inventory items information for interfaces
+    * ``get_connections`` - queries device interfaces connections from Netbox
     
-    For ``query`` function to work, need to define Netbox token and url 
-    parameters in master's configuration ``ext_pillar`` section::
+    For ``query`` function to work, Netbox token and url parameters should be 
+    defined in master's configuration ``ext_pillar`` section::
     
         ext_pillar:
           - salt_nornir_netbox:
@@ -3036,57 +3039,37 @@ def netbox(*args, **kwargs):
     
     # check if need to run task from netbox_utils
     if task_name in netbox_tasks:
-        ret = []
-        # if tasks given, get a list of tasks and run them
-        if "tasks" in netbox_tasks[task_name]:
-            tasks_list = netbox_tasks[task_name]["tasks"](
-                hosts=nornir_fun("inventory", "list_hosts_platforms")
-            )
-            # execute tasks to retrieve data from hosts
-            for task_data in tasks_list:
-                ret.append(
-                    globals()[task_data["fun"]](
-                        *task_data.get("args", []), **task_data.get("kwargs", {})
-                    )
+        salt_jobs_results = []
+        # get a list of hosts to run Salt Jobs for
+        task_hosts = nornir_fun(
+            "inventory", "list_hosts_platforms",
+            **{
+                k: v for k, v in kwargs.items() 
+                if k in FFun_functions
+            }
+        )
+        # source list of Salt Jobs to run
+        tasks_list = netbox_tasks[task_name]["salt_jobs"](
+            hosts=task_hosts
+        )
+        # execute Salt Jobs to retrieve data
+        for task_data in tasks_list:
+            salt_jobs_results.append(
+                __salt__[task_data["salt_exec_fun_name"]](
+                    *task_data.get("args", []), 
+                    **task_data.get("kwargs", {})
                 )
-            return ret
-        # run netbox_utils function directly
-        else:
-            # get salt_nornir_netbox pillar configuration 
-            for i in __salt__["config.get"](
-                key="ext_pillar", 
-                omit_pillar=True, 
-                omit_opts=True, 
-                omit_grains=True, 
-                omit_master=False,
-                default=[],
-            ):
-                if "salt_nornir_netbox" in i:
-                    master_params = i["salt_nornir_netbox"]
-                    if master_params.get("use_pillar") is True:
-                        pillar_params = __salt__["config.get"](
-                            key="salt_nornir_netbox_pillar",
-                            omit_pillar=False,
-                            omit_opts=True,
-                            omit_master=True,
-                            omit_grains=True,
-                        )
-                        kwargs["params"] = {**master_params, **pillar_params}
-                    else:
-                        kwargs["params"] = master_params
-                    break
-            else:
-                raise CommandExecutionError(
-                    "Failed to find salt_nornir_netbox pillar configuration"
-                )
-            return netbox_tasks[task_name]["fun"](
-                **{
-                    k: v 
-                    for k, v in kwargs.items() 
-                    if not k.startswith("_")
-                }
             )
-    # run tasks from netbox_tasks task plugin
+        # run Netbox task using Salt Jobs results
+        return netbox_tasks[task_name]["task_function"](
+            salt_jobs_results=salt_jobs_results,
+            **{
+                k: v 
+                for k, v in kwargs.items() 
+                if not k.startswith("_")
+            }
+        )
+    # run tasks from netbox_tasks plugin
     else:    
         kwargs["task_name"] = task_name
         return __proxy__["nornir.execute_job"](

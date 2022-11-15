@@ -517,6 +517,8 @@ class EnumNrNetboxTasks(str, Enum):
     query = "query"
     get_interfaces = "get_interfaces"
     get_connections = "get_connections"
+    update_config_context = "update_config_context"
+    update_vrf = "update_vrf"
     
 class model_exec_nr_netbox(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""
