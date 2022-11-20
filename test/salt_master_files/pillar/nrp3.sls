@@ -2079,6 +2079,8 @@ salt_nornir_netbox_pillar:
     resolve_secrets: True
     fetch_username: True
     fetch_password: True
+    secret_name_map: 
+      bgp_peer_secret: peer_ip
     plugins:
       netbox_secretstore:
         private_key: /etc/salt/netbox_secretstore_private.key

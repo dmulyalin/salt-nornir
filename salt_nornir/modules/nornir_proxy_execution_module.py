@@ -3036,44 +3036,34 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox get_connections device_name="ceos1"
     """
     task_name = args[0] if args else kwargs.pop("task")
+    salt_jobs_results = []
     
-    # check if need to run task from netbox_utils
-    if task_name in netbox_tasks:
-        salt_jobs_results = []
-        # get a list of hosts to run Salt Jobs for
-        task_hosts = nornir_fun(
-            "inventory", "list_hosts_platforms",
-            **{
-                k: v for k, v in kwargs.items() 
-                if k in FFun_functions
-            }
-        )
-        # source list of Salt Jobs to run
-        tasks_list = netbox_tasks[task_name]["salt_jobs"](
-            hosts=task_hosts
-        )
-        # execute Salt Jobs to retrieve data
-        for task_data in tasks_list:
-            salt_jobs_results.append(
-                __salt__[task_data["salt_exec_fun_name"]](
-                    *task_data.get("args", []), 
-                    **task_data.get("kwargs", {})
-                )
+    # get a list of hosts to run Salt Jobs for
+    task_hosts = nornir_fun(
+        "inventory", "list_hosts_platforms",
+        **{
+            k: v for k, v in kwargs.items() 
+            if k in FFun_functions
+        }
+    )
+    # source list of Salt Jobs to run
+    tasks_list = netbox_tasks[task_name]["salt_jobs"](
+        hosts=task_hosts
+    )
+    # execute Salt Jobs to retrieve data
+    for task_data in tasks_list:
+        salt_jobs_results.append(
+            __salt__[task_data["salt_exec_fun_name"]](
+                *task_data.get("args", []), 
+                **task_data.get("kwargs", {})
             )
-        # run Netbox task using Salt Jobs results
-        return netbox_tasks[task_name]["task_function"](
-            salt_jobs_results=salt_jobs_results,
-            **{
-                k: v 
-                for k, v in kwargs.items() 
-                if not k.startswith("_")
-            }
         )
-    # run tasks from netbox_tasks plugin
-    else:    
-        kwargs["task_name"] = task_name
-        return __proxy__["nornir.execute_job"](
-            task_fun="nornir_salt.plugins.tasks.netbox_tasks",
-            kwargs=kwargs,
-            identity=_form_identity(kwargs, "netbox"),
-        )
+    # run Netbox task using Salt Jobs results
+    return netbox_tasks[task_name]["task_function"](
+        salt_jobs_results=salt_jobs_results,
+        **{
+            k: v 
+            for k, v in kwargs.items() 
+            if not k.startswith("_")
+        }
+    )

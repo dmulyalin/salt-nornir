@@ -66,8 +66,7 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
     :param params: dictionary with salt_nornir_netbox parameters
     """
     # if salt_jobs_results provided, extract Netbox params from it
-    if salt_jobs_results:
-        params = extract_salt_nornir_netbox_params(salt_jobs_results)
+    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
     # form GraphQL query string
     filters = []
     for k, v in filt.items():
@@ -101,7 +100,7 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
         return None
 
 
-def get_interfaces(device_name, salt_jobs_results, add_ip=False, add_inventory_items=False):
+def get_interfaces(device_name, salt_jobs_results=None, params=None, add_ip=False, add_inventory_items=False):
     """
     Function to retrieve device interfaces from Netbox using GraphQL.
     
@@ -110,7 +109,8 @@ def get_interfaces(device_name, salt_jobs_results, add_ip=False, add_inventory_i
     :param device_name: name of the device to retrieve interfaces for
     :param salt_jobs_results: list with config.get job results
     """
-    params = extract_salt_nornir_netbox_params(salt_jobs_results)
+    # if salt_jobs_results provided, extract Netbox params from it
+    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
     filt = {"device": device_name}
     intf_fields = [
         "name",
@@ -184,14 +184,16 @@ def get_interfaces(device_name, salt_jobs_results, add_ip=False, add_inventory_i
         
     return intf_dict
     
-def get_connections(device_name, salt_jobs_results):
+def get_connections(device_name, salt_jobs_results=None, params=None):
     """
     Function to retrieve connections details from Netbox
     
     :param device_name: name of the device to retrieve interfaces for
     :param params: dictionary with salt_nornir_netbox parameters
+    :param salt_jobs_results: list with config.get job results
     """
-    params = extract_salt_nornir_netbox_params(salt_jobs_results)
+    # if salt_jobs_results provided, extract Netbox params from it
+    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
     # retrieve full list of device cables
     filt = {"device": device_name}
     cable_fields = [
@@ -385,7 +387,7 @@ def parse_config(salt_jobs_results: dict, **kwargs):
     
     :param salt_jobs_results: dictionary keyed by hosts with run_ttp results
     """
-    return salt_jobs_results
+    return salt_jobs_results[0]
 
 
 def get_create_devices_salt_jobs(hosts: dict):
@@ -568,9 +570,11 @@ def update_config_context(salt_jobs_results: list, **kwargs):
             elif not host_data.get("run_ttp", {}).get("netbox_data", {}):
                 ret[host_name] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
             else:
+                context_data = nb_device.local_context_data or {}
+                context_data.update(host_data["run_ttp"]["netbox_data"])
                 nb_device.update(
                     data={
-                        "local_context_data": host_data["run_ttp"]["netbox_data"]
+                        "local_context_data": context_data
                     }                    
                 )
                 nb_device.save()
@@ -698,6 +702,14 @@ def update_vrf(salt_jobs_results: list, **kwargs):
     nb.ipam.vrfs.update(vrf_update)          
     nb.ipam.vrfs.create(vrf_create)    
                 
+def no_jobs(hosts):
+    return []
+
+def run_dir(salt_jobs_results: list, **kwargs):
+    """
+    Function to return a list of supported Netbox Utils tasks
+    """
+    return list(netbox_tasks.keys())
     
 # dispatch dictionary of Netbox tasks exposed for calling
 # salt_jobs - returns a list of salt jobs to run to retrieve data for task function
@@ -710,4 +722,5 @@ netbox_tasks = {
     "query": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_graphql},
     "get_interfaces": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": get_interfaces},
     "get_connections": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": get_connections},
+    "dir": {"salt_jobs": no_jobs, "task_function": run_dir}
 }

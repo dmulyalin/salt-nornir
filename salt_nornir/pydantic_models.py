@@ -512,13 +512,12 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
 
 class EnumNrNetboxTasks(str, Enum):
     dir_ = "dir"
-    sync_from = "sync_from"
-    sync_to = "sync_to"
     query = "query"
     get_interfaces = "get_interfaces"
     get_connections = "get_connections"
     update_config_context = "update_config_context"
     update_vrf = "update_vrf"
+    parse_config = "parse_config"
     
 class model_exec_nr_netbox(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""

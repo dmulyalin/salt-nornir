@@ -351,6 +351,22 @@ devices = [
                             "nb://netbox_secretstore/keymaster-1/OSPF/hello_secret"
                         ]
                     }
+                },
+                "fceos7": {
+                    "hostname": "1.2.3.5",
+                    "platform": "arista_eos",
+                    "port": "22",
+                    "username": "nornir",
+                    "password": "nornir",
+                    "data": {
+                        "bgp": {
+                            "peers": [
+                                {"bgp_peer_secret": "nb://netbox_secretstore/keymaster-1/BGP_PEERS/10.0.1.1"},
+                                {"bgp_peer_secret": "nb://netbox_secretstore/keymaster-1/BGP_PEERS/10.0.1.2"},
+                                {"bgp_peer_secret": "nb://netbox_secretstore/keymaster-1/BGP_PEERS/10.0.1.3"},
+                            ]
+                        }
+                    }
                 }
             },
             "foo": "bar",
@@ -395,6 +411,8 @@ netbox_secretsotre_roles = [
     {"name": "ISIS"},
     {"name": "OSPF"},
     {"name": "SSH"},
+    {"name": "Credentials"},
+    {"name": "BGP_PEERS"},
 ]
 
 netbox_secretsotre_secrets = [
@@ -465,11 +483,35 @@ netbox_secretsotre_secrets = [
         "plaintext": "qwerty123456"
     },   
     {
+        "name": "admin_user",
+        "role": {"name": "Credentials"},
+        "device": "keymaster-1",
+        "plaintext": "Nornir123"
+    },   
+    {
+        "name": "10.0.1.1",
+        "role": {"name": "BGP_PEERS"},
+        "device": "keymaster-1",
+        "plaintext": "BGPSecret1"
+    },    
+    {
+        "name": "10.0.1.2",
+        "role": {"name": "BGP_PEERS"},
+        "device": "keymaster-1",
+        "plaintext": "BGPSecret2"
+    },    
+    {
+        "name": "10.0.1.3",
+        "role": {"name": "BGP_PEERS"},
+        "device": "keymaster-1",
+        "plaintext": "BGPSecret3"
+    },    
+    {
         "name": "hello_secret",
         "role": {"name": "OSPF"},
         "device": "keymaster-1",
         "plaintext": "q1w2e3r45t5y"
-    },     
+    },  
 ]
 
 

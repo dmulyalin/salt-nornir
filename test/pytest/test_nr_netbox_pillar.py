@@ -202,6 +202,29 @@ class TestProxyNRP3:
         assert pillar_data["nrp3"]["nrp3_foobar_key"] == "nrp3_foobar_key_value", (
             "nrp3 config context nrp3_foobar_key secret not resolved"
         )
+        
+    def test_secret_name_map_secrets_and_names_resolved(self, pillar_data):  
+        """
+        nrp3 device config context in Netbox has fceos7 defined, fceos7 has keys defined
+        for BGP peers:
+        
+            "bgp_peer_secret": "nb://netbox_secretstore/keymaster-1/BGP_PEERS/10.0.1.1"
+        
+        and nrp3 pillar has this secret_name_map:
+        
+            secret_name_map: 
+              bgp_peer_secret: peer_ip
+              
+        as a result, secret-name values should be mapped to peer_ip in fceos7 inventory
+        """
+        assert all(
+            "peer_ip" in i and isinstance(i["peer_ip"], str)
+            for i in pillar_data["nrp3"]["hosts"]["fceos7"]["data"]["bgp"]["peers"] 
+        ), "Not all fceos7 BGP peers have peer_ip resolved correctly"
+        assert all(
+            "bgp_peer_secret" in i and isinstance(i["bgp_peer_secret"], str)
+            for i in pillar_data["nrp3"]["hosts"]["fceos7"]["data"]["bgp"]["peers"] 
+        ), "Not all fceos7 BGP peers have bgp_peer_secret resolved correctly"
 
     def test_use_minion_id_device_hosts_merged(self, nrp3_inventory):  
         """
@@ -279,6 +302,7 @@ class TestProxyNRP3:
         assert all("remote_device" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_device"
         assert all("remote_interface" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_interface"
         assert all("remote_interface" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_interface"
+        
         
 @skip_if_not_has_netbox
 class TestProxyNRP1:  

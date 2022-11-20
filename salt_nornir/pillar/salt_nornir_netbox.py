@@ -67,6 +67,7 @@ Sample external pillar Salt Master configuration::
             fetch_username: True
             fetch_password: True
             secret_device: keymaster
+            secret_name_map: username
             plugins:
               netbox_secretstore:
                 private_key: /etc/salt/netbox_secretstore_private.key
@@ -89,6 +90,7 @@ defined in proxy minion pillar under ``salt_nornir_netbox_pillar`` key::
         fetch_username: True
         fetch_password: True
         secret_device: nrp1
+        secret_name_map: username
         plugins:
           netbox_secretstore:
             private_key: /etc/salt/netbox_secretstore_private.key
@@ -207,6 +209,10 @@ proxy minion pillar.
      - N/A
      - keymaster
      - Name of netbox device to retrieve secrets from by default
+   * - ``secret_name_map``
+     - N/A
+     - username
+     - Name of the inventory data key to assign secret name to
    * - ``plugins``
      - N/A
      - N/A
@@ -406,6 +412,7 @@ to be uploaded to Master and configured in Master's ext_pillar::
             fetch_username: True
             fetch_password: True
             secret_device: keymaster
+            secret_name_map: username
             plugins:
               netbox_secretstore:
                 private_key: /etc/salt/netbox_secretstore_private.key
@@ -437,7 +444,7 @@ For example, if this is how secrets defined in Netbox:
 
 .. image:: ./_images/netbox_secrets.png
 
-And sample configuration context data of ``fceos4`` device is::
+And sample configuration context data of Netbox device with name``fceos4`` is::
 
     secrets:
       bgp: nb://netbox_secretstore/keymaster-1/BGP/peers_pass
@@ -457,6 +464,79 @@ Above secrets would be resolved to this::
 
 salt_nornir_netbox iterates over all key's values and resolves
 them accordingly.
+
+Starting with version ``0.17.0`` ``secret_name_map`` dictionary parameter 
+added to allow the use of secret name values in Nornir inventory, mapping 
+secret names to keys as specified by ``secret_name_map`` dictionary.
+
+For example, given this secrets:
+
+.. image:: ./_images/netbox_secrets_with_usernames.png
+
+With this master's pillar secrets configuration::
+
+    ext_pillar:
+      - salt_nornir_netbox:
+          token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
+          secrets:
+            secret_name_map: 
+              password: username
+              bgp_peer_secret: peer_ip
+            plugins:
+              netbox_secretstore:
+                private_key: /etc/salt/netbox_secretstore_private.key
+
+This Nornir inventory data for ``fceos`` devices::
+
+    hosts:
+      fceos6:
+        password: "nb://netbox_secretstore/Credentials/admin_user"
+      fceos7:
+        data:
+          bgp:
+            peers:
+              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.1"
+              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.2"
+              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.3"
+        
+Would be resolved to this final Nornir Inventory data::
+
+    hosts:
+      fceos6:
+        password: Nornir123
+        username: admin_user
+      fceos7:
+        data:
+          bgp:
+            peers:
+              - bgp_peer_secret: BGPSecret1
+                peer_ip: 10.0.1.1
+              - bgp_peer_secret: BGPSecret2
+                peer_ip: 10.0.1.2
+              - bgp_peer_secret: BGPSecret3
+                peer_ip: 10.0.1.3
+        
+In example above, for ``fceos6`` username and password values are encoded in 
+same secret entry, this mapping::
+
+    secrets:
+      secret_name_map: 
+        password: username
+        
+Tells Salt-Nornir Netbox Pillar to assign ``password``'s secret name value
+to ``username`` key in Nornir inventory at the same level.
+
+For ``fceos7``, this configuration::
+
+    secrets:
+      secret_name_map: 
+        bgp_peer_secret: peer_ip
+        
+Tells Salt-Nornir Netbox Pillar to assign ``bgp_peer_secret``'s secret name 
+value to ``peer_ip`` key in Nornir inventory at the same level.        
+
+That approach allows to simplify secrets management making it easier to map
+secrets to other entities in Nornir inventory.
 
 Sourcing Interfaces and IP addresses data
 +++++++++++++++++++++++++++++++++++++++++
@@ -722,19 +802,17 @@ def _netbox_secretstore_get_session_key(params):
 def _fetch_device_secrets(device_name, params):
     """
     Function to retrieve all secret values for given device from all
-    configured Netbox secret plugins.
+    configured Netbox secret plugins, cache it RUNTIME_VARS and return
+    secrets dictionary.
 
     :param device_name: string, name of device to retrieve secrets for
     :param params: dictionary with salt_nornir_netbox parameters
     """
-    if device_name in RUNTIME_VARS["secrets"]:
-        return RUNTIME_VARS["secrets"][device_name]
-
-    RUNTIME_VARS["secrets"].setdefault(device_name, {})
-
     # retrieve device secrets
     for plugin_name in params.get("secrets", {}).get("plugins", {}).keys():
-        if plugin_name == "netbox_secretstore":
+        if RUNTIME_VARS["secrets"].get(device_name, {}).get(plugin_name):
+            return RUNTIME_VARS["secrets"][device_name]
+        elif plugin_name == "netbox_secretstore":
             url = params["url"] + "/api/plugins/netbox_secretstore/secrets/"
             token = "Token " + params["token"]
             session_key = _netbox_secretstore_get_session_key(params)
@@ -748,6 +826,7 @@ def _fetch_device_secrets(device_name, params):
                 params={"device": device_name},
             )
             if req.status_code == 200:
+                RUNTIME_VARS["secrets"].setdefault(device_name, {})
                 RUNTIME_VARS["secrets"][device_name][plugin_name] = [
                     {
                         "role": i["role"]["name"],
@@ -776,7 +855,8 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
     :param secret_path: string, path to the secret in one of the supported formats
     :param params: dictionary with salt_nornir_netbox parameters
     :param strict: bool, if True raise KeyError if no secret found, return None otherwise
-
+    :return: secret value and secret name or None, None if fail to resolve
+    
     Supported secret key path formats:
 
     - ``nb://<plugin-name>/<device-name>/<secret-role>/<secret-name>``
@@ -823,7 +903,7 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
                     f"salt_nornir_netbox fetched secret '{secret_path}' for '{device_name}', "
                     f"secret_device '{secret_device_name}', secrets plugin '{plugin_name}'"
                 )
-                return secret["value"]
+                return secret["value"], secret_name
     else:
         message = (
             f"salt_nornir_netbox failed to fetch '{secret_path}' secret for "
@@ -834,7 +914,7 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
             raise KeyError(message)
         else:
             log.debug(message)
-        return None
+        return None, None
 
 
 def _resolve_secrets(data, device_name, params):
@@ -849,14 +929,29 @@ def _resolve_secrets(data, device_name, params):
     :param data: dictionary, containing key with values to be resolved
     :param params: salt_nornir_netbox configuration parameters
     """
-    if isinstance(data, str) and data.startswith("nb://"):
-        return _resolve_secret(device_name, data, params)
-    elif isinstance(data, dict):
-        for k in data.keys():
-            data[k] = _resolve_secrets(data[k], device_name, params)
+    if isinstance(data, dict):
+        # run against list of keys, as we may add new 
+        # keys to data using secret_name_map dictionary
+        for k in list(data.keys()):
+            # resolve key if its value is "nb://.." like string
+            if isinstance(data[k], str) and data[k].startswith("nb://"):
+                secret_value, secret_name = _resolve_secret(device_name, data[k], params)
+                if k in params["secrets"].get("secret_name_map", {}):
+                    secret_name_map_key = params["secrets"]["secret_name_map"][k]
+                    data[secret_name_map_key] = secret_name  
+                data[k] = secret_value
+            # run recursion otherwise
+            else:
+                data[k] = _resolve_secrets(data[k], device_name, params)
     elif isinstance(data, list):
         for index, i in enumerate(data):
-            data[index] = _resolve_secrets(i, device_name, params)
+            # resolve list item if its an "nb://.." like string
+            if isinstance(i, str) and i.startswith("nb://"):
+                secret_value, secret_name = _resolve_secret(device_name, i, params)
+                data[index] = secret_value
+            # run recursion otherwise
+            else:
+                data[index] = _resolve_secrets(i, device_name, params)
     return data
 
 
@@ -962,11 +1057,11 @@ def _process_device(device, inventory, params):
         _host_add_connections(device, host, params)
     # retrieve device secrets
     if fetch_username:
-        host["username"] = _resolve_secret(
+        host["username"], _ = _resolve_secret(
             name, host.get("username", "nb://username"), params, strict=True
         )
     if fetch_password:
-        host["password"] = _resolve_secret(
+        host["password"], _ = _resolve_secret(
             name, host.get("password", "nb://password"), params, strict=True
         )
     if resolve_secrets:
