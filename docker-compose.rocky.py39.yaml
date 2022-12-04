@@ -31,7 +31,7 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
-        
+
   salt-minion-nrp1:
     container_name: salt-minion-nrp1
     hostname: 'salt-minion-nrp1'
@@ -66,7 +66,7 @@ services:
       - type: bind
         source: ../TTP_templates/ttp_templates
         target: /usr/local/lib/python3.9/site-packages/ttp_templates/
-        
+
   salt-minion-nrp2:
     container_name: salt-minion-nrp2
     hostname: 'salt-minion-nrp2'
@@ -101,7 +101,7 @@ services:
       - type: bind
         source: ../TTP_templates/ttp_templates
         target: /usr/local/lib/python3.9/site-packages/ttp_templates/
-        
+
   salt-minion-nrp3:
     container_name: salt-minion-nrp3
     hostname: 'salt-minion-nrp3'
@@ -136,7 +136,7 @@ services:
       - type: bind
         source: ../TTP_templates/ttp_templates
         target: /usr/local/lib/python3.9/site-packages/ttp_templates/
-        
+
   ceos1:
     container_name: ceos1
     hostname: 'ceos1'

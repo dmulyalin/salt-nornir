@@ -85,8 +85,8 @@ SaltStack versions tested
 
 Nornir Proxy minion was tested and confirmed working with these versions of SaltStack:
 
-* salt 3005 - Salt-Nornir 0.15.x
-* salt 3004 - Salt-Nornir 0.15.x, 0.14.x, 0.13.x, 0.12.x,
+* salt 3005 - Salt-Nornir 0.15.x, 0.16.x, 0.17.x
+* salt 3004 - Salt-Nornir 0.15.x, 0.14.x, 0.13.x, 0.12.x
 * salt 3003 - Salt-Nornir 0.11.x
 * salt 3002 - Salt-Nornir 0.9.x
 

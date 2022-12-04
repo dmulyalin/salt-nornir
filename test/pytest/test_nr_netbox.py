@@ -153,3 +153,24 @@ def test_netbox_update_config_context_no_device_in_netbox():
     )
     pprint.pprint(ret)
     assert "ERROR" in ret["nrp1"]["ceos2"] and "device not found" in ret["nrp1"]["ceos2"]
+    
+@skip_if_not_has_netbox
+def test_netbox_update_vrf():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["update_vrf"], 
+        kwarg={
+            "FB": "iosxr1"
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert all(
+        i in ret["nrp3"] 
+        for i in [
+            "Hosts processed", "Created RT", "Updated RT", 
+            "Created VRF", "Updated VRF"
+        ]
+    )

@@ -75,11 +75,7 @@ class ModelExecCommonArgs(model_ffun_fx_filters):
     sortby: Optional[StrictStr]
     reverse: Optional[StrictBool]
     tests: Optional[
-        Union[
-            List[List[StrictStr]], 
-            List[Dict], 
-            Dict[StrictStr, List[Dict]]
-        ]
+        Union[List[List[StrictStr]], List[Dict], Dict[StrictStr, List[Dict]]]
     ]
     failed_only: Optional[StrictBool]
     remove_tasks: Optional[StrictBool]
@@ -510,6 +506,7 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
                 assert "oids" in values, f"Method '{call}' requires 'oids' argument"
         return values
 
+
 class EnumNrNetboxTasks(str, Enum):
     dir_ = "dir"
     query = "query"
@@ -518,10 +515,11 @@ class EnumNrNetboxTasks(str, Enum):
     update_config_context = "update_config_context"
     update_vrf = "update_vrf"
     parse_config = "parse_config"
-    
+
+
 class model_exec_nr_netbox(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""
-    
+
     args: Optional[List[StrictStr]]
     task: Optional[EnumNrNetboxTasks]
     subject: Optional[StrictStr]
@@ -531,7 +529,7 @@ class model_exec_nr_netbox(ModelExecCommonArgs):
     add_ip: Optional[StrictBool]
     add_inventory_items: Optional[StrictBool]
     via: Optional[StrictStr]
-        
+
     class Config:
         extra = "allow"
 
@@ -549,7 +547,8 @@ class model_exec_nr_netbox(ModelExecCommonArgs):
                 )
             )
         return values
-    
+
+
 class StateWorkflowOptions(BaseModel):
     fail_if_any_host_fail_any_step: Optional[List[StrictStr]]
     fail_if_any_host_fail_all_step: Optional[List[StrictStr]]
@@ -818,6 +817,7 @@ class SaltNornirExecutionFunctions(BaseModel):
     gnmi: model_exec_nr_gnmi
     snmp: model_exec_nr_snmp
     netbox: model_exec_nr_netbox
+
 
 class SaltNornirStateFunctions(BaseModel):
     task: model_exec_nr_task

@@ -70,6 +70,7 @@ Sample external pillar Salt Master configuration::
             secret_name_map: username
             plugins:
               netbox_secretstore:
+                url_override: netbox_secretstore
                 private_key: /etc/salt/netbox_secretstore_private.key
 
 
@@ -93,6 +94,7 @@ defined in proxy minion pillar under ``salt_nornir_netbox_pillar`` key::
         secret_name_map: username
         plugins:
           netbox_secretstore:
+            url_override: netbox_secretstore
             private_key: /etc/salt/netbox_secretstore_private.key
 
 Pillar configuration updates Master's configuration and takes precedence.
@@ -230,6 +232,10 @@ proxy minion pillar.
      - N/A
      - "/etc/salt/nb_secretstore.key"
      - OS Path to file with netbox_secretstore RSA Private Key content
+   * - ``url_override``
+     - ``netbox_secretstore``
+     - ``netbox_secretstore_fork``
+     - Used to customize plugin URL "{netbox_url}/api/plugins/{url_override}/secrets/"
 
 Sourcing Data from Netbox
 +++++++++++++++++++++++++
@@ -465,8 +471,8 @@ Above secrets would be resolved to this::
 salt_nornir_netbox iterates over all key's values and resolves
 them accordingly.
 
-Starting with version ``0.17.0`` ``secret_name_map`` dictionary parameter 
-added to allow the use of secret name values in Nornir inventory, mapping 
+Starting with version ``0.17.0`` ``secret_name_map`` dictionary parameter
+added to allow the use of secret name values in Nornir inventory, mapping
 secret names to keys as specified by ``secret_name_map`` dictionary.
 
 For example, given this secrets:
@@ -479,7 +485,7 @@ With this master's pillar secrets configuration::
       - salt_nornir_netbox:
           token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
           secrets:
-            secret_name_map: 
+            secret_name_map:
               password: username
               bgp_peer_secret: peer_ip
             plugins:
@@ -498,7 +504,7 @@ This Nornir inventory data for ``fceos`` devices::
               - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.1"
               - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.2"
               - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.3"
-        
+
 Would be resolved to this final Nornir Inventory data::
 
     hosts:
@@ -515,25 +521,25 @@ Would be resolved to this final Nornir Inventory data::
                 peer_ip: 10.0.1.2
               - bgp_peer_secret: BGPSecret3
                 peer_ip: 10.0.1.3
-        
-In example above, for ``fceos6`` username and password values are encoded in 
+
+In example above, for ``fceos6`` username and password values are encoded in
 same secret entry, this mapping::
 
     secrets:
-      secret_name_map: 
+      secret_name_map:
         password: username
-        
+
 Tells Salt-Nornir Netbox Pillar to assign ``password``'s secret name value
 to ``username`` key in Nornir inventory at the same level.
 
 For ``fceos7``, this configuration::
 
     secrets:
-      secret_name_map: 
+      secret_name_map:
         bgp_peer_secret: peer_ip
-        
-Tells Salt-Nornir Netbox Pillar to assign ``bgp_peer_secret``'s secret name 
-value to ``peer_ip`` key in Nornir inventory at the same level.        
+
+Tells Salt-Nornir Netbox Pillar to assign ``bgp_peer_secret``'s secret name
+value to ``peer_ip`` key in Nornir inventory at the same level.
 
 That approach allows to simplify secrets management making it easier to map
 secrets to other entities in Nornir inventory.
@@ -648,7 +654,7 @@ Sample device interfaces data retrieved from Netbox::
 If ``host_add_interfaces_ip`` parameter set to True, interface IP addresses
 retrieved from Netbox as well.
 
-If ``host_add_interfaces_inventory_items`` parameter set to True, interface 
+If ``host_add_interfaces_inventory_items`` parameter set to True, interface
 inventory items retrieved from Netbox too.
 
 Interface IP addresses combined into a list and added under ``ip_addresses``
@@ -770,7 +776,10 @@ def _netbox_secretstore_get_session_key(params):
     Function to retrieve netbox_secretstore session key
     """
     if "nb_secretstore_session_key" not in RUNTIME_VARS:
-        url = params["url"] + "/api/plugins/netbox_secretstore/get-session-key/"
+        url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
+            "url_override", "netbox_secretstore"
+        )
+        url = f"{params['url']}/api/plugins/{url_override}/get-session-key/"
         token = "Token " + params["token"]
         # read private key content from file
         key_file = params["secrets"]["plugins"]["netbox_secretstore"]["private_key"]
@@ -813,7 +822,10 @@ def _fetch_device_secrets(device_name, params):
         if RUNTIME_VARS["secrets"].get(device_name, {}).get(plugin_name):
             return RUNTIME_VARS["secrets"][device_name]
         elif plugin_name == "netbox_secretstore":
-            url = params["url"] + "/api/plugins/netbox_secretstore/secrets/"
+            url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
+                "url_override", "netbox_secretstore"
+            )
+            url = f"{params['url']}/api/plugins/{url_override}/secrets/"
             token = "Token " + params["token"]
             session_key = _netbox_secretstore_get_session_key(params)
             # retrieve all device secrets
@@ -856,7 +868,7 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
     :param params: dictionary with salt_nornir_netbox parameters
     :param strict: bool, if True raise KeyError if no secret found, return None otherwise
     :return: secret value and secret name or None, None if fail to resolve
-    
+
     Supported secret key path formats:
 
     - ``nb://<plugin-name>/<device-name>/<secret-role>/<secret-name>``
@@ -930,15 +942,17 @@ def _resolve_secrets(data, device_name, params):
     :param params: salt_nornir_netbox configuration parameters
     """
     if isinstance(data, dict):
-        # run against list of keys, as we may add new 
+        # run against list of keys, as we may add new
         # keys to data using secret_name_map dictionary
         for k in list(data.keys()):
             # resolve key if its value is "nb://.." like string
             if isinstance(data[k], str) and data[k].startswith("nb://"):
-                secret_value, secret_name = _resolve_secret(device_name, data[k], params)
+                secret_value, secret_name = _resolve_secret(
+                    device_name, data[k], params
+                )
                 if k in params["secrets"].get("secret_name_map", {}):
                     secret_name_map_key = params["secrets"]["secret_name_map"][k]
-                    data[secret_name_map_key] = secret_name  
+                    data[secret_name_map_key] = secret_name
                 data[k] = secret_value
             # run recursion otherwise
             else:
@@ -967,8 +981,8 @@ def _host_add_interfaces(device, host, params):
     host_add_interfaces = params["host_add_interfaces"]
 
     interfaces = get_interfaces(
-        device_name=device["name"], 
-        params=params, 
+        device_name=device["name"],
+        params=params,
         add_ip=params.get("host_add_interfaces_ip", False),
         add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
     )
@@ -991,10 +1005,10 @@ def _host_add_connections(device, host, params):
     host_add_connections = params["host_add_connections"]
 
     cables = get_connections(
-        device_name=device["name"], 
-        params=params, 
+        device_name=device["name"],
+        params=params,
     )
-    
+
     # save data into Nornir host's inventory
     dk = (
         host_add_connections if isinstance(host_add_connections, str) else "connections"
@@ -1187,9 +1201,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if use_hosts_filters:
         ret.setdefault("hosts", {})
         for filter_item in params.get("hosts_filters") or []:
-            devices_by_filter = nb_graphql(
-                "device", filter_item, device_fields, params
-            )
+            devices_by_filter = nb_graphql("device", filter_item, device_fields, params)
             while devices_by_filter:
                 device = devices_by_filter.pop()
                 try:

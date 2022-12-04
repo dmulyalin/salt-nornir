@@ -370,7 +370,9 @@ def _run_workflow_step(
         # return when have no hosts to run step against
         if not matched_hosts:
             if report_all:
-                log.info("state:nr.workflow: no hosts matched for step: '{}'".format(step))
+                log.info(
+                    "state:nr.workflow: no hosts matched for step: '{}'".format(step)
+                )
                 if step.get("report") is not False:
                     report["details"].append({step["name"]: {}})
                 for host_name, host_steps in report["summary"].items():
@@ -391,7 +393,9 @@ def _run_workflow_step(
             *step.get("args", []),
             **step["kwargs"],
         )
-        log.debug("state:nr.workflow: completed step '{}'; result:\n {}".format(step, result))
+        log.debug(
+            "state:nr.workflow: completed step '{}'; result:\n {}".format(step, result)
+        )
 
         # record a set of hosts that failed/passed this step
         if step["function"] == "nr.do":

@@ -1090,7 +1090,7 @@ from salt_nornir.pydantic_models import (
     model_exec_nr_gnmi,
     model_exec_nr_do_action,
     model_exec_nr_snmp,
-    model_exec_nr_netbox
+    model_exec_nr_netbox,
 )
 from salt_nornir.netbox_utils import netbox_tasks
 
@@ -1785,14 +1785,12 @@ def test(*args, **kwargs):
         # download suite content
         suite_content = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
         if not suite_content:
-            raise CommandExecutionError(
-                f"Tests suite '{suite}' file download failed"
-            )
+            raise CommandExecutionError(f"Tests suite '{suite}' file download failed")
         # render tests suite on a per-host basis
         per_host_suite = cfg_gen(
             config=suite_content,
             saltenv=saltenv,
-            **{k: v for k, v in kwargs.items() if k in FFun_functions}
+            **{k: v for k, v in kwargs.items() if k in FFun_functions},
         )
         # process cfg_gen results
         loaded_suite = {}
@@ -1805,9 +1803,8 @@ def test(*args, **kwargs):
                 )
             else:
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
-                    string=v, 
-                    default_renderer="yaml"
-                ) 
+                    string=v, default_renderer="yaml"
+                )
         suite = loaded_suite
     # if test suite is a list or dict - use it as is
     elif isinstance(suite, (list, dict)) and suite:
@@ -1819,13 +1816,13 @@ def test(*args, **kwargs):
             "test": test,
             "task": commands[0] if len(commands) == 1 else commands,
             "name": name,
-            **kwargs
+            **kwargs,
         }
-        
+
         # clean up kwargs from test related items
         for k in ["schema", "function_file", "use_all_tasks", "add_host"]:
             _ = kwargs.pop(k, None)
-            
+
         # check if need to download pattern file from salt master
         if _is_url(pattern):
             pattern = __salt__["cp.get_url"](pattern, dest=None, saltenv=saltenv)
@@ -1836,12 +1833,12 @@ def test(*args, **kwargs):
             test_dict.setdefault("function_text", pattern)
         else:
             test_dict.setdefault("pattern", pattern)
-            
+
         # render test dictionary on a per-host basis
         per_host_suite = cfg_gen(
             config=yaml_safe_dump([test_dict]),
             saltenv=saltenv,
-            **{k: v for k, v in kwargs.items() if k in FFun_functions}
+            **{k: v for k, v in kwargs.items() if k in FFun_functions},
         )
         # process cfg_gen results
         loaded_suite = {}
@@ -1854,20 +1851,25 @@ def test(*args, **kwargs):
                 )
             else:
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
-                    string=v, 
-                    default_renderer="yaml"
-                ) 
+                    string=v, default_renderer="yaml"
+                )
         suite = loaded_suite
     else:
         raise CommandExecutionError("No test suite or inline test&commands provided.")
 
     # validate tests suite
     _ = modelTestsProcessorSuite(tests=filtered_suite)
-        
+
     # do dry run - return produced tests suite only
     if dry_run:
         return suite
-    
+
+    # check if tests suite is empty
+    if not suite:
+        raise CommandExecutionError(
+            "No tests to run, either no hosts matched or tests suite is empty"
+        )
+
     # load files contents for suite that is a list of test items
     if isinstance(suite, list):
         for index, item in enumerate(suite):
@@ -1878,8 +1880,8 @@ def test(*args, **kwargs):
                     )
                     if k == "function_file":
                         item["function_text"] = item.pop(k)
-            suite[index] = item   
-     # load files contents for suite that is a per-host dict of test items
+            suite[index] = item
+    # load files contents for suite that is a per-host dict of test items
     elif isinstance(suite, dict):
         for host_name in suite.keys():
             for index, item in enumerate(suite[host_name]):
@@ -1890,8 +1892,8 @@ def test(*args, **kwargs):
                         )
                         if k == "function_file":
                             item["function_text"] = item.pop(k)
-                suite[host_name][index] = item      
-    
+                suite[host_name][index] = item
+
     # run tests in one go
     cli_kwargs = {
         "add_details": kwargs.get("add_details", True),
@@ -2859,7 +2861,7 @@ def gnmi(call, *args, **kwargs):
           - "openconfig-interfaces:interfaces/interface[name=Loopback35]"
           - "openconfig-interfaces:interfaces/interface[name=Loopback36]"
 
-    ``salt://path/to/set_args.txt`` content will be rendered to a dictionary and 
+    ``salt://path/to/set_args.txt`` content will be rendered to a dictionary and
     supplied to ``set`` call as ``**kwargs``.
 
     ``pygnmi`` plugin order of operation for above case is ``delete -> replace -> update``
@@ -2996,7 +2998,7 @@ def snmp(call, *args, **kwargs):
 def netbox(*args, **kwargs):
     """
     Function to interact with `Netbox DCIM <https://github.com/netbox-community/netbox>`_.
-    
+
     Why? Because data is the key.
 
     This execution module uses Nornir-Salt
@@ -3014,18 +3016,24 @@ def netbox(*args, **kwargs):
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
     * ``query`` - send ``XYZ_list`` Netbox GraphQL API query to retrieve data
     * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
-        ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and 
-        inventory items information for interfaces
+      ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and
+      inventory items information for interfaces
     * ``get_connections`` - queries device interfaces connections from Netbox
-    
-    For ``query`` function to work, Netbox token and url parameters should be 
+    * ``update_config_context`` - parse device configuration and save results
+      in configuration context
+    * ``parse_config`` - parse device configuratoion using TTP templates and
+      return results
+    * ``update_vrf`` - create or update VRFs and Route-Targets in Netbox from
+      device configuration
+
+    For ``query`` function to work, Netbox token and url parameters should be
     defined in master's configuration ``ext_pillar`` section::
-    
+
         ext_pillar:
           - salt_nornir_netbox:
               url: 'http://192.168.115.129:8000'
               token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
-        
+
     Sample usage::
 
         salt nrp1 nr.netbox dir
@@ -3037,33 +3045,26 @@ def netbox(*args, **kwargs):
     """
     task_name = args[0] if args else kwargs.pop("task")
     salt_jobs_results = []
-    
+
     # get a list of hosts to run Salt Jobs for
     task_hosts = nornir_fun(
-        "inventory", "list_hosts_platforms",
-        **{
-            k: v for k, v in kwargs.items() 
-            if k in FFun_functions
-        }
+        "inventory",
+        "list_hosts_platforms",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
     )
+    if not task_hosts:
+        raise CommandExecutionError("No hosts matched")
     # source list of Salt Jobs to run
-    tasks_list = netbox_tasks[task_name]["salt_jobs"](
-        hosts=task_hosts
-    )
+    tasks_list = netbox_tasks[task_name]["salt_jobs"](hosts=task_hosts)
     # execute Salt Jobs to retrieve data
     for task_data in tasks_list:
         salt_jobs_results.append(
             __salt__[task_data["salt_exec_fun_name"]](
-                *task_data.get("args", []), 
-                **task_data.get("kwargs", {})
+                *task_data.get("args", []), **task_data.get("kwargs", {})
             )
         )
     # run Netbox task using Salt Jobs results
     return netbox_tasks[task_name]["task_function"](
         salt_jobs_results=salt_jobs_results,
-        **{
-            k: v 
-            for k, v in kwargs.items() 
-            if not k.startswith("_")
-        }
+        **{k: v for k, v in kwargs.items() if not k.startswith("_")},
     )

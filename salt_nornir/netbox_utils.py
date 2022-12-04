@@ -2,7 +2,8 @@
 Netbox Utils
 ============
 
-Collection of functions for Salt-Nornir to interact with Netbox.
+Collection of functions for Salt-Nornir to interact with Netbox
+using Execution module ``nr.netbox`` function.
 
 Reference
 +++++++++
@@ -10,6 +11,9 @@ Reference
 .. autofunction:: salt_nornir.netbox_utils.nb_graphql
 .. autofunction:: salt_nornir.netbox_utils.get_interfaces
 .. autofunction:: salt_nornir.netbox_utils.get_connections
+.. autofunction:: salt_nornir.netbox_utils.parse_config
+.. autofunction:: salt_nornir.netbox_utils.update_config_context
+.. autofunction:: salt_nornir.netbox_utils.update_vrf
 """
 import logging
 import json
@@ -30,14 +34,15 @@ manufacturers_platforms = {
     "Juniper": ["juniper", "junos"],
     "Arista": ["arista", "eos"],
 }
-    
+
+
 def extract_salt_nornir_netbox_params(salt_jobs_results):
     """
     Function to retreive Netbox Params from salt_jobs_results.
-    
+
     :param salt_jobs_results: list with config.get jobs results
     """
-    # extract salt_nornir_netbox pillar configuration 
+    # extract salt_nornir_netbox pillar configuration
     for i in salt_jobs_results[0]:
         if "salt_nornir_netbox" in i:
             master_params = i["salt_nornir_netbox"]
@@ -48,10 +53,8 @@ def extract_salt_nornir_netbox_params(salt_jobs_results):
                 params = master_params
             break
     else:
-        raise KeyError(
-            "Failed to find salt_nornir_netbox pillar configuration"
-        )
-        
+        raise KeyError("Failed to find salt_nornir_netbox pillar configuration")
+
     return params
 
 
@@ -100,10 +103,16 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
         return None
 
 
-def get_interfaces(device_name, salt_jobs_results=None, params=None, add_ip=False, add_inventory_items=False):
+def get_interfaces(
+    device_name,
+    salt_jobs_results=None,
+    params=None,
+    add_ip=False,
+    add_inventory_items=False,
+):
     """
     Function to retrieve device interfaces from Netbox using GraphQL.
-    
+
     :param add_ip: if True, retrieves interface IPs
     :param add_inventory_items: if True, retrieves interface inventory items
     :param device_name: name of the device to retrieve interfaces for
@@ -138,9 +147,9 @@ def get_interfaces(device_name, salt_jobs_results=None, params=None, add_ip=Fals
         intf_fields.append(
             "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
         )
-        
+
     interfaces = nb_graphql("interface", filt, intf_fields, params)
-    
+
     if add_inventory_items:
         # retrieve inventory items for all device interfaces
         inv_filt = {
@@ -160,7 +169,9 @@ def get_interfaces(device_name, salt_jobs_results=None, params=None, add_ip=Fals
             "serial",
             "part_id",
         ]
-        inventory_items_list = nb_graphql("inventory_item", inv_filt, inv_fields, params)
+        inventory_items_list = nb_graphql(
+            "inventory_item", inv_filt, inv_fields, params
+        )
         # transform inventory items list to a dictionary keyed by component_id
         inventory_items_dict = {}
         while inventory_items_list:
@@ -171,23 +182,22 @@ def get_interfaces(device_name, salt_jobs_results=None, params=None, add_ip=Fals
 
         # iterate over interfaces and add inventory items
         for intf in interfaces:
-            intf["inventory_items"] = inventory_items_dict.pop(
-                intf["id"], []
-            )
-        
+            intf["inventory_items"] = inventory_items_dict.pop(intf["id"], [])
+
     # transform interfaces list to dictionary keyed by interfaces names
     intf_dict = {}
     while interfaces:
         intf = interfaces.pop()
         _ = intf.pop("id")
         intf_dict[intf.pop("name")] = intf
-        
+
     return intf_dict
-    
+
+
 def get_connections(device_name, salt_jobs_results=None, params=None):
     """
     Function to retrieve connections details from Netbox
-    
+
     :param device_name: name of the device to retrieve interfaces for
     :param params: dictionary with salt_nornir_netbox parameters
     :param salt_jobs_results: list with config.get job results
@@ -302,27 +312,30 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
             "remote_device": remote_interface["_device"]["name"],
             "remote_interface": remote_interface.get("interface", {}).get("name"),
             "termination_type": local_interface["termination_type"]["model"],
-            "remote_termination_type": remote_interface.get("termination_type", {}).get("model"),
+            "remote_termination_type": remote_interface.get("termination_type", {}).get(
+                "model"
+            ),
         }
 
     return cables_dict
 
+
 def get_netbox_params_salt_jobs(hosts: dict):
     """
-    Function to return a list of __salt__ execution functions to run 
+    Function to return a list of __salt__ execution functions to run
     to retrieve Netbox configuration parameters.
     """
     return [
         {
             "salt_exec_fun_name": "config.get",
             "kwargs": {
-                "key": "ext_pillar", 
-                "omit_pillar": True, 
-                "omit_opts": True, 
-                "omit_grains": True, 
+                "key": "ext_pillar",
+                "omit_pillar": True,
+                "omit_opts": True,
+                "omit_grains": True,
                 "omit_master": False,
                 "default": [],
-            }
+            },
         },
         {
             "salt_exec_fun_name": "config.get",
@@ -333,11 +346,11 @@ def get_netbox_params_salt_jobs(hosts: dict):
                 "omit_master": True,
                 "omit_grains": True,
                 "default": {},
-            }
-        }
+            },
+        },
     ]
-    
-    
+
+
 def get_parse_config_salt_jobs(hosts: dict):
     """
     Function to produce a list of tasks to collect output from devices
@@ -382,9 +395,9 @@ def get_parse_config_salt_jobs(hosts: dict):
 
 def parse_config(salt_jobs_results: dict, **kwargs):
     """
-    Function to return results of devices confgiuration parsing 
+    Function to return results of devices confgiuration parsing
     produced by TTP Templates for Netbox.
-    
+
     :param salt_jobs_results: dictionary keyed by hosts with run_ttp results
     """
     return salt_jobs_results[0]
@@ -393,25 +406,21 @@ def parse_config(salt_jobs_results: dict, **kwargs):
 def get_create_devices_salt_jobs(hosts: dict):
     """
     To create devices need to retrieve their inventory data.
-    
-    Hosts to platform mapping retrieved separately in case platform 
+
+    Hosts to platform mapping retrieved separately in case platform
     for host defined using groups.
     """
     ret = [
         {
             "salt_exec_fun_name": "nr.nornir",
             "args": ["inventory", "list_hosts_platforms"],
-            "kwargs": {
-                "FL": list(hosts.keys())
-            }
+            "kwargs": {"FL": list(hosts.keys())},
         },
         {
             "salt_exec_fun_name": "nr.nornir",
             "args": ["inventory"],
-            "kwargs": {
-                "FL": list(hosts.keys())
-            }
-        }
+            "kwargs": {"FL": list(hosts.keys())},
+        },
     ]
     ret.extend(get_netbox_params_salt_jobs(hosts))
     return ret
@@ -432,63 +441,50 @@ def create_devices(salt_jobs_results: list, **kwargs):
     new_device_types = []
     new_platforms = []
     new_devices = []
-    
+
     # instantiate pynetbox object
-    nb = pynetbox.api(
-        url=params["url"],
-        token=params["token"]
-    )
-        
+    nb = pynetbox.api(url=params["url"], token=params["token"])
+
     # get a list of all existing manufacturers from Netbox
     existing_manufacturers = nb_graphql(
-        subject="manufacturer", 
-        filt={"name": ""},
-        fields=["name"],
-        params=params
+        subject="manufacturer", filt={"name": ""}, fields=["name"], params=params
     )
     existing_manufacturers = [i["name"] for i in existing_manufacturers]
-    
+
     # get a list of all existing platforms from Netbox
     existing_platforms = nb_graphql(
-        subject="platform", 
-        filt={"name": ""},
-        fields=["name"],
-        params=params
+        subject="platform", filt={"name": ""}, fields=["name"], params=params
     )
-    existing_platforms = [i["name"] for i in existing_platforms]    
+    existing_platforms = [i["name"] for i in existing_platforms]
 
     # get a list of existing devices from Netbox
     existing_devices = nb_graphql(
-        subject="device", 
-        filt={"name": list(hosts_platforms.keys())}, 
-        fields=["name"], 
-        params=params
+        subject="device",
+        filt={"name": list(hosts_platforms.keys())},
+        fields=["name"],
+        params=params,
     )
     existing_devices = [i["name"] for i in existing_devices]
-    
+
     # iterate over hosts and create them in Netbox
     for host_name, platform in hosts_platforms.items():
         host_inventory = inventory[host_name]
-        
+
         # skip already existing devices
         if host_name in existing_devices:
-            continue 
-            
+            continue
+
         # determine device manufacturer
         for manufacturer, platforms in manufacturers_platforms.items():
             for m_platform in platforms:
                 if platform in m_platform:
                     if manufacturer not in existing_manufacturers:
-                        new_manufacturers.append(
-                            {
-                                "name": manufacturer
-                            }
-                        )
+                        new_manufacturers.append({"name": manufacturer})
                         # add generic device type
                         new_device_types.append(
                             {
                                 "manufacturer": manufacturer,
-                                "model": f"{manufacturer} Network Device"
+                                "model": f"{manufacturer} Network Device",
                             }
                         )
                     break
@@ -498,26 +494,21 @@ def create_devices(salt_jobs_results: list, **kwargs):
                 f"'{host_name}' platform '{platform}', skipping host"
             )
             continue
-        
+
         # decide if need to create device platform
         if platform not in existing_platforms:
-            new_platforms.append(
-                {
-                    "name": platform
-                }
-            )
-            
+            new_platforms.append({"name": platform})
+
         new_devices.append(
             {
                 "name": host_name,
-                
             }
         )
-        
+
         # create host vendor
-       
-    # Decided to skip this for know, as need to create manufacturer, platform and 
-    # device type, device hardware type is the most dificult one as have to define 
+
+    # Decided to skip this for know, as need to create manufacturer, platform and
+    # device type, device hardware type is the most dificult one as have to define
     # based on output from device, not sure yet on the most reliable way to do that,
     # especially for multichassis devices, it seems support for device types need to
     # be added on a case by case basis mapping information obtained from device to
@@ -529,10 +520,10 @@ def create_devices(salt_jobs_results: list, **kwargs):
     # To create device need to provide device_type, site, device_role attributes,
     # site and device role are usually not derivable from Nornir inventory, possible workaround
     # is to use data.netbox... path data and instruct user to populate that section with
-    # device details required to create it in netbox, but IMHO simple csv import into netbox 
+    # device details required to create it in netbox, but IMHO simple csv import into netbox
     # is a better alternative
-    
-    
+
+
 def get_params_parse_config_salt_jobs(hosts):
     """
     Function to produce a list of jobs to run to parse devices configs
@@ -543,12 +534,12 @@ def get_params_parse_config_salt_jobs(hosts):
     # add jobs to parse devices configs
     jobs.extend(get_parse_config_salt_jobs(hosts))
     return jobs
-    
-    
+
+
 def update_config_context(salt_jobs_results: list, **kwargs):
     """
     Function to populate device configuration context with parsed results.
-    
+
     :param salt_jobs_results: list with Netbox Params and config parsing job results
     """
     ret = {}
@@ -556,11 +547,8 @@ def update_config_context(salt_jobs_results: list, **kwargs):
     parsing_job_results = salt_jobs_results[2:]
 
     # instantiate pynetbox object
-    nb = pynetbox.api(
-        url=netbox_params["url"],
-        token=netbox_params["token"]
-    )
-    
+    nb = pynetbox.api(url=netbox_params["url"], token=netbox_params["token"])
+
     # update devices context
     for hosts_results in parsing_job_results:
         for host_name, host_data in hosts_results.items():
@@ -568,159 +556,200 @@ def update_config_context(salt_jobs_results: list, **kwargs):
             if not nb_device:
                 ret[host_name] = f"ERROR: '{host_name}' device not found in Netbox;"
             elif not host_data.get("run_ttp", {}).get("netbox_data", {}):
-                ret[host_name] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
+                ret[
+                    host_name
+                ] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
             else:
                 context_data = nb_device.local_context_data or {}
                 context_data.update(host_data["run_ttp"]["netbox_data"])
-                nb_device.update(
-                    data={
-                        "local_context_data": context_data
-                    }                    
-                )
+                nb_device.update(data={"local_context_data": context_data})
                 nb_device.save()
                 ret[host_name] = "Configuration Context data updated;"
-        
+
     return ret
-    
-    
+
+
 def update_vrf(salt_jobs_results: list, **kwargs):
     """
-    Function to update VRFs in Netbox
-    
+    Function to create or update VRFs and Route-Targets in Netbox.
+
+    This function creates or updates:
+
+    * VRFs with their names and description (if present in confiugration)
+    * Route-Targets values
+    * Reference to import and export RT for VRFs
+
     :param salt_jobs_results: list with Netbox Params and config parsing job results
     """
-    ret = {}
-    rt_create, vrf_create, vrf_update = [], [], []
+    all_rt, all_vrf = set(), {}  # variables to hold all parsed RT and VRFs names
+    rt_create, rt_update, vrf_create, vrf_update = {}, {}, {}, {}
     netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[:2])
     parsing_job_results = salt_jobs_results[2:]
 
     # instantiate pynetbox object
-    nb = pynetbox.api(
-        url=netbox_params["url"],
-        token=netbox_params["token"]
-    )    
-    
-    # retrieve a list of existing route-targets
-    existing_rt = nb_graphql(
-        subject="route_target", 
-        filt={"name": ""}, 
-        fields=["name"], 
-        params=netbox_params
-    )
+    nb = pynetbox.api(url=netbox_params["url"], token=netbox_params["token"])
 
-    # retrieve a list of existing VRFs
-    existing_vrf = nb_graphql(
-        subject="vrf", 
-        filt={"name": ""}, 
-        fields=["name", "id"], 
-        params=netbox_params
-    )
-    # transform to a dict keyed by VRF names and VRF ID as values
-    existing_vrf = {i["name"]: i["id"] for i in existing_vrf}
-    
-    # update devices context
+    # iterate over VRF parsing results
+    hosts_done = []
     for hosts_results in parsing_job_results:
         for host_name, host_data in hosts_results.items():
+            hosts_done.append(host_name)
+            # check if parsing results are good
             if not host_data.get("run_ttp", {}).get("netbox_data", {}):
-                ret[host_name] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
+                log.error(
+                    f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}'"
+                )
                 continue
-                
+            # process parsing results
             for vrf in host_data["run_ttp"]["netbox_data"]["vrf"]:
                 vrf_import_rt, vrf_export_rt = [], []
                 # update IPv4 import route-targets
-                for rt in vrf.get(
-                    "afi", {}
-                ).get(
-                    "ipv4_unicast", {}
-                ).get(
-                    "route_target", {}
-                ).get(
-                    "import", []
+                for rt in (
+                    vrf.get("afi", {})
+                    .get("ipv4_unicast", {})
+                    .get("route_target", {})
+                    .get("import", [])
                 ):
-                    vrf_import_rt.append({"name": rt})
+                    vrf_import_rt.append(rt)
                 # update IPv4 export route-targets
-                for rt in vrf.get(
-                    "afi", {}
-                ).get(
-                    "ipv4_unicast", {}
-                ).get(
-                    "route_target", {}
-                ).get(
-                    "export", []
+                for rt in (
+                    vrf.get("afi", {})
+                    .get("ipv4_unicast", {})
+                    .get("route_target", {})
+                    .get("export", [])
                 ):
-                    vrf_export_rt.append({"name": rt})
+                    vrf_export_rt.append(rt)
                 # update IPv6 import route-targets
-                for rt in vrf.get(
-                    "afi", {}
-                ).get(
-                    "ipv6_unicast", {}
-                ).get(
-                    "route_target", {}
-                ).get(
-                    "import", []
+                for rt in (
+                    vrf.get("afi", {})
+                    .get("ipv6_unicast", {})
+                    .get("route_target", {})
+                    .get("import", [])
                 ):
-                    vrf_import_rt.append({"name": rt})
+                    vrf_import_rt.append(rt)
                 # update IPv6 export route-targets
-                for rt in vrf.get(
-                    "afi", {}
-                ).get(
-                    "ipv6_unicast", {}
-                ).get(
-                    "route_target", {}
-                ).get(
-                    "export", []
+                for rt in (
+                    vrf.get("afi", {})
+                    .get("ipv6_unicast", {})
+                    .get("route_target", {})
+                    .get("export", [])
                 ):
-                    vrf_export_rt.append({"name": rt})
-                
-                # get a list of RT to create
-                for rt in vrf_import_rt + vrf_export_rt:
-                    if rt not in existing_rt and rt not in rt_create:
-                        rt_create.append(rt)
-                 
+                    vrf_export_rt.append(rt)
+
+                # form RT data
+                for i in vrf_import_rt:
+                    all_rt.add(i)
+                for i in vrf_export_rt:
+                    all_rt.add(i)
+
                 # form VRF data dictionary
-                vrf_data = {
+                all_vrf[vrf["name"]] = {
                     "name": vrf["name"],
-                    # "description": vrf.get("description", ""),
-                    # "rd": vrf.get("rd", ""),
-                    # "import_targets": vrf_import_rt,
-                    # "export_targets": vrf_export_rt, 
+                    "description": vrf.get("description", ""),
+                    "import_targets": vrf_import_rt,
+                    "export_targets": vrf_export_rt,
                 }
-                
-                if vrf["name"] in existing_vrf:
-                    vrf_data["id"] = existing_vrf[vrf["name"]]
-                    vrf_update.append(vrf_data)
-                else:
-                    vrf_create.append(vrf_data) 
-    
-    log.debug(
-        f"netbox_utils: creating rt '{rt_create}'; updating vrf "
-        f"'{vrf_update}'; creating vrf '{vrf_create}'"
+
+    # retrieve a list of existing route-targets
+    existing_rt = nb_graphql(
+        subject="route_target",
+        filt={"name": all_rt},
+        fields=["name", "id"],
+        params=netbox_params,
     )
-    
-    # create and update entities
-    nb.ipam.route_targets.create(rt_create)
-    nb.ipam.vrfs.update(vrf_update)          
-    nb.ipam.vrfs.create(vrf_create)    
-                
+    existing_rt = {i["name"]: int(i["id"]) for i in existing_rt}
+    # form RT data to update/create
+    for rt in all_rt:
+        rt_data = {"name": rt}
+        if rt in existing_rt:
+            rt_data["id"] = existing_rt[rt]
+            rt_update.setdefault(rt, rt_data)
+        else:
+            rt_create.setdefault(rt, rt_data)
+    # create and update RT
+    log.debug(
+        f"netbox_utils: creating rt '{list(rt_create)}'; updating rt '{list(rt_update)}'"
+    )
+    nb.ipam.route_targets.create(list(rt_create.values()))
+    nb.ipam.route_targets.update(list(rt_update.values()))
+
+    # retrieve a list of existing route-targets IDs to add VRF references
+    existing_rt = nb_graphql(
+        subject="route_target",
+        filt={"name": all_rt},
+        fields=["name", "id"],
+        params=netbox_params,
+    )
+    existing_rt = {i["name"]: int(i["id"]) for i in existing_rt}
+    # retrieve a list of existing VRFs
+    existing_vrf = nb_graphql(
+        subject="vrf",
+        filt={"name": list(all_vrf)},
+        fields=["name", "id"],
+        params=netbox_params,
+    )
+    existing_vrf = {i["name"]: int(i["id"]) for i in existing_vrf}
+    # form VRF data to update/create
+    for vrf in all_vrf.values():
+        vrf["import_targets"] = [existing_rt[rt] for rt in vrf["import_targets"]]
+        vrf["export_targets"] = [existing_rt[rt] for rt in vrf["export_targets"]]
+        if vrf["name"] in existing_vrf:
+            vrf["id"] = existing_vrf[vrf["name"]]
+            vrf_update.setdefault(vrf["name"], vrf)
+        else:
+            vrf_create.setdefault(vrf["name"], vrf)
+    # create and update VRF
+    log.debug(
+        f"netbox_utils: creating vrf '{list(vrf_create)}'; updating vrf '{list(vrf_update)}'"
+    )
+    nb.ipam.vrfs.create(list(vrf_create.values()))
+    nb.ipam.vrfs.update(list(vrf_update.values()))
+
+    return (
+        f"Hosts processed: '{(', ').join(hosts_done)}'\n"
+        f"Created RT: '{(', ').join(rt_create)}'\n"
+        f"Updated RT: '{(', ').join(rt_update)}'\n"
+        f"Created VRF: '{(', ').join(vrf_create)}'\n"
+        f"Updated VRF: '{(', ').join(vrf_update)}'"
+    )
+
+
 def no_jobs(hosts):
     return []
+
 
 def run_dir(salt_jobs_results: list, **kwargs):
     """
     Function to return a list of supported Netbox Utils tasks
     """
     return list(netbox_tasks.keys())
-    
+
+
 # dispatch dictionary of Netbox tasks exposed for calling
 # salt_jobs - returns a list of salt jobs to run to retrieve data for task function
 # task_function - callable function to run on data from salt jobs
 netbox_tasks = {
-    "parse_config": {"salt_jobs": get_parse_config_salt_jobs, "task_function": parse_config},
-    "update_config_context": {"salt_jobs": get_params_parse_config_salt_jobs, "task_function": update_config_context},
-    "update_vrf": {"salt_jobs": get_params_parse_config_salt_jobs, "task_function": update_vrf},
-    "create_devices": {"salt_jobs": get_create_devices_salt_jobs, "task_function": create_devices},
+    "parse_config": {
+        "salt_jobs": get_parse_config_salt_jobs,
+        "task_function": parse_config,
+    },
+    "update_config_context": {
+        "salt_jobs": get_params_parse_config_salt_jobs,
+        "task_function": update_config_context,
+    },
+    "update_vrf": {
+        "salt_jobs": get_params_parse_config_salt_jobs,
+        "task_function": update_vrf,
+    },
+    # "create_devices": {"salt_jobs": get_create_devices_salt_jobs, "task_function": create_devices},
     "query": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_graphql},
-    "get_interfaces": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": get_interfaces},
-    "get_connections": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": get_connections},
-    "dir": {"salt_jobs": no_jobs, "task_function": run_dir}
+    "get_interfaces": {
+        "salt_jobs": get_netbox_params_salt_jobs,
+        "task_function": get_interfaces,
+    },
+    "get_connections": {
+        "salt_jobs": get_netbox_params_salt_jobs,
+        "task_function": get_connections,
+    },
+    "dir": {"salt_jobs": no_jobs, "task_function": run_dir},
 }

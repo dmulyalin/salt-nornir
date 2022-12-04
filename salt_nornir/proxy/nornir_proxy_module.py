@@ -1235,7 +1235,7 @@ def _download_and_render_files(hosts, render, kwargs, ignore_keys):
                 "Nornir-proxy MAIN PID {} worker thread, rendered '{}' '{}' data for '{}' host".format(
                     os.getpid(), key, type(value), host_name
                 )
-            )                
+            )
             host_object.data["__task__"][key] = rendered
 
     # clean up kwargs from render keys to force tasks to use hosts's __task__ attribute

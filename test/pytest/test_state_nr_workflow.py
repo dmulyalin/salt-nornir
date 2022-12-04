@@ -875,7 +875,19 @@ def test_state_nr_workflow_common_filters_fo_fb_fl_fakenos():
                 assert "Traceback" not in v["fceos1"]["show clock"]["result"]
                 assert len(v) == 1, "matched more than 1 host"
                 
-                
+
+def test_nr_workflow_with_other_modules():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.apply",
+        arg=["test_nr_workflow_with_other_modules"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)   
+    for v in ret["nrp1"].values():
+        assert v["result"] == True            
+    
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
 #     pass
