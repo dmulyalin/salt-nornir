@@ -10,8 +10,6 @@ SaltStack pillar module name - ``salt_nornir_netbox``
 Foreword
 ++++++++
 
-*With great power comes great responsibility*
-
 Salt-Nornir Netbox Pillar strives to be as efficient as possible and
 uses Netbox read-only GraphQL API because of that. However, the more data
 sourced from Netbox the longer it takes to process it and more memory
@@ -19,10 +17,10 @@ it will occupy. Moreover, Netbox infrastructure need to be scaled to match
 Salt-Nornir requirements capable of processing appropriate number of
 incoming requests.
 
-Keep in mind that pillar retrieval happens from Salt-Master only with
+Keep in mind that pillar retrieval happens from Salt-Master only, with
 retrieved data pushed to proxy minions for their use. Given Netbox can
-supply significant amount of data, Salt-Master resources need to be sized
-appropriately to be able to process it in a timely fashion.
+supply significant amount of data, Salt-Master resources should be sized
+appropriately to process it in a timely fashion.
 
 Salt-Nornir Proxy uses Nornir workers internally, each worker is an
 instance of Nornir with its own dedicated inventory. As a result, an

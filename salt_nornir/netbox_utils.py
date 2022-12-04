@@ -17,17 +17,18 @@ Reference
 """
 import logging
 import json
-import requests
-import pynetbox
 
 log = logging.getLogger(__name__)
 
 try:
-    import pynetbox
-
-    HAS_PYNETBOX = True
+    import requests
 except ImportError:
-    HAS_PYNETBOX = False
+    log.warning("Failed importing requests module")
+    
+try:
+    import pynetbox
+except ImportError:
+    log.warning("Failed importing pynetbox module")
 
 manufacturers_platforms = {
     "Cisco": ["cisco", "iosxr", "ios", "nxos"],
