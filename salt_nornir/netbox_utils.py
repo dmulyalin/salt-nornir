@@ -22,9 +22,10 @@ log = logging.getLogger(__name__)
 
 try:
     import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
 except ImportError:
     log.warning("Failed importing requests module")
-    
+
 try:
     import pynetbox
 except ImportError:
@@ -59,6 +60,18 @@ def extract_salt_nornir_netbox_params(salt_jobs_results):
     return params
 
 
+def get_pynetbox(params):
+    """Helper function to instantiate pynetbox api object"""
+    if params.get("ssl_verify") == False:
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        nb = pynetbox.api(url=params["url"], token=params["token"])
+        nb.http_session.verify = False
+    else:
+        nb = pynetbox.api(url=params["url"], token=params["token"])
+
+    return nb
+
+
 def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
     """
     Helper function to send query to Netbox GraphQL API and
@@ -71,6 +84,9 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
     """
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
+    # disable SSL warnings if requested so
+    if params.get("ssl_verify") == False:
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
     # form GraphQL query string
     filters = []
     for k, v in filt.items():
@@ -92,6 +108,7 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
             "authorization": f"Token {params['token']}",
         },
         params={"query": query},
+        verify=params.get("ssl_verify", True),
     )
     if req.status_code == 200:
         return req.json()["data"][f"{subject}_list"]
@@ -141,6 +158,8 @@ def get_interfaces(
         "bridge_interfaces {name}",
         "member_interfaces {name}",
         "wwn",
+        "duplex",
+        "speed",
         "id",
     ]
     # add IP addresses to interfaces
@@ -436,7 +455,7 @@ def create_devices(salt_jobs_results: list, **kwargs):
 
     hosts_platforms = salt_jobs_results[0]
     inventory = salt_jobs_results[1]
-    params = extract_salt_nornir_netbox_params(salt_jobs_results[2:])
+    netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[2:])
 
     new_manufacturers = []
     new_device_types = []
@@ -444,17 +463,17 @@ def create_devices(salt_jobs_results: list, **kwargs):
     new_devices = []
 
     # instantiate pynetbox object
-    nb = pynetbox.api(url=params["url"], token=params["token"])
+    nb = get_pynetbox(netbox_params)
 
     # get a list of all existing manufacturers from Netbox
     existing_manufacturers = nb_graphql(
-        subject="manufacturer", filt={"name": ""}, fields=["name"], params=params
+        subject="manufacturer", filt={"name": ""}, fields=["name"], params=netbox_params
     )
     existing_manufacturers = [i["name"] for i in existing_manufacturers]
 
     # get a list of all existing platforms from Netbox
     existing_platforms = nb_graphql(
-        subject="platform", filt={"name": ""}, fields=["name"], params=params
+        subject="platform", filt={"name": ""}, fields=["name"], params=netbox_params
     )
     existing_platforms = [i["name"] for i in existing_platforms]
 
@@ -463,7 +482,7 @@ def create_devices(salt_jobs_results: list, **kwargs):
         subject="device",
         filt={"name": list(hosts_platforms.keys())},
         fields=["name"],
-        params=params,
+        params=netbox_params,
     )
     existing_devices = [i["name"] for i in existing_devices]
 
@@ -548,7 +567,7 @@ def update_config_context(salt_jobs_results: list, **kwargs):
     parsing_job_results = salt_jobs_results[2:]
 
     # instantiate pynetbox object
-    nb = pynetbox.api(url=netbox_params["url"], token=netbox_params["token"])
+    nb = get_pynetbox(netbox_params)
 
     # update devices context
     for hosts_results in parsing_job_results:
@@ -588,7 +607,7 @@ def update_vrf(salt_jobs_results: list, **kwargs):
     parsing_job_results = salt_jobs_results[2:]
 
     # instantiate pynetbox object
-    nb = pynetbox.api(url=netbox_params["url"], token=netbox_params["token"])
+    nb = get_pynetbox(netbox_params)
 
     # iterate over VRF parsing results
     hosts_done = []

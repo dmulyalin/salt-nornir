@@ -5,7 +5,7 @@ import pytest
 import socket
 import requests
 
-from netbox_data import NB_URL, netbox_device_data_keys
+from netbox_data import NB_URL, NB_URL_SSL, netbox_device_data_keys
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,18 @@ except Exception as e:
 skip_if_not_has_netbox = pytest.mark.skipif(
     has_netbox == False,
     reason=f"Has no connection to Netbox {netbox_url}",
+)
+
+# check if Netbox endpoint reachable over SSL
+netbox_url_ssl = NB_URL_SSL + "/api"
+try:
+    response = requests.get(netbox_url_ssl, verify=False)
+    has_netbox_ssl = response.status_code == 200
+except Exception as e:
+    has_netbox_ssl = False
+skip_if_not_has_netbox_ssl = pytest.mark.skipif(
+    has_netbox_ssl == False,
+    reason=f"Has no connection to Netbox {netbox_url} over HTTPS",
 )
 
 def _refresh_nornir():
@@ -381,3 +393,35 @@ class TestProxyNRP1:
         """
         cfg_ctxt = nrp1_inventory["nrp1"]["hosts"]["ceos1"]["data"]["salt_nornir_netbox_pillar_test"]["config_context"]
         assert cfg_ctxt["secrets_test"]["OSPF_KEY"] == "q1w2e3r45t5y", "ceos1 OSPF hello_secret not resolved"
+        
+        
+@skip_if_not_has_netbox_ssl
+class TestProxyNRP2:  
+    
+    @pytest.fixture(scope="class", autouse=True)
+    def nrp2_inventory(self):        
+        ret = client.cmd(
+            tgt="nrp2", 
+            fun="nr.nornir", 
+            arg=["refresh"], 
+        )  
+        for i in range(3):
+            time.sleep(10)
+            ret = client.cmd(
+                tgt="nrp2",
+                fun="nr.nornir", 
+                arg=["inventory"], 
+                kwarg={}
+            )
+            if ret["nrp2"] and "Traceback (most recent call last)" not in str(ret["nrp2"]):
+                pprint.pprint(ret)
+                return ret
+        else:
+            raise RuntimeError(f"Failed to retrieve nrp2 inventory: {ret}")
+
+    def test_iosxr1_inventory_data_retrieved_over_ssl(self, nrp2_inventory):
+        assert all(
+            k in nrp2_inventory["nrp2"]["hosts"]["iosxr1"]["data"]
+            for k in netbox_device_data_keys
+        ), "iosxr1 data missing some Netbox keys"
+        

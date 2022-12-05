@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 
 
 NB_URL = "http://192.168.75.200:8000/"
+NB_URL_SSL = "https://192.168.75.200:443/"
 NB_USERNAME = "admin"
 NB_PASSWORD = "admin"
 NB_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"

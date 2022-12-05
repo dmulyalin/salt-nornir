@@ -756,6 +756,7 @@ import logging
 import requests
 import json
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from salt_nornir.netbox_utils import nb_graphql, get_interfaces, get_connections
 
 log = logging.getLogger(__name__)
@@ -773,6 +774,9 @@ def _netbox_secretstore_get_session_key(params):
     """
     Function to retrieve netbox_secretstore session key
     """
+    # if salt_jobs_results provided, extract Netbox params from it
+    if params.get("ssl_verify") == False:
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
     if "nb_secretstore_session_key" not in RUNTIME_VARS:
         url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
             "url_override", "netbox_secretstore"
@@ -791,6 +795,7 @@ def _netbox_secretstore_get_session_key(params):
                 "private_key": private_key,
                 "preserve_key": True,
             },
+            verify=params.get("ssl_verify", True),
         )
         if req.status_code == 200:
             RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
@@ -815,6 +820,9 @@ def _fetch_device_secrets(device_name, params):
     :param device_name: string, name of device to retrieve secrets for
     :param params: dictionary with salt_nornir_netbox parameters
     """
+    # if salt_jobs_results provided, extract Netbox params from it
+    if params.get("ssl_verify") == False:
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
     # retrieve device secrets
     for plugin_name in params.get("secrets", {}).get("plugins", {}).keys():
         if RUNTIME_VARS["secrets"].get(device_name, {}).get(plugin_name):
@@ -834,6 +842,7 @@ def _fetch_device_secrets(device_name, params):
                     "authorization": token,
                 },
                 params={"device": device_name},
+                verify=params.get("ssl_verify", True),
             )
             if req.status_code == 200:
                 RUNTIME_VARS["secrets"].setdefault(device_name, {})
