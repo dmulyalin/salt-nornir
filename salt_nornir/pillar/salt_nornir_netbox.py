@@ -51,7 +51,6 @@ Sample external pillar Salt Master configuration::
       - salt_nornir_netbox:
           url: 'http://192.168.115.129:8000'
           token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
-          ssl_verify: True
           use_minion_id_device: True
           use_minion_id_tag: True
           use_hosts_filters: True
@@ -120,11 +119,6 @@ override Master's configuration.
      - N/A
      - N/A
      - Netbox API Token
-   * - ``ssl_verify``
-     - ``True``
-     - ``False``
-     - | Configure HTTPS SSL certificates verification,
-       | verification disabled if set to False
    * - ``use_minion_id_device``
      - False
      - True or False
@@ -239,9 +233,8 @@ proxy minion pillar.
    * - ``url_override``
      - ``netbox_secretstore``
      - ``netbox_secretstore_fork``
-     - | Used to customize plugin URL 
-       | ``{netbox_url}/api/plugins/{url_override}/secrets/``
-       
+     - Used to customize plugin URL "{netbox_url}/api/plugins/{url_override}/secrets/"
+
 Sourcing Data from Netbox
 +++++++++++++++++++++++++
 

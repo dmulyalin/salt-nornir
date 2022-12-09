@@ -1654,9 +1654,14 @@ def list_hosts(**kwargs):
     :param Fx: filters to filter hosts
     """
     # get a list of filtered hosts
-    filtered_hosts, has_filter = FFun(
-        nornir_data["nrs"][0]["nr"], kwargs=kwargs, check_if_has_filter=True
-    )
+    try:
+        filtered_hosts, has_filter = FFun(
+            nornir_data["nrs"][0]["nr"], kwargs=kwargs, check_if_has_filter=True
+        )
+    except IndexError:
+        raise CommandExecutionError(
+            "Nornir workers not ready, refresh or initialisation in progress"
+        )
 
     # check if nornir_filter_required is True but no filter
     if nornir_data["nornir_filter_required"] is True and has_filter is False:

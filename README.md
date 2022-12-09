@@ -55,7 +55,7 @@ Start a [discussion](https://github.com/dmulyalin/salt-nornir/discussions)
 
 Issues, bug reports and feature requests are welcomed. Feedback is a gift and we truly value it.
 
-# Authors Guidelines
+# Developers Motto
 
 - if it is not in the docs it does not exist
 - if it is not tested it is broken

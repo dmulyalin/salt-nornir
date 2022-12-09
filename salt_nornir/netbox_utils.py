@@ -329,7 +329,7 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
 
         cables_dict[local_interface["interface"]["name"]] = {
             **cable,
-            "remote_device": remote_interface["_device"]["name"],
+            "remote_device": remote_interface.get("_device", {}).get("name"),
             "remote_interface": remote_interface.get("interface", {}).get("name"),
             "termination_type": local_interface["termination_type"]["model"],
             "remote_termination_type": remote_interface.get("termination_type", {}).get(

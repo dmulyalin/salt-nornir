@@ -1761,6 +1761,9 @@ def test(*args, **kwargs):
             +----+--------+----------------------------------+----------+-------------+
     """
     # extract attributes
+    job_identity = _form_identity(
+        kwargs, "test"
+    )  # form identity before cleaning kwargs
     kwargs = {k: v for k, v in kwargs.items() if not str(k).startswith("__")}
     commands = args[0] if args else kwargs.pop("commands", [])
     test = args[1] if len(args) > 1 else kwargs.pop("test", None)
@@ -1900,7 +1903,7 @@ def test(*args, **kwargs):
         **kwargs,
         "to_dict": False,
         "tests": suite,
-        "identity": _form_identity(kwargs, "test"),
+        "identity": job_identity,
         "render": [],
         "subset": subset,
     }
