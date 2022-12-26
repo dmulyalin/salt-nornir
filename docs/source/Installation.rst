@@ -15,17 +15,19 @@ Or explicitly specifying Python version::
 
     python3 -m pip install salt-nornir[prodmin]
 
-Or install GIT and run installation of latest source code from GitHub master brunch::
+Or install GIT and install latest code from master brunch::
 
     python3 -m pip install git+https://github.com/dmulyalin/salt-nornir
 
-Salt Nornir need to be installed on proxy minion machine. If planning to use runner
-module, ``salt-nornir`` should be installed on Salt Master machine as well.
+Salt-Nornir Minion need to be installed on proxy minion machine.
+
+.. info:: If planning to use ``salt-nornir-runner`` module, ``salt-nornir`` should be 
+   installed on Salt Master machine as well.
 
 For installation of SaltStack master and minion/proxy-minion modules
 refer to `official documentation <https://repo.saltproject.io/>`_.
 
-.. warning:: Python 3.6 support deprecated starting with version 0.12.0.
+.. warning:: Python 3.6 support deprecated starting with version 0.12.0
 
 Installation extras
 ===================
