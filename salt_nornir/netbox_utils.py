@@ -97,17 +97,20 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
             filters.append(f'{k}: "{v}"')
     filters = ", ".join(filters)
     fields = " ".join(fields)
-    query = f"query {{{subject}_list({filters}) {{ {fields} }}}}"
-    log.debug(f"salt_nornir_netbox sending GraphQL query '{query}'")
+    query = f"query {{{subject}_list({filters}) {{{fields}}}}}"
+    payload = json.dumps({"query": query})
+    log.debug(
+        f"salt_nornir_netbox sending GraphQL query '{payload}' to URL '{params['url']}/graphql/'"
+    )
     # send request to Netbox GraphQL API
-    req = requests.get(
-        url=f"{params['url']}/graphql",
+    req = requests.post(
+        url=f"{params['url']}/graphql/",
         headers={
-            "content-cype": "application/json",
-            "accept": "application/json",
-            "authorization": f"Token {params['token']}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Token {params['token']}",
         },
-        params={"query": query},
+        data=payload,
         verify=params.get("ssl_verify", True),
     )
     if req.status_code == 200:
@@ -238,22 +241,30 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
         "custom_fields",
         "terminations {termination_id termination_type {model} _device {name}}",
     ]
-    cables = nb_graphql("cable", filt, cable_fields, params)
+    all_cables = nb_graphql("cable", filt, cable_fields, params)
 
     # iterate over cables to form a list of termination interfaces to retrieve
     interface_ids = []
     console_port_ids = []
     console_server_port_ids = []
     device_names = set()
-    for cable in cables:
+    cables = []
+    while all_cables:
+        cable = all_cables.pop()
+        skip_cable = False  # flag to skip unsupported cable types
         for i in cable["terminations"]:
-            device_names.add(i["_device"]["name"])
             if i["termination_type"]["model"] == "interface":
                 interface_ids.append(i["termination_id"])
             elif i["termination_type"]["model"] == "consoleport":
                 console_port_ids.append(i["termination_id"])
             elif i["termination_type"]["model"] == "consoleserverport":
                 console_server_port_ids.append(i["termination_id"])
+            else:
+                skip_cable = True
+                break
+            device_names.add(i["_device"]["name"])
+        if not skip_cable:
+            cables.append(cable)
 
     # retrieve interfaces and ports from Netbox
     interfaces = (
@@ -745,6 +756,19 @@ def run_dir(salt_jobs_results: list, **kwargs):
     return list(netbox_tasks.keys())
 
 
+def update_interfaces(salt_jobs_results: list, **kwargs):
+    """
+    Function to create or update devices' interfaces in Netbox.
+
+    This function creates or updates:
+
+    * Device interfaces and their parameters
+
+    :param salt_jobs_results: list with Netbox Params and config parsing job results
+    """
+    pass
+
+
 # dispatch dictionary of Netbox tasks exposed for calling
 # salt_jobs - returns a list of salt jobs to run to retrieve data for task function
 # task_function - callable function to run on data from salt jobs
@@ -760,6 +784,10 @@ netbox_tasks = {
     "update_vrf": {
         "salt_jobs": get_params_parse_config_salt_jobs,
         "task_function": update_vrf,
+    },
+    "update_interfaces": {
+        "salt_jobs": get_params_parse_config_salt_jobs,
+        "task_function": update_interfaces,
     },
     # "create_devices": {"salt_jobs": get_create_devices_salt_jobs, "task_function": create_devices},
     "query": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_graphql},

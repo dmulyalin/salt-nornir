@@ -315,7 +315,32 @@ class TestProxyNRP3:
         assert all("remote_interface" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_interface"
         assert all("remote_interface" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_interface"
         
-        
+    def test_use_minion_id_device_fceos8_retrieved(self, nrp3_inventory):  
+        """
+        nrp3 device config context in Netbox has fceos8 device listed in confgi context with empty data thoug,
+        pillar should retrieve fcos8 details using fceos8 Netbox device
+        """
+        fceos8 = nrp3_inventory["nrp3"]["hosts"].get("fceos8")
+        assert fceos8, "nrp3 missing fceos8"
+        assert all(k in fceos8["data"]["netbox"] for k in netbox_device_data_keys), "fceos8 netbox data missing keys"
+        assert all(fceos8.get(k) for k in ["platform", "port", "username", "hostname"]), "fceos8 inventory missing keys"
+
+    def test_fceos3_39x_inventory(self, nrp3_inventory):
+        """
+        Added fceos3_390 - fceos3_399 devices into netbox, this test is to verify their inventory content,
+        mainly to confirm that multihreadin using minion_id_tag works.
+        """
+        for i in range(10):
+            host_name = f"fceos3_39{i}"
+            assert host_name in nrp3_inventory["nrp3"]["hosts"], f"Host {host_name} not in inventory"
+            assert all(
+                k in nrp3_inventory["nrp3"]["hosts"][host_name]["data"]["netbox"] 
+                for k in netbox_device_data_keys
+            ), f"Host {host_name} netbox data missing keys"
+            assert nrp3_inventory["nrp3"]["hosts"][host_name]["data"]["secrets"][0]["bgp"] == "123456bgppeer", f"Host {host_name} BGP secret not resolved"
+            assert nrp3_inventory["nrp3"]["hosts"][host_name]["data"]["secrets"][1]["snmp"] == "qwerty123456", f"Host {host_name} SNMP secret not resolved"
+            
+            
 @skip_if_not_has_netbox
 class TestProxyNRP1:  
     

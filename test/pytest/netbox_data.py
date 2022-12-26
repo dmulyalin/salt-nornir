@@ -113,6 +113,10 @@ device_types = [
         "model": "Arista cEOS",
         "manufacturer": {"name": "Arista"},
     },
+    {
+        "model": "XVR9000",
+        "manufacturer": {"name": "Cisco"},
+    },
 ]
 
 device_roles = [
@@ -368,7 +372,8 @@ devices = [
                             ]
                         }
                     }
-                }
+                },
+                "fceos8": {}
             },
             "foo": "bar",
             "nrp3_foobar_key": "nb://nrp3_foobar_key_secret",
@@ -402,8 +407,74 @@ devices = [
             }
         }
     },
+    {
+        "name": "fceos8",
+        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_role": {"name": "VirtualRouter"},
+        "tenant": {"name": "SALTNORNIR"},
+        "site": {"name": "SALTNORNIR-LAB"},
+        "rack": {"name": "R201"},
+        "position": 8,
+        "face": "front",
+        "platform": {"name": "FakeNOS Arista cEOS"},
+        "local_context_data": {
+            "nornir": {
+                "platform": "arista_eos",
+                "hostname": "10.0.1.10",
+                "port": "6008",
+                "username": "nb://netbox_secretstore/keymaster-1/SaltNornirCreds/username",
+                "password": "nb://netbox_secretstore/keymaster-1/SaltNornirCreds/password",
+            }
+        }
+    },
+    {
+        "name": "iosxr1",
+        "device_type": {"slug": slugify("XVR9000")},
+        "device_role": {"name": "VirtualRouter"},
+        "tenant": {"name": "SALTNORNIR"},
+        "site": {"name": "SALTNORNIR-LAB"},
+        "rack": {"name": "R201"},
+        "position": 31,
+        "face": "front",
+        "platform": {"name": "Cisco IOS-XR"},
+        "local_context_data": {
+            "nornir": {
+                "platform": "cisco_xr",
+                "hostname": "sandbox-iosxr-1.cisco.com"
+            }
+        }
+    },
 ]
-
+# add fceos3_390-fceos3_399 devices to test multi-threading retrieval
+for i in range(10):
+    devices.append({
+        "name": f"fceos3_39{i}",
+        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_role": {"name": "VirtualRouter"},
+        "tenant": {"name": "SALTNORNIR"},
+        "site": {"name": "SALTNORNIR-LAB"},
+        "rack": {"name": "R201"},
+        "face": "front",
+        "platform": {"name": "FakeNOS Arista cEOS"},
+        "tags": [{"name": "nrp3"}],
+        "local_context_data": {
+            "nornir": {
+                "platform": "arista_eos",
+                "hostname": "10.0.1.10",
+                "port": str(5390 + 1),
+                "password": "nornir",
+                "username": "nornir",
+                "data": {
+                    "secrets": [
+                        {"bgp": "nb://netbox_secretstore/keymaster-1/BGP/peers_pass"},
+                        {"snmp": "nb://netbox_secretstore/keymaster-1/SNMP/community"},  
+                    ]
+                }
+            }
+        }
+    })
+    
+    
 netbox_secretsotre_roles = [
     {"name": "SaltNornirCreds"},
     {"name": "SaltSecrets"},

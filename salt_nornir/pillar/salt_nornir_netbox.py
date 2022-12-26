@@ -10,25 +10,25 @@ SaltStack pillar module name - ``salt_nornir_netbox``
 Foreword
 ++++++++
 
-Salt-Nornir Netbox Pillar strives to be as efficient as possible and
+Salt-Nornir Netbox Pillar attempts to be as efficient as possible and
 uses Netbox read-only GraphQL API because of that. However, the more data
 sourced from Netbox the longer it takes to process it and more memory
 it will occupy. Moreover, Netbox infrastructure need to be scaled to match
 Salt-Nornir requirements capable of processing appropriate number of
 incoming requests.
 
-Keep in mind that pillar retrieval happens from Salt-Master only, with
-retrieved data pushed to proxy minions for their use. Given Netbox can
-supply significant amount of data, Salt-Master resources should be sized
+Be mindful that pillar retrieval happens from Salt-Master only,
+retrieved data pushed to proxy minions. Netbox capable of supplying
+significant amount of data, Salt-Master resources should be sized
 appropriately to process it in a timely fashion.
 
-Salt-Nornir Proxy uses Nornir workers internally, each worker is an
+Salt-Nornir Proxy Minion uses Nornir workers internally, each worker is an
 instance of Nornir with its own dedicated inventory. As a result, an
 independent copy of pillar data retrieved from Netbox used by each Nornir
 worker. This can raise memory utilization concerns and should be kept an eye on.
 
-It is always good to test this pillar functionality to get an understanding
-of how much resources required before using it in scaled-out deployments.
+It is always good to test this pillar to get an understanding of resources 
+usage in scaled-out deployments.
 
 Dependencies
 ++++++++++++
@@ -51,6 +51,7 @@ Sample external pillar Salt Master configuration::
       - salt_nornir_netbox:
           url: 'http://192.168.115.129:8000'
           token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
+          ssl_verify: True
           use_minion_id_device: True
           use_minion_id_tag: True
           use_hosts_filters: True
@@ -60,6 +61,8 @@ Sample external pillar Salt Master configuration::
           host_add_interfaces_ip: True
           host_add_interfaces_inventory_items: True
           host_add_connections: True
+          data_retrieval_timeout: 120
+          data_retrieval_num_workers: 10
           secrets:
             resolve_secrets: True
             fetch_username: True
@@ -99,10 +102,6 @@ Pillar configuration updates Master's configuration and takes precedence.
 Configuration **not** merged recursively, instead, pillar top key values
 override Master's configuration.
 
-.. warning:: Salt-Nornir Netbox pillar module strives to optimize interaction with
-    Netbox improving efficiency of data retrieval. However, the more data fetched
-    from Netbox the longer it takes to process it.
-
 .. list-table:: Configuration Parameters
    :widths: 10 10 20 60
    :header-rows: 1
@@ -119,6 +118,10 @@ override Master's configuration.
      - N/A
      - N/A
      - Netbox API Token
+   * - ``ssl_verify``
+     - ``True``
+     - ``False``
+     - Configure SSL verification, disabled if set to ``False``   
    * - ``use_minion_id_device``
      - False
      - True or False
@@ -173,6 +176,15 @@ override Master's configuration.
      - N/A
      - | Secrets Configuration Parameters indicating how to retrieve
        | secrets values from Netbox
+   * - ``data_retrieval_timeout``
+     - 120
+     - 60
+     - | Python concurrent futures ``as_completed`` function timeout
+       | to impose hard limit on time to retrieve data from Netbox 
+   * - ``data_retrieval_num_workers``
+     - 10
+     - 5
+     - | Number of multi-threading workers to run to retrive data from Netbox
 
 ``url`` and ``token`` are mandatory parameters. ``salt_nornir_netbox.hosts_filters``
 nomenclature available at Netbox
@@ -238,7 +250,7 @@ proxy minion pillar.
 Sourcing Data from Netbox
 +++++++++++++++++++++++++
 
-salt_nornir_netbox external pillar retrieves data from Netbox using several
+``salt_nornir_netbox`` external pillar retrieves data from Netbox using several
 methods. **By default none of the methods turned on**. All of the methods can be
 used separately or simultaneously, if used simultaneously processing follows
 order below.
@@ -335,8 +347,8 @@ following these rules:
    platform value set equal to the value of device's platform NAPALM Driver. If Netbox
    device has no platform associated and no platform given in configuration context ``nornir``
    section, KeyError raised and device excluded from pillar data
-4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir`` s
-   action, ``hostname`` value set equal to device primary IPv4 address, if primary IPv4
+4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir``
+   section, ``hostname`` value set equal to device primary IPv4 address, if primary IPv4
    address is not defined, primary IPv6 address used, if no primary IPv6 address defined,
    device name is used as a ``hostname`` in assumption that device name is a valid FQDN
 5. If ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's data
@@ -755,6 +767,8 @@ Reference
 import logging
 import requests
 import json
+from concurrent.futures import as_completed, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from salt_nornir.netbox_utils import nb_graphql, get_interfaces, get_connections
@@ -1077,11 +1091,11 @@ def _process_device(device, inventory, params):
     if host_add_connections:
         _host_add_connections(device, host, params)
     # retrieve device secrets
-    if fetch_username:
+    if fetch_username and host.get("username", "nb://username").startswith("nb://"):
         host["username"], _ = _resolve_secret(
             name, host.get("username", "nb://username"), params, strict=True
         )
-    if fetch_password:
+    if fetch_password and host.get("password", "nb://password").startswith("nb://"):
         host["password"], _ = _resolve_secret(
             name, host.get("password", "nb://password"), params, strict=True
         )
@@ -1091,6 +1105,52 @@ def _process_device(device, inventory, params):
     inventory["hosts"][name] = host
     # add device as processed
     RUNTIME_VARS["devices_done"].add(name)
+
+
+def _process_devices_in_threads(num_workers, timeout, devices, inventory, params):
+    """
+    Helper function to run threads to retrieve data from Netbox
+
+    :param device: device dictionary
+    :param inventory: Nornir inventory dictionary to update with host details
+    :param params: salt_nornir_netbox configuration parameters dictionary
+    """
+    devices_done = []
+    futures = []
+    with ThreadPoolExecutor(num_workers) as pool:
+        # start threads
+        futures = {
+            pool.submit(_process_device, device, inventory, params): device["name"]
+            for device in devices
+        }
+        # wait for threads to complete its work
+        try:
+            for future in as_completed(futures, timeout=timeout):
+                device_name = futures[future]
+                devices_done.append(device_name)
+                # check if experienced an error, log it accordingly
+                if future.exception():
+                    log.error(
+                        f"salt_nornir_netbox ThreadPoolExecutor error "
+                        f"processing device '{device_name}': {future.exception()}"
+                    )
+                else:
+                    log.info(
+                        f"salt_nornir_netbox ThreadPoolExecutor finished "
+                        f"processing device '{device_name}'"
+                    )
+        except FuturesTimeoutError:
+            devices_not_done = ", ".join(
+                [
+                    device_name
+                    for device_name in futures.values()
+                    if device_name not in devices_done
+                ]
+            )
+            raise TimeoutError(
+                f"salt_nornir_netbox ThreadPoolExecutor {timeout}s timeout expired, "
+                f"devices not completed - {devices_not_done}"
+            )
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
@@ -1122,6 +1182,8 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     use_minion_id_device = params.get("use_minion_id_device", False)
     use_minion_id_tag = params.get("use_minion_id_tag", False)
     use_hosts_filters = params.get("use_hosts_filters", False)
+    data_retrieval_num_workers = params.get("data_retrieval_num_workers", 10)
+    data_retrieval_timeout = params.get("data_retrieval_timeout", 120)
 
     device_fields = [
         "name",
@@ -1175,48 +1237,61 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                     f"salt_nornir_netbox error while resolving secrets for "
                     f"'{minion_id}' config context data: {e}"
                 )
-            # process hosts one by one
-            for host_name, host_data in ret.get("hosts", {}).items():
-                device = nb_graphql(
-                    "device", {"name": host_name}, device_fields, params
+            # retrieve all hosts details
+            host_names = list(ret.get("hosts", {}))
+            devices_by_minion_id = nb_graphql(
+                "device", {"name": host_names}, device_fields, params
+            )
+            # process hosts
+            try:
+                _process_devices_in_threads(
+                    num_workers=data_retrieval_num_workers,
+                    timeout=data_retrieval_timeout,
+                    devices=devices_by_minion_id,
+                    inventory=ret,
+                    params=params,
                 )
-                try:
-                    if device:
-                        _process_device(device[0], ret, params)
-                except Exception as e:
-                    log.exception(
-                        f"salt_nornir_netbox error while processing device '{host_name}' "
-                        f"from '{minion_id}' config context data: {e}"
-                    )
+            except Exception as e:
+                log.exception(
+                    f"salt_nornir_netbox error while processing device '{host_name}' "
+                    f"from '{minion_id}' config context data: {e}"
+                )
 
     # source devices list using tag value equal to minion id
     if use_minion_id_tag is True:
         ret.setdefault("hosts", {})
-        filt = {"tag": minion_id}
-        devices_by_tag = nb_graphql("device", filt, device_fields, params)
-        while devices_by_tag:
-            device = devices_by_tag.pop()
-            try:
-                _process_device(device, ret, params)
-            except Exception as e:
-                log.exception(
-                    f"salt_nornir_netbox error while retrieving devices by "
-                    f"tag '{minion_id}': {e}"
-                )
+        devices_by_tag = nb_graphql("device", {"tag": minion_id}, device_fields, params)
+        try:
+            _process_devices_in_threads(
+                num_workers=data_retrieval_num_workers,
+                timeout=data_retrieval_timeout,
+                devices=devices_by_tag,
+                inventory=ret,
+                params=params,
+            )
+        except Exception as e:
+            log.exception(
+                f"salt_nornir_netbox error while retrieving devices by "
+                f"tag '{minion_id}': {e}"
+            )
 
     # retrieve devices using hosts filters
     if use_hosts_filters:
         ret.setdefault("hosts", {})
         for filter_item in params.get("hosts_filters") or []:
             devices_by_filter = nb_graphql("device", filter_item, device_fields, params)
-            while devices_by_filter:
-                device = devices_by_filter.pop()
-                try:
-                    _process_device(device, ret, params)
-                except Exception as e:
-                    log.exception(
-                        f"salt_nornir_netbox error while retrieving devices "
-                        f"by hosts filter '{filter_item}': {e}"
-                    )
+            try:
+                _process_devices_in_threads(
+                    num_workers=data_retrieval_num_workers,
+                    timeout=data_retrieval_timeout,
+                    devices=devices_by_filter,
+                    inventory=ret,
+                    params=params,
+                )
+            except Exception as e:
+                log.exception(
+                    f"salt_nornir_netbox error while retrieving devices "
+                    f"by hosts filter '{filter_item}': {e}"
+                )
 
     return ret
