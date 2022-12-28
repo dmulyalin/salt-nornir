@@ -30,6 +30,10 @@ worker. This can raise memory utilization concerns and should be kept an eye on.
 It is always good to test this pillar to get an understanding of resources 
 usage in scaled-out deployments.
 
+.. warning:: Salt-Nornir Netbox Pillar imposes hard timeout of 50 seconds to
+  retrieve data from Netbox for each of the methods. This is done due to hard 
+  timeout of 60 seconds that SaltStack imposes on pillar data composing by master.
+
 Dependencies
 ++++++++++++
 
@@ -177,8 +181,8 @@ override Master's configuration.
      - | Secrets Configuration Parameters indicating how to retrieve
        | secrets values from Netbox
    * - ``data_retrieval_timeout``
+     - 50
      - 120
-     - 60
      - | Python concurrent futures ``as_completed`` function timeout
        | to impose hard limit on time to retrieve data from Netbox 
    * - ``data_retrieval_num_workers``
