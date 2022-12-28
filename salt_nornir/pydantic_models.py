@@ -522,13 +522,14 @@ class model_exec_nr_netbox(ModelExecCommonArgs):
 
     args: Optional[List[StrictStr]]
     task: Optional[EnumNrNetboxTasks]
-    subject: Optional[StrictStr]
-    filt: Optional[Dict[StrictStr, StrictStr]]
+    field: Optional[StrictStr]
+    filters: Optional[Dict[StrictStr, StrictStr]]
     fields: Optional[List[StrictStr]]
     device_name: Optional[Union[StrictStr, List[StrictStr]]]
     add_ip: Optional[StrictBool]
     add_inventory_items: Optional[StrictBool]
-    via: Optional[StrictStr]
+    queries: Optional[Dict]
+    query_string: Optional[StrictStr]
 
     class Config:
         extra = "allow"

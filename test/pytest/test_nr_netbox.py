@@ -54,8 +54,8 @@ def test_netbox_query():
         fun="nr.netbox", 
         arg=["query"], 
         kwarg={
-            "subject": "device",
-            "filt": {"name": "ceos1"},
+            "field": "device_list",
+            "filters": {"name": "ceos1"},
             "fields": ["name", "platform {name}", "primary_ip4 {address}", "status"],
         },
         tgt_type="glob", 
@@ -174,3 +174,37 @@ def test_netbox_update_vrf():
             "Created VRF", "Updated VRF"
         ]
     )
+    
+@skip_if_not_has_netbox
+def test_netbox_query_string():
+    ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.netbox", 
+        arg=["query"], 
+        kwarg={
+            "query_string": 'query{device_list(platform: "eos") {name}}'
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["device_list"], list)
+    assert len(ret["nrp1"]["device_list"]) > 0
+    assert all("name" in i for i in ret["nrp1"]["device_list"])
+    
+@skip_if_not_has_netbox
+def test_netbox_queries_dictionary_and_aliasing():
+    ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.netbox", 
+        arg=["query"], 
+        kwarg={
+            "queries": {"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    assert isinstance(ret["nrp1"]["devices"], list)
+    assert len(ret["nrp1"]["devices"]) > 0
+    assert all("name" in i for i in ret["nrp1"]["devices"])

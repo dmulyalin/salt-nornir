@@ -72,32 +72,75 @@ def get_pynetbox(params):
     return nb
 
 
-def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
+def _form_query(field, filters, fields, alias=None):
     """
-    Helper function to send query to Netbox GraphQL API and
-    return results
+    Helper function to form graphql query
 
-    :param subject: string, subject to return data for e.g. device, interface, ip_address
-    :param filt: dictionary of key-value pairs to filter by
+    :param field: string, field to return data for e.g. device, interface, ip_address
+    :param filters: dictionary of key-value pairs to filter by
+    :param fields: list of data fields to return
+    :param alias: string, alias value for requested field
+    """
+    filters_list = []
+    for k, v in filters.items():
+        if isinstance(v, (list, set, tuple)):
+            items = ", ".join(f'"{i}"' for i in v)
+            filters_list.append(f"{k}: [{items}]")
+        else:
+            filters_list.append(f'{k}: "{v}"')
+    filters_string = ", ".join(filters_list)
+    fields = " ".join(fields)
+    if alias:
+        query = f"{alias}: {field}({filters_string}) {{{fields}}}"
+    else:
+        query = f"{field}({filters_string}) {{{fields}}}"
+
+    return query
+
+
+def nb_graphql(
+    field=None,
+    filters=None,
+    fields=None,
+    params=None,
+    salt_jobs_results=None,
+    queries=None,
+    query_string=None,
+):
+    """
+    Function to send query to Netbox GraphQL API and return results.
+
+    :param field: dictionary of queies or string, field to return data for e.g. device, interface, ip_address
+    :param filters: dictionary of key-value pairs to filter by
     :param fields: list of data fields to return
     :param params: dictionary with salt_nornir_netbox parameters
+    :param salt_jobs_results: dictionary of saltstack job results to extract params from
+    :param queries: dictionary keyed by GraphQL aliases with query data
+    :param query_string: string with GraphQL query
     """
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
     # disable SSL warnings if requested so
     if params.get("ssl_verify") == False:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    # form GraphQL query string
-    filters = []
-    for k, v in filt.items():
-        if isinstance(v, (list, set, tuple)):
-            items = ", ".join(f'"{i}"' for i in v)
-            filters.append(f"{k}: [{items}]")
-        else:
-            filters.append(f'{k}: "{v}"')
-    filters = ", ".join(filters)
-    fields = " ".join(fields)
-    query = f"query {{{subject}_list({filters}) {{{fields}}}}}"
+    # form graphql query(ies) payload
+    if queries:
+        queries_list = []
+        for alias, query_data in queries.items():
+            query_data["alias"] = alias
+            queries_list.append(_form_query(**query_data))
+        queries_strings = "    ".join(queries_list)
+        query = f"query {{{queries_strings}}}"
+    elif field and filters and fields:
+        query = _form_query(field, filters, fields)
+        query = f"query {{{query}}}"
+    elif query_string:
+        query = query_string
+    else:
+        raise RuntimeError(
+            f"nb_graphql expect quieries argument or field, filters, "
+            f"fields arguments or query_string argument provided"
+        )
     payload = json.dumps({"query": query})
     log.debug(
         f"salt_nornir_netbox sending GraphQL query '{payload}' to URL '{params['url']}/graphql/'"
@@ -113,8 +156,12 @@ def nb_graphql(subject, filt, fields, params=None, salt_jobs_results=None):
         data=payload,
         verify=params.get("ssl_verify", True),
     )
+    # return results
     if req.status_code == 200:
-        return req.json()["data"][f"{subject}_list"]
+        if queries or query_string:
+            return req.json()["data"]
+        else:
+            return req.json()["data"][field]
     else:
         log.error(
             f"netbox_utils Netbox GraphQL query failed, query '{query}', "
@@ -141,7 +188,6 @@ def get_interfaces(
     """
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
-    filt = {"device": device_name}
     intf_fields = [
         "name",
         "enabled",
@@ -165,20 +211,22 @@ def get_interfaces(
         "speed",
         "id",
     ]
-    # add IP addresses to interfaces
+    # add IP addresses to interfaces fields
     if add_ip:
         intf_fields.append(
             "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
         )
-
-    interfaces = nb_graphql("interface", filt, intf_fields, params)
-
-    if add_inventory_items:
-        # retrieve inventory items for all device interfaces
-        inv_filt = {
-            "device": device_name,
-            "component_id": [i["id"] for i in interfaces],
+    # form interfaces query dictioney
+    queries = {
+        "interfaces": {
+            "field": "interface_list",
+            "filters": {"device": device_name},
+            "fields": intf_fields,
         }
+    }
+    # add query to retrieve inventory items
+    if add_inventory_items:
+        inv_filters = {"device": device_name, "component_type": "dcim.interface"}
         inv_fields = [
             "name",
             "component_id",
@@ -192,9 +240,19 @@ def get_interfaces(
             "serial",
             "part_id",
         ]
-        inventory_items_list = nb_graphql(
-            "inventory_item", inv_filt, inv_fields, params
-        )
+        queries["inventor_items"] = {
+            "field": "inventory_item_list",
+            "filters": inv_filters,
+            "fields": inv_fields,
+        }
+
+    interfaces_data = nb_graphql(queries=queries, params=params)
+
+    interfaces = interfaces_data.pop("interfaces")
+
+    # process inventory items
+    if add_inventory_items:
+        inventory_items_list = interfaces_data.pop("inventor_items")
         # transform inventory items list to a dictionary keyed by component_id
         inventory_items_dict = {}
         while inventory_items_list:
@@ -202,7 +260,6 @@ def get_interfaces(
             component_id = str(inv_item.pop("component_id"))
             inventory_items_dict.setdefault(component_id, [])
             inventory_items_dict[component_id].append(inv_item)
-
         # iterate over interfaces and add inventory items
         for intf in interfaces:
             intf["inventory_items"] = inventory_items_dict.pop(intf["id"], [])
@@ -228,7 +285,7 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
     # retrieve full list of device cables
-    filt = {"device": device_name}
+    # filt = {"device": device_name}
     cable_fields = [
         "type",
         "status",
@@ -241,7 +298,7 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
         "custom_fields",
         "terminations {termination_id termination_type {model} _device {name}}",
     ]
-    all_cables = nb_graphql("cable", filt, cable_fields, params)
+    all_cables = nb_graphql("cable_list", {"device": device_name}, cable_fields, params)
 
     # iterate over cables to form a list of termination interfaces to retrieve
     interface_ids = []
@@ -267,41 +324,29 @@ def get_connections(device_name, salt_jobs_results=None, params=None):
             cables.append(cable)
 
     # retrieve interfaces and ports from Netbox
-    interfaces = (
-        nb_graphql(
-            subject="interface",
-            filt={"device": device_names, "id": interface_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if interface_ids
-        else []
-    )
-    console_ports = (
-        nb_graphql(
-            subject="console_port",
-            filt={"device": device_names, "id": console_port_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if console_port_ids
-        else []
-    )
-    console_server_ports = (
-        nb_graphql(
-            subject="console_server_port",
-            filt={"device": device_names, "id": console_server_port_ids},
-            fields=["name", "id", "device {name}"],
-            params=params,
-        )
-        if console_server_port_ids
-        else []
-    )
+    queries = {
+        "interfaces": {
+            "field": "interface_list",
+            "filters": {"device": device_names, "id": interface_ids},
+            "fields": ["name", "id", "device {name}"],
+        },
+        "console_ports": {
+            "field": "console_port_list",
+            "filters": {"device": device_names, "id": console_port_ids},
+            "fields": ["name", "id", "device {name}"],
+        },
+        "console_server_ports": {
+            "field": "console_server_port_list",
+            "filters": {"device": device_names, "id": console_server_port_ids},
+            "fields": ["name", "id", "device {name}"],
+        },
+    }
+    ports = nb_graphql(queries=queries, params=params)
 
     # transform termination points data into dictionaries keyed by IDs
-    interfaces = {str(i.pop("id")): i for i in interfaces}
-    console_ports = {str(i.pop("id")): i for i in console_ports}
-    console_server_ports = {str(i.pop("id")): i for i in console_server_ports}
+    interfaces = {str(i.pop("id")): i for i in ports["interfaces"]}
+    console_ports = {str(i.pop("id")): i for i in ports["console_ports"]}
+    console_server_ports = {str(i.pop("id")): i for i in ports["console_server_ports"]}
 
     # process cables list to make cables ditionary keyed
     # by local interface name with connection details
@@ -478,20 +523,26 @@ def create_devices(salt_jobs_results: list, **kwargs):
 
     # get a list of all existing manufacturers from Netbox
     existing_manufacturers = nb_graphql(
-        subject="manufacturer", filt={"name": ""}, fields=["name"], params=netbox_params
+        field="manufacturer_list",
+        filters={"name": ""},
+        fields=["name"],
+        params=netbox_params,
     )
     existing_manufacturers = [i["name"] for i in existing_manufacturers]
 
     # get a list of all existing platforms from Netbox
     existing_platforms = nb_graphql(
-        subject="platform", filt={"name": ""}, fields=["name"], params=netbox_params
+        field="platform_list",
+        filters={"name": ""},
+        fields=["name"],
+        params=netbox_params,
     )
     existing_platforms = [i["name"] for i in existing_platforms]
 
     # get a list of existing devices from Netbox
     existing_devices = nb_graphql(
-        subject="device",
-        filt={"name": list(hosts_platforms.keys())},
+        field="device_list",
+        filters={"name": list(hosts_platforms.keys())},
         fields=["name"],
         params=netbox_params,
     )
@@ -683,8 +734,8 @@ def update_vrf(salt_jobs_results: list, **kwargs):
 
     # retrieve a list of existing route-targets
     existing_rt = nb_graphql(
-        subject="route_target",
-        filt={"name": all_rt},
+        field="route_target_list",
+        filters={"name": all_rt},
         fields=["name", "id"],
         params=netbox_params,
     )
@@ -706,16 +757,16 @@ def update_vrf(salt_jobs_results: list, **kwargs):
 
     # retrieve a list of existing route-targets IDs to add VRF references
     existing_rt = nb_graphql(
-        subject="route_target",
-        filt={"name": all_rt},
+        field="route_target_list",
+        filters={"name": all_rt},
         fields=["name", "id"],
         params=netbox_params,
     )
     existing_rt = {i["name"]: int(i["id"]) for i in existing_rt}
     # retrieve a list of existing VRFs
     existing_vrf = nb_graphql(
-        subject="vrf",
-        filt={"name": list(all_vrf)},
+        field="vrf_list",
+        filters={"name": list(all_vrf)},
         fields=["name", "id"],
         params=netbox_params,
     )

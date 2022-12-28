@@ -3017,7 +3017,7 @@ def netbox(*args, **kwargs):
     * ``dir`` - returns a list of supported tasks functions
     * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
-    * ``query`` - send ``XYZ_list`` Netbox GraphQL API query to retrieve data
+    * ``query`` - query Netbox GraphQL API
     * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
       ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and
       inventory items information for interfaces
@@ -3042,7 +3042,9 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox dir
         salt nrp1 nr.netbox sync_from FB="ceos1"
         salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
-        salt nrp1 nr.netbox query subject="device" filt='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
+        salt nrp1 nr.netbox query field="device_list" filters='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
+        salt nrp1 nr.netbox query queries='{"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}'
+        salt nrp1 nr.netbox query query_string='query{device_list(platform: "eos") {name}}'
         salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
         salt nrp1 nr.netbox get_connections device_name="ceos1"
     """

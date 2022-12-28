@@ -767,6 +767,7 @@ Reference
 import logging
 import requests
 import json
+from threading import RLock
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 
@@ -778,49 +779,58 @@ log = logging.getLogger(__name__)
 __virtualname__ = "salt_nornir_netbox"
 
 RUNTIME_VARS = {"devices_done": set(), "secrets": {}}
+RUNTIME_VARS_LOCK = RLock()
 
 
 def __virtual__():
     return __virtualname__
 
 
-def _netbox_secretstore_get_session_key(params):
+def _netbox_secretstore_get_session_key(params, device_name):
     """
     Function to retrieve netbox_secretstore session key
     """
     # if salt_jobs_results provided, extract Netbox params from it
     if params.get("ssl_verify") == False:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    if "nb_secretstore_session_key" not in RUNTIME_VARS:
-        url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
-            "url_override", "netbox_secretstore"
-        )
-        url = f"{params['url']}/api/plugins/{url_override}/get-session-key/"
-        token = "Token " + params["token"]
-        # read private key content from file
-        key_file = params["secrets"]["plugins"]["netbox_secretstore"]["private_key"]
-        with open(key_file, encoding="utf-8") as kf:
-            private_key = kf.read().strip()
-        # send request to netbox
-        req = requests.post(
-            url,
-            headers={"authorization": token},
-            json={
-                "private_key": private_key,
-                "preserve_key": True,
-            },
-            verify=params.get("ssl_verify", True),
-        )
-        if req.status_code == 200:
-            RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
-        else:
-            raise RuntimeError(
-                f"salt_nornir_netbox failed to get netbox_secretstore session-key, "
-                f"status-code '{req.status_code}', reason '{req.reason}', response "
-                f"content '{req.text}'"
+    with RUNTIME_VARS_LOCK:
+        if "nb_secretstore_session_key" not in RUNTIME_VARS:
+            url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
+                "url_override", "netbox_secretstore"
             )
+            url = f"{params['url']}/api/plugins/{url_override}/get-session-key/"
+            token = "Token " + params["token"]
+            # read private key content from file
+            key_file = params["secrets"]["plugins"]["netbox_secretstore"]["private_key"]
+            with open(key_file, encoding="utf-8") as kf:
+                private_key = kf.read().strip()
+            # send request to netbox
+            req = requests.post(
+                url,
+                headers={"authorization": token},
+                json={
+                    "private_key": private_key,
+                    "preserve_key": True,
+                },
+                verify=params.get("ssl_verify", True),
+            )
+            if req.status_code == 200:
+                RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
+                log.debug(
+                    f"salt_nornir_netbox fetched and saved netbox-secretsore session "
+                    f"key in RUNTIME_VARS while processing '{device_name}'"
+                )
+            else:
+                raise RuntimeError(
+                    f"salt_nornir_netbox failed to get netbox_secretstore session-key, "
+                    f"status-code '{req.status_code}', reason '{req.reason}', response "
+                    f"content '{req.text}'"
+                )
 
-    log.debug("salt_nornir_netbox obtained netbox-secretsore session key")
+    log.debug(
+        f"salt_nornir_netbox retrieved netbox-secretsore session key "
+        f"for '{device_name}' processing"
+    )
 
     return RUNTIME_VARS["nb_secretstore_session_key"]
 
@@ -847,7 +857,7 @@ def _fetch_device_secrets(device_name, params):
             )
             url = f"{params['url']}/api/plugins/{url_override}/secrets/"
             token = "Token " + params["token"]
-            session_key = _netbox_secretstore_get_session_key(params)
+            session_key = _netbox_secretstore_get_session_key(params, device_name)
             # retrieve all device secrets
             req = requests.get(
                 url,
@@ -859,15 +869,16 @@ def _fetch_device_secrets(device_name, params):
                 verify=params.get("ssl_verify", True),
             )
             if req.status_code == 200:
-                RUNTIME_VARS["secrets"].setdefault(device_name, {})
-                RUNTIME_VARS["secrets"][device_name][plugin_name] = [
-                    {
-                        "role": i["role"]["name"],
-                        "name": i["name"],
-                        "value": i["plaintext"],
-                    }
-                    for i in req.json()["results"]
-                ]
+                with RUNTIME_VARS_LOCK:
+                    RUNTIME_VARS["secrets"].setdefault(device_name, {})
+                    RUNTIME_VARS["secrets"][device_name][plugin_name] = [
+                        {
+                            "role": i["role"]["name"],
+                            "name": i["name"],
+                            "value": i["plaintext"],
+                        }
+                        for i in req.json()["results"]
+                    ]
             else:
                 raise RuntimeError(
                     f"salt_nornir_netbox failed to retrieve '{device_name}' device secrets "
@@ -1104,7 +1115,8 @@ def _process_device(device, inventory, params):
     # save host to Nornir inventory
     inventory["hosts"][name] = host
     # add device as processed
-    RUNTIME_VARS["devices_done"].add(name)
+    with RUNTIME_VARS_LOCK:
+        RUNTIME_VARS["devices_done"].add(name)
 
 
 def _process_devices_in_threads(num_workers, timeout, devices, inventory, params):
@@ -1130,10 +1142,13 @@ def _process_devices_in_threads(num_workers, timeout, devices, inventory, params
                 devices_done.append(device_name)
                 # check if experienced an error, log it accordingly
                 if future.exception():
-                    log.error(
-                        f"salt_nornir_netbox ThreadPoolExecutor error "
-                        f"processing device '{device_name}': {future.exception()}"
-                    )
+                    try:
+                        raise future.exception()
+                    except Exception as e:
+                        log.exception(
+                            f"salt_nornir_netbox ThreadPoolExecutor error "
+                            f"processing device '{device_name}': {e}"
+                        )
                 else:
                     log.info(
                         f"salt_nornir_netbox ThreadPoolExecutor finished "
@@ -1183,7 +1198,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     use_minion_id_tag = params.get("use_minion_id_tag", False)
     use_hosts_filters = params.get("use_hosts_filters", False)
     data_retrieval_num_workers = params.get("data_retrieval_num_workers", 10)
-    data_retrieval_timeout = params.get("data_retrieval_timeout", 120)
+    data_retrieval_timeout = params.get("data_retrieval_timeout", 50)
 
     device_fields = [
         "name",
@@ -1209,7 +1224,12 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
     try:
         # request dummy device to verify that Netbox GraphQL API is reachable
-        _ = nb_graphql("device", {"name": "__dummy__"}, ["id"], params)
+        _ = nb_graphql(
+            field="device_list",
+            filters={"name": "__dummy__"},
+            fields=["id"],
+            params=params,
+        )
     except Exception as e:
         log.exception(
             f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
@@ -1221,7 +1241,10 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # source proxy minion pillar from config context
     if use_minion_id_device is True:
         minion_nb = nb_graphql(
-            "device", {"name": minion_id}, ["config_context"], params
+            field="device_list",
+            filters={"name": minion_id},
+            fields=["config_context"],
+            params=params,
         )
         if not minion_nb:
             log.warning(
@@ -1240,7 +1263,10 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             # retrieve all hosts details
             host_names = list(ret.get("hosts", {}))
             devices_by_minion_id = nb_graphql(
-                "device", {"name": host_names}, device_fields, params
+                field="device_list",
+                filters={"name": host_names},
+                fields=device_fields,
+                params=params,
             )
             # process hosts
             try:
@@ -1260,7 +1286,12 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # source devices list using tag value equal to minion id
     if use_minion_id_tag is True:
         ret.setdefault("hosts", {})
-        devices_by_tag = nb_graphql("device", {"tag": minion_id}, device_fields, params)
+        devices_by_tag = nb_graphql(
+            field="device_list",
+            filters={"tag": minion_id},
+            fields=device_fields,
+            params=params,
+        )
         try:
             _process_devices_in_threads(
                 num_workers=data_retrieval_num_workers,
@@ -1275,23 +1306,44 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 f"tag '{minion_id}': {e}"
             )
 
-    # retrieve devices using hosts filters
-    if use_hosts_filters:
+    # # retrieve devices using hosts filters
+    if use_hosts_filters and params.get("hosts_filters"):
         ret.setdefault("hosts", {})
-        for filter_item in params.get("hosts_filters") or []:
-            devices_by_filter = nb_graphql("device", filter_item, device_fields, params)
-            try:
-                _process_devices_in_threads(
-                    num_workers=data_retrieval_num_workers,
-                    timeout=data_retrieval_timeout,
-                    devices=devices_by_filter,
-                    inventory=ret,
-                    params=params,
-                )
-            except Exception as e:
-                log.exception(
-                    f"salt_nornir_netbox error while retrieving devices "
-                    f"by hosts filter '{filter_item}': {e}"
-                )
+        # form queries dictionary out of filters
+        queries = {
+            f"devices_by_filter_{index}": {
+                "field": "device_list",
+                "filters": filter_item,
+                "fields": device_fields,
+            }
+            for index, filter_item in enumerate(params["hosts_filters"])
+        }
+        # send queries
+        devices_query_result = nb_graphql(queries=queries, params=params)
+        # unpack devices into a list
+        devices_by_filter, devices_added = [], set()
+        for devices in devices_query_result.values():
+            for device in devices:
+                if device["name"] not in devices_added:
+                    devices_by_filter.append(device)
+                    devices_added.add(device["name"])
+        log.debug(
+            f"salt_nornir_netbox retrieved devices by host filters for "
+            f"'{minion_id}': '{', '.join(devices_added)}', processing"
+        )
+        # process devices
+        try:
+            _process_devices_in_threads(
+                num_workers=data_retrieval_num_workers,
+                timeout=data_retrieval_timeout,
+                devices=devices_by_filter,
+                inventory=ret,
+                params=params,
+            )
+        except Exception as e:
+            log.exception(
+                f"salt_nornir_netbox '{minion_id}' error while retrieving devices "
+                f"by hosts filter '{filter_item}': {e}"
+            )
 
     return ret
