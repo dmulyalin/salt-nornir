@@ -81,5 +81,8 @@ else:
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+def setup(app):
+   app.add_css_file("stylesheet.css")
+
 # to make crossreferencing section names between documents work
 autosectionlabel_prefix_document = True
