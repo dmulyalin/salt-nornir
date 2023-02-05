@@ -46,6 +46,17 @@ Salt-Nornir Netbox Pillar module uses Netbox REST API for secrets
 retrieval, as a result REST API need to be enabled if secrets fetched
 from Netbox.
 
+Supported Netbox Versions
++++++++++++++++++++++++++
+
++---------+------------------+
+| Netbox  | Salt-Nornir      |
++=========+==================+
+| 3.3     | 0.17, 0.18       |
++---------+------------------+
+| 3.4     | 0.19             |
++---------+------------------+
+
 Configuration Parameters
 ++++++++++++++++++++++++
 
@@ -60,6 +71,7 @@ Sample external pillar Salt Master configuration::
           use_minion_id_tag: True
           use_hosts_filters: True
           use_pillar: True
+          host_primary_ip: ip4,
           host_add_netbox_data: True
           host_add_interfaces: True
           host_add_interfaces_ip: True
@@ -72,12 +84,14 @@ Sample external pillar Salt Master configuration::
             fetch_username: True
             fetch_password: True
             secret_device: keymaster
-            secret_name_map: username
+            secret_name_map: 
+              password: username
             plugins:
               netbox_secretstore:
                 url_override: netbox_secretstore
                 private_key: /etc/salt/netbox_secretstore_private.key
-
+              netbox_secrets:
+                private_key: /etc/salt/netbox_secrets_private.key
 
 If ``use_pillar`` is True, salt_nornir_netbox additional configuration can be
 defined in proxy minion pillar under ``salt_nornir_netbox_pillar`` key::
@@ -96,7 +110,8 @@ defined in proxy minion pillar under ``salt_nornir_netbox_pillar`` key::
         fetch_username: True
         fetch_password: True
         secret_device: nrp1
-        secret_name_map: username
+        secret_name_map: 
+          password: username
         plugins:
           netbox_secretstore:
             url_override: netbox_secretstore
@@ -106,150 +121,80 @@ Pillar configuration updates Master's configuration and takes precedence.
 Configuration **not** merged recursively, instead, pillar top key values
 override Master's configuration.
 
-.. list-table:: Configuration Parameters
-   :widths: 10 10 20 60
-   :header-rows: 1
+Base Configuration Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   * - Name
-     - Default
-     - Example
-     - Description
-   * - ``url``
-     - N/A
-     - 'http://192.168.115.129:8000'
-     - Netbox URL
-   * - ``token``
-     - N/A
-     - N/A
-     - Netbox API Token
-   * - ``ssl_verify``
-     - ``True``
-     - ``False``
-     - Configure SSL verification, disabled if set to ``False``   
-   * - ``use_minion_id_device``
-     - False
-     - True or False
-     - | If True, configuration context data of device with name
-       | equal to proxy minion-id merged with proxy minion pillar
-   * - ``use_minion_id_tag``
-     - False
-     - True or False
-     - | If True, Netbox devices that have tag assigned with value equal
-       | to proxy minion-id included into pillar data
-   * - ``use_hosts_filters``
-     - False
-     - True or False
-     - | If True, devices matched by ``hosts_filters`` processed
-       | and included into pillar data
-   * - ``use_pillar``
-     - False
-     - True or False
-     - | If True, Master's ext_pillar ``salt_nornir_netbox`` configuration
-       | augmented with pillar ``salt_nornir_netbox_pillar`` configuration
-   * - ``host_add_netbox_data``
-     - False
-     - | True, False or
-       | String e.g. ``netbox_data``
-     - | If True, Netbox device data merged with Nornir host's data, if
-       | ``host_add_netbox_data`` is a string, Netbox device data saved into
-       | Nornir host's data under key with ``host_add_netbox_data`` value
-   * - ``host_add_interfaces``
-     - False
-     - | True, False or
-       | String e.g. ``interfaces``
-     - | If True, Netbox device's interfaces data added into Nornir host's data
-       | under ``interfaces`` key. If ``host_add_interfaces`` is a string,
-       | interfaces data added into Nornir host's data under key with
-       | ``host_add_interfaces`` value
-   * - ``host_add_connections``
-     - False
-     - | True, False or
-       | String e.g. ``nb_connections``
-     - | If True, Netbox device's interface and console connections data added
-       | into Nornir host's data under ``conections`` key. If ``host_add_connections``
-       | is a string, connections data added into Nornir host's data under key with
-       | ``host_add_connections`` value
-   * - ``hosts_filters``
-     - None
-     - "name__ic": "ceos1"
-     - | List of dictionaries where each dictionary contains filtering
-       | parameters to filter Netbox devices, Netbox devices that
-       | matched, processed further and included into pillar data
-   * - ``secrets``
-     - N/A
-     - N/A
-     - | Secrets Configuration Parameters indicating how to retrieve
-       | secrets values from Netbox
-   * - ``data_retrieval_timeout``
-     - 50
-     - 120
-     - | Python concurrent futures ``as_completed`` function timeout
-       | to impose hard limit on time to retrieve data from Netbox 
-   * - ``data_retrieval_num_workers``
-     - 10
-     - 5
-     - | Number of multi-threading workers to run to retrive data from Netbox
+* ``url`` - example: ``http://192.168.115.129:8000``; Netbox URL value, mandatory to define 
+    parameter
+* ``token`` - Netbox API Token, mandatory to define parameter
+* ``ssl_verify`` - default: ``True``; Configure SSL verification, disabled if set to ``False``   
+* ``use_minion_id_device`` - default: ``False``; If True, configuration context data of 
+    device with name equal to proxy minion-id merged with proxy minion pillar
+* ``use_minion_id_tag`` - default: ``False``; If True, Netbox devices that have tag assigned 
+    with value equal to proxy minion-id included into pillar data
+* ``use_hosts_filters`` - default: ``False``; If True, devices matched by ``hosts_filters`` 
+    processed and included into pillar data, filters processed in sequence, devices matched 
+    by at least one filter added into proxy minion pillar. Filters nomenclature available at 
+    Netbox `documentation <https://demo.netbox.dev/static/docs/rest-api/filtering/>`_
+* ``use_pillar`` - default: ``False``; If True, Master's ext_pillar ``salt_nornir_netbox`` 
+    configuration augmented with pillar ``salt_nornir_netbox_pillar`` configuration
+* ``host_add_netbox_data`` - default: ``False``, supported values: ``True``, ``False`` or
+    string e.g. ``netbox_data``; If True, Netbox device data merged with Nornir host's data, 
+    if ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's 
+    data under key with ``host_add_netbox_data`` value
+* ``host_add_interfaces`` - default: ``False``, supported values: ``True``, ``False`` or
+    string e.g. ``interfaces``; If True, Netbox device's interfaces data added into Nornir 
+    host's data under ``interfaces`` key. If ``host_add_interfaces`` is a string, interfaces 
+    data added into Nornir host's data under key with ``host_add_interfaces`` value
+* ``host_add_connections`` - default: ``False``, supported values: ``True``, ``False`` or
+    string e.g. ``nb_connections``; If True, Netbox device's interface and console connections 
+    data added into Nornir host's data under ``conections`` key. If ``host_add_connections``
+    is a string, connections data added into Nornir host's data under key with 
+    ``host_add_connections`` value
+* ``host_primary_ip`` - default: ``None``, supported values: ``ip4``, ``ip6`` or ``None``;
+    Control which primary IP to use as host's hostname
+* ``hosts_filters`` - default: N/A, example: ``"name__ic": "ceos1"``; List of dictionaries 
+    where each dictionary contains filtering parameters to filter Netbox devices, Netbox 
+    devices that matched, processed further and included into pillar data
+* ``secrets`` - Secrets Configuration Parameters indicating how to retrieve secrets values 
+    from Netbox
+* ``data_retrieval_timeout`` - default: ``50``; Python concurrent futures ``as_completed`` 
+    function timeout to impose hard limit on time to retrieve data from Netbox 
+* ``data_retrieval_num_workers`` - default: ``10``; Number of multi-threading workers to run 
+    to retrive data from Netbox
 
-``url`` and ``token`` are mandatory parameters. ``salt_nornir_netbox.hosts_filters``
-nomenclature available at Netbox
-`documentation <https://demo.netbox.dev/static/docs/rest-api/filtering/>`_.
-Filters processed in sequence, devices matched by at least one filter added into
-proxy minion pillar.
+Secrets Configuration Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table:: Secrets Configuration Parameters
-   :widths: 10 10 20 60
-   :header-rows: 1
+* ``resolve_secrets`` - default: ``True``; If True, attempts to resolve secrets values 
+    defined using URL like strings
+* ``fetch_username`` - default: ``True``; If True, attempts to retrieve host's username 
+    from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
+    data.
+* ``fetch_password`` - default: ``True``; If True, attempts to retrieve host's password 
+    from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
+    data.
+* ``secret_device`` - default: N/A, example: ``keymaster-1``; Name of netbox device to 
+    retrieve secrets from by default
+* ``secret_name_map`` - default: N/A, example: ``password: username``; List of dictionaries 
+    keyed by secret key names with values of the of the inventory data key name to assign 
+    secret name to
+* ``plugins`` - Netbox Secrets Plugins Configuration Parameters, supported values: 
+    ``netbox_secretstore``
 
-   * - Name
-     - Default
-     - Example
-     - Description
-   * - ``resolve_secrets``
-     - True
-     - True or False
-     - | If True, attempts to resolve secrets values defined using
-       | URL like strings
-   * - ``fetch_username``
-     - True
-     - True or False
-     - | If True, attempts to retrieve host's username from Netbox
-       | secrets plugins, raises error if fails to do so, removing
-       | host from pillar data.
-   * - ``fetch_password``
-     - True
-     - True or False
-     - | If True, attempts to retrieve host's password from Netbox
-       | secrets plugins, raises error if fails to do so, removing
-       | host from pillar data.
-   * - ``secret_device``
-     - N/A
-     - keymaster
-     - Name of netbox device to retrieve secrets from by default
-   * - ``secret_name_map``
-     - N/A
-     - username
-     - Name of the inventory data key to assign secret name to
-   * - ``plugins``
-     - N/A
-     - N/A
-     - Netbox Secrets Plugins Configuration Parameters
+netbox_secretstore Secrets Plugin Configuration Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table:: netbox_secretstore Secrets Plugin Configuration Parameters
-   :widths: 10 10 20 60
-   :header-rows: 1
+* ``private_key`` - default: N/A, example: ``/etc/salt/nb_secretstore.key``
+    OS Path to file with netbox_secretstore RSA Private Key content
+* ``url_override`` - default: ``netbox_secretstore``, example: ``netbox_secretstore_fork``;
+    Used to customize plugin URL ``{netbox_url}/api/plugins/{url_override}/secrets/``
+    
+netbox_secrets Secrets Plugin Configuration Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   * - Parameter
-     - Default
-     - Example
-     - Description
-   * - ``private_key``
-     - N/A
-     - "/etc/salt/nb_secretstore.key"
-     - OS Path to file with netbox_secretstore RSA Private Key content
-   * - ``url_override``
-     - ``netbox_secretstore``
-     - ``netbox_secretstore_fork``
-     - Used to customize plugin URL "{netbox_url}/api/plugins/{url_override}/secrets/"
+* ``private_key`` - default: N/A, example: ``/etc/salt/nb_secrets.key``
+    OS Path to file with netbox_secrets RSA Private Key content
 
 Sourcing Data from Netbox
 +++++++++++++++++++++++++
@@ -352,9 +297,11 @@ following these rules:
    device has no platform associated and no platform given in configuration context ``nornir``
    section, KeyError raised and device excluded from pillar data
 4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir``
-   section, ``hostname`` value set equal to device primary IPv4 address, if primary IPv4
-   address is not defined, primary IPv6 address used, if no primary IPv6 address defined,
-   device name is used as a ``hostname`` in assumption that device name is a valid FQDN
+   section, ``hostname`` value set equal to device primary IPv4 address if ``host_primary_ip``
+   is set to ``ip4`` or not configured at all, if primary IPv4 address is not defined, primary 
+   IPv6 address used if ``host_primary_ip`` is set to ``ip6`` or not configured at all, if 
+   no primary IPv6 address defined, device name is used as a ``hostname`` in assumption that 
+   device name is a valid FQDN
 5. If ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's data
    using ``host_add_netbox_data`` value as a key. For example, if value of ``host_add_netbox_data``
    is `netbox_data`, Netbox device data saved into Nornir host's data under `netbox_data` key.
@@ -416,7 +363,8 @@ Sample device data sourced from Netbox, ``host_add_netbox_data`` key name equal 
 Sourcing Secrets from Netbox
 ++++++++++++++++++++++++++++
 
-salt_nornir_netbox supports
+salt_nornir_netbox supports a number of secrets plugins.
+
 `netbox_secretstore <https://github.com/DanSheps/netbox-secretstore>`_
 plugin to source secrets. netbox_secretstore should be installed and
 configured as a Netbox plugin. RSA private key need to be generated for
@@ -432,10 +380,33 @@ to be uploaded to Master and configured in Master's ext_pillar::
             fetch_username: True
             fetch_password: True
             secret_device: keymaster
-            secret_name_map: username
+            secret_name_map: 
+              password: username
             plugins:
               netbox_secretstore:
                 private_key: /etc/salt/netbox_secretstore_private.key
+
+`netbox_secrets <https://github.com/Onemind-Services-LLC/netbox-secrets/>`_
+plugin to source secrets. netbox_secrets should be installed and
+configured as a Netbox plugin. RSA private key need to be generated for
+the user which token is used to work with Netbox, private key need
+to be uploaded to Master and configured in Master's ext_pillar::
+
+    ext_pillar:
+      - salt_nornir_netbox:
+          token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
+          secrets:
+            resolve_secrets: True
+            fetch_username: True
+            fetch_password: True
+            secret_device: keymaster
+            secret_name_map: 
+              password: username
+            plugins:
+              netbox_secrets:
+                private_key: /etc/salt/netbox_secrets_private.key
+                
+.. note:: netbox_secrets supported starting with Salt-Nornir version 0.19.0
 
 Alternatively, secrets plugins configuration can be defined in Salt-Nornir
 Proxy Minion pillar if Master's ext_pillar configuration has ``use_pillar``
@@ -457,6 +428,9 @@ Any of inventory keys can use value of URL string in one of the formats:
    given ``secret-name``across all plugins and secret roles, uses same
    rule for ``device-name`` as in case 2
 
+.. note:: `secret-role` refers to secret role name, but starting with version 
+    0.18.1 `secret-role` can refer to secret role slug as well
+    
 salt_nornir_netbox recursively iterates over entire data sourced from Netbox
 and attempts to resolve keys using specified secrets URLs.
 
@@ -723,38 +697,92 @@ default it is set to ``connections``.
 Connections retrieved for device interfaces and console ports and combined
 into a dictionary keyed by device interface names.
 
-Sample device interfaces connections data retrieved from Netbox::
+Sample device connections data retrieved from Netbox::
 
-    hosts:
-      ceos1:
-        data:
-          connections:
-            ConsolePort1:
+  hosts:
+    fceos4:
+      connection_options: {}
+      data:
+        connections:
+          ConsolePort1:
+            breakout: false
+            cable:
               custom_fields: {}
               label: ''
-              last_updated: '2022-09-19T18:47:52.533889+00:00'
+              last_updated: '2022-12-30T06:21:48.819037+00:00'
               length: null
               length_unit: null
-              remote_device: fceos5
-              remote_interface: ConsoleServerPort1
               status: CONNECTED
               tags: []
               tenant:
                 name: SALTNORNIR
               type: CAT6A
-            eth1:
+            reachable: true
+            remote_device: fceos5
+            remote_interface: ConsoleServerPort1
+            remote_termination_type: consoleserverport
+            termination_type: consoleport
+          PowerOutlet-1:
+            breakout: false
+            cable:
               custom_fields: {}
               label: ''
-              last_updated: '2022-09-19T18:47:48.091871+00:00'
+              last_updated: '2022-12-30T06:21:49.048937+00:00'
               length: null
               length_unit: null
-              remote_device: fceos5
-              remote_interface: eth1
+              status: CONNECTED
+              tags: []
+              tenant:
+                name: SALTNORNIR
+              type: POWER
+            reachable: true
+            remote_device: fceos5
+            remote_interface: PowerPort-1
+            remote_termination_type: powerport
+            termination_type: poweroutlet
+          eth1:
+            breakout: true
+            cable:
+              custom_fields: {}
+              label: ''
+              last_updated: '2022-12-30T06:21:47.258167+00:00'
+              length: null
+              length_unit: null
               status: CONNECTED
               tags: []
               tenant:
                 name: SALTNORNIR
               type: CAT6A
+            reachable: true
+            remote_device: fceos5
+            remote_interface:
+            - eth1
+            - eth10
+            remote_termination_type: interface
+            termination_type: interface
+          eth101:
+            cable:
+              custom_fields: {}
+              label: ''
+              last_updated: '2022-12-30T06:21:52.925936+00:00'
+              length: null
+              length_unit: null
+              status: CONNECTED
+              tags: []
+              tenant: null
+              type: SMF
+            circuit:
+              cid: CID1
+              commit_rate: null
+              custom_fields: {}
+              description: ''
+              provider:
+                name: Provider1
+              status: ACTIVE
+              tags: []
+            reachable: true
+            remote_termination_type: circuittermination
+            termination_type: interface
 
 Reference
 +++++++++
@@ -767,6 +795,7 @@ Reference
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._host_add_interfaces
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._host_add_connections
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._netbox_secretstore_get_session_key
+.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._netbox_secrets_get_session_key
 """
 import logging
 import requests
@@ -821,7 +850,7 @@ def _netbox_secretstore_get_session_key(params, device_name):
             if req.status_code == 200:
                 RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
                 log.debug(
-                    f"salt_nornir_netbox fetched and saved netbox-secretsore session "
+                    f"salt_nornir_netbox fetched and saved netbox-secretstore session "
                     f"key in RUNTIME_VARS while processing '{device_name}'"
                 )
             else:
@@ -832,11 +861,57 @@ def _netbox_secretstore_get_session_key(params, device_name):
                 )
 
     log.debug(
-        f"salt_nornir_netbox retrieved netbox-secretsore session key "
+        f"salt_nornir_netbox retrieved netbox-secretstore session key "
         f"for '{device_name}' processing"
     )
 
     return RUNTIME_VARS["nb_secretstore_session_key"]
+
+
+def _netbox_secrets_get_session_key(params, device_name):
+    """
+    Function to retrieve netbox_secretstore session key
+    """
+    # if salt_jobs_results provided, extract Netbox params from it
+    if params.get("ssl_verify") == False:
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    with RUNTIME_VARS_LOCK:
+        if "nb_secretstore_session_key" not in RUNTIME_VARS:
+            url = f"{params['url']}/api/plugins/secrets/get-session-key/"
+            token = "Token " + params["token"]
+            # read private key content from file
+            key_file = params["secrets"]["plugins"]["netbox_secrets"]["private_key"]
+            with open(key_file, encoding="utf-8") as kf:
+                private_key = kf.read().strip()
+            # send request to netbox
+            req = requests.post(
+                url,
+                headers={"authorization": token},
+                json={
+                    "private_key": private_key,
+                    "preserve_key": True,
+                },
+                verify=params.get("ssl_verify", True),
+            )
+            if req.status_code == 200:
+                RUNTIME_VARS["nb_secrets_session_key"] = req.json()["session_key"]
+                log.debug(
+                    f"salt_nornir_netbox fetched and saved netbox-secrets session "
+                    f"key in RUNTIME_VARS while processing '{device_name}'"
+                )
+            else:
+                raise RuntimeError(
+                    f"salt_nornir_netbox failed to get netbox_secrets session-key, "
+                    f"status-code '{req.status_code}', reason '{req.reason}', response "
+                    f"content '{req.text}'"
+                )
+
+    log.debug(
+        f"salt_nornir_netbox retrieved netbox-secrets session key "
+        f"for '{device_name}' processing"
+    )
+
+    return RUNTIME_VARS["nb_secrets_session_key"]
 
 
 def _fetch_device_secrets(device_name, params):
@@ -851,8 +926,14 @@ def _fetch_device_secrets(device_name, params):
     # if salt_jobs_results provided, extract Netbox params from it
     if params.get("ssl_verify") == False:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    # check if secret plugins configured
+    if not params.get("secrets", {}).get("plugins"):
+        raise RuntimeError(
+            f"Failed to retrieve '{device_name}' device secrets - "
+            f"no secrets plugins configured."
+        )
     # retrieve device secrets
-    for plugin_name in params.get("secrets", {}).get("plugins", {}).keys():
+    for plugin_name in params["secrets"]["plugins"].keys():
         if RUNTIME_VARS["secrets"].get(device_name, {}).get(plugin_name):
             return RUNTIME_VARS["secrets"][device_name]
         elif plugin_name == "netbox_secretstore":
@@ -878,6 +959,49 @@ def _fetch_device_secrets(device_name, params):
                     RUNTIME_VARS["secrets"][device_name][plugin_name] = [
                         {
                             "role": i["role"]["name"],
+                            "role_slug": i["role"]["slug"],
+                            "name": i["name"],
+                            "value": i["plaintext"],
+                        }
+                        for i in req.json()["results"]
+                    ]
+            else:
+                raise RuntimeError(
+                    f"salt_nornir_netbox failed to retrieve '{device_name}' device secrets "
+                    f"from '{req.url}', status-code '{req.status_code}', reason '{req.reason}', "
+                    f"response content '{req.text}'"
+                )
+        elif plugin_name == "netbox_secrets":
+            url = f"{params['url']}/api/plugins/secrets/secrets/"
+            token = "Token " + params["token"]
+            session_key = _netbox_secrets_get_session_key(params, device_name)
+            # fetch device id using Netbox GraphQL API
+            nb_device = nb_graphql(
+                field="device_list",
+                filters={"name": device_name},
+                fields=["id"],
+                params=params,
+            )
+            # retrieve all device secrets
+            req = requests.get(
+                url,
+                headers={
+                    "X-Session-Key": session_key,
+                    "authorization": token,
+                },
+                params={
+                    "assigned_object_type": "dcim.device",
+                    "assigned_object_id": nb_device[0]["id"],
+                },
+                verify=params.get("ssl_verify", True),
+            )
+            if req.status_code == 200:
+                with RUNTIME_VARS_LOCK:
+                    RUNTIME_VARS["secrets"].setdefault(device_name, {})
+                    RUNTIME_VARS["secrets"][device_name][plugin_name] = [
+                        {
+                            "role": i["role"]["name"],
+                            "role_slug": i["role"]["slug"],
                             "name": i["name"],
                             "value": i["plaintext"],
                         }
@@ -903,7 +1027,7 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
     :param secret_path: string, path to the secret in one of the supported formats
     :param params: dictionary with salt_nornir_netbox parameters
     :param strict: bool, if True raise KeyError if no secret found, return None otherwise
-    :return: secret value and secret name or None, None if fail to resolve
+    :return: secret value and secret name or (None, None) if fail to resolve
 
     Supported secret key path formats:
 
@@ -944,7 +1068,12 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
         if secret_plugin and plugin_name != secret_plugin:
             continue
         for secret in secrets:
-            if secret_role and secret_role != secret["role"]:
+            # check secret role if its given
+            if secret_role and (
+                secret_role != secret["role"]
+                and secret_role  # check role name
+                != secret["role_slug"]  # check role slug
+            ):
                 continue
             if secret_name == secret["name"]:
                 log.debug(
@@ -963,6 +1092,20 @@ def _resolve_secret(device_name, secret_path, params, strict=False):
         else:
             log.debug(message)
         return None, None
+
+
+def _secret_name_map(key: str, params: dict, data: dict, secret_name: str):
+    """
+    Helper function to add secret name in host's inventory.
+
+    :param key: name of the key to map secret name for
+    :param params: netbox secrets plugins configuration parameters
+    :param data: host inventory data
+    :param secret_name: name of the secret retrieved from netbox
+    """
+    if key in params["secrets"].get("secret_name_map", {}):
+        secret_name_map_key = params["secrets"]["secret_name_map"][key]
+        data[secret_name_map_key] = secret_name
 
 
 def _resolve_secrets(data, device_name, params):
@@ -986,9 +1129,7 @@ def _resolve_secrets(data, device_name, params):
                 secret_value, secret_name = _resolve_secret(
                     device_name, data[k], params
                 )
-                if k in params["secrets"].get("secret_name_map", {}):
-                    secret_name_map_key = params["secrets"]["secret_name_map"][k]
-                    data[secret_name_map_key] = secret_name
+                _secret_name_map(k, params, data, secret_name)
                 data[k] = secret_value
             # run recursion otherwise
             else:
@@ -1058,7 +1199,7 @@ def _process_device(device, inventory, params):
     Helper function to extract data to form Nornir host entry out
     of Netbox device entry.
 
-    :param device: device dictionary
+    :param device: Netbox device data dictionary
     :param inventory: Nornir inventory dictionary to update with host details
     :param params: salt_nornir_netbox configuration parameters dictionary
     """
@@ -1071,6 +1212,7 @@ def _process_device(device, inventory, params):
     host_add_netbox_data = params.get("host_add_netbox_data", False)
     host_add_interfaces = params.get("host_add_interfaces", False)
     host_add_connections = params.get("host_add_connections", False)
+    host_primary_ip = params.get("host_primary_ip", None)
     resolve_secrets = params.get("secrets", {}).get("resolve_secrets", False)
     fetch_username = params.get("secrets", {}).get("fetch_username", False)
     fetch_password = params.get("secrets", {}).get("fetch_password", False)
@@ -1085,20 +1227,24 @@ def _process_device(device, inventory, params):
             raise KeyError(f"salt_nornir_netbox no platform found for '{name}' device")
     # add hostname if not provided in config context
     if not host.get("hostname"):
-        if device["primary_ip4"]:
+        if device["primary_ip4"] and host_primary_ip in ["ip4", None]:
             host["hostname"] = device["primary_ip4"]["address"].split("/")[0]
-        elif device["primary_ip6"]:
+        elif device["primary_ip6"] and host_primary_ip in ["ip6", None]:
             host["hostname"] = device["primary_ip6"]["address"].split("/")[0]
         else:
             host["hostname"] = name
     # save device data under host data
-    if isinstance(host_add_netbox_data, str) and host_add_netbox_data.strip():
-        host.setdefault("data", {})
-        host["data"].setdefault(host_add_netbox_data, {})
-        host["data"][host_add_netbox_data].update(device)
-    elif host_add_netbox_data is True:
-        host.setdefault("data", {})
-        host["data"].update(device)
+    if host_add_netbox_data:
+        # transform tags dictionaries to lists
+        device["tags"] = [t["name"] for t in device["tags"]]
+        device["site"]["tags"] = [t["name"] for t in device["site"]["tags"]]
+        if isinstance(host_add_netbox_data, str) and host_add_netbox_data.strip():
+            host.setdefault("data", {})
+            host["data"].setdefault(host_add_netbox_data, {})
+            host["data"][host_add_netbox_data].update(device)
+        elif host_add_netbox_data is True:
+            host.setdefault("data", {})
+            host["data"].update(device)
     # retrieve interfaces data
     if host_add_interfaces:
         _host_add_interfaces(device, host, params)
@@ -1107,13 +1253,15 @@ def _process_device(device, inventory, params):
         _host_add_connections(device, host, params)
     # retrieve device secrets
     if fetch_username and host.get("username", "nb://username").startswith("nb://"):
-        host["username"], _ = _resolve_secret(
+        host["username"], secret_name = _resolve_secret(
             name, host.get("username", "nb://username"), params, strict=True
         )
+        _secret_name_map("username", params, host, secret_name)
     if fetch_password and host.get("password", "nb://password").startswith("nb://"):
-        host["password"], _ = _resolve_secret(
+        host["password"], secret_name = _resolve_secret(
             name, host.get("password", "nb://password"), params, strict=True
         )
+        _secret_name_map("password", params, host, secret_name)
     if resolve_secrets:
         _resolve_secrets(host, name, params)
     # save host to Nornir inventory
@@ -1216,7 +1364,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         "platform {name napalm_driver}",
         "serial",
         "asset_tag",
-        "site {name}",
+        "site {name tags{name}}",
         "location {name}",
         "rack {name}",
         "status",
@@ -1233,12 +1381,12 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             filters={"name": "__dummy__"},
             fields=["id"],
             params=params,
+            raise_for_status=True,
         )
     except Exception as e:
         log.exception(
             f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
-            f"'{params['url']}', token ends with '..{params['token'][-6:]}', "
-            f"error '{e}'"
+            f"'{params['url']}', token ends with '..{params['token'][-6:]}'"
         )
         return ret
 
@@ -1310,7 +1458,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 f"tag '{minion_id}': {e}"
             )
 
-    # # retrieve devices using hosts filters
+    # retrieve devices using hosts filters
     if use_hosts_filters and params.get("hosts_filters"):
         ret.setdefault("hosts", {})
         # form queries dictionary out of filters
@@ -1347,7 +1495,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         except Exception as e:
             log.exception(
                 f"salt_nornir_netbox '{minion_id}' error while retrieving devices "
-                f"by hosts filter '{filter_item}': {e}"
+                f"by hosts filter: {e}"
             )
 
     return ret

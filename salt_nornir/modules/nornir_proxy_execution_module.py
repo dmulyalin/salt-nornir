@@ -976,6 +976,8 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
 +-----------------+---------------------------------------------------+--------------------+
+| `nr.snmp`_      | Function to manage davices over SNMP protocol     |                    |
++-----------------+---------------------------------------------------+--------------------+
 | `nr.task`_      | Function to run any Nornir task plugin            |                    |
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.test`_      | Function to test show commands output             | netmiko (default), |
@@ -1048,6 +1050,11 @@ nr.nornir
 +++++++++
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
+
+nr.snmp
++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.snmp
 
 nr.task
 +++++++
@@ -3018,6 +3025,7 @@ def netbox(*args, **kwargs):
     * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
     * ``sync_to`` - sync Nornir host's inventory data to Netbox device
     * ``query`` - query Netbox GraphQL API
+    * ``rest`` - query Netbox REST API using requests
     * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
       ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and
       inventory items information for interfaces
@@ -3047,6 +3055,8 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox query query_string='query{device_list(platform: "eos") {name}}'
         salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
         salt nrp1 nr.netbox get_connections device_name="ceos1"
+        salt nrp1 nr.netbox rest get "dcim/interfaces" params='{"name__ic": "eth1", "device": "fceos4"}'
+        salt nrp1 nr.netbox rest method=get api="dcim/interfaces" params='{"device": "fceos4"}'
     """
     task_name = args[0] if args else kwargs.pop("task")
     salt_jobs_results = []
@@ -3059,6 +3069,7 @@ def netbox(*args, **kwargs):
     )
     if not task_hosts:
         raise CommandExecutionError("No hosts matched")
+
     # source list of Salt Jobs to run
     tasks_list = netbox_tasks[task_name]["salt_jobs"](hosts=task_hosts)
     # execute Salt Jobs to retrieve data
@@ -3068,8 +3079,10 @@ def netbox(*args, **kwargs):
                 *task_data.get("args", []), **task_data.get("kwargs", {})
             )
         )
+
     # run Netbox task using Salt Jobs results
     return netbox_tasks[task_name]["task_function"](
         salt_jobs_results=salt_jobs_results,
+        *args[1:],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")},
     )

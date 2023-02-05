@@ -310,10 +310,10 @@ class TestProxyNRP3:
         fceos5_conns = nrp3_inventory["nrp3"]["hosts"]["fceos5"]["data"]["connections"]        
         assert isinstance(fceos4_conns, dict), "fceos4 connections data is not a dictionary"
         assert isinstance(fceos5_conns, dict), "fceos5 connections data is not a dictionary"
-        assert all("remote_device" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_device"
-        assert all("remote_device" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_device"
-        assert all("remote_interface" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_interface"
-        assert all("remote_interface" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_interface"
+        assert all("remote_device" in i or "circuit" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_device"
+        assert all("remote_device" in i or "circuit" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_device"
+        assert all("remote_interface" in i or "circuit" in i for i in fceos4_conns.values()), "fceos4 connections item has no remote_interface"
+        assert all("remote_interface" in i or "circuit" in i for i in fceos5_conns.values()), "fceos5 connections item has no remote_interface"
         
     def test_use_minion_id_device_fceos8_retrieved(self, nrp3_inventory):  
         """

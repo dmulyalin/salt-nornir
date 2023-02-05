@@ -21,7 +21,7 @@ Or install GIT and install latest code from master brunch::
 
 Salt-Nornir Minion need to be installed on proxy minion machine.
 
-.. info:: If planning to use ``salt-nornir-runner`` module, ``salt-nornir`` should be 
+.. note:: If planning to use ``salt-nornir-runner`` module, ``salt-nornir`` should be 
    installed on Salt Master machine as well.
 
 For installation of SaltStack master and minion/proxy-minion modules

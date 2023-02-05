@@ -31,6 +31,10 @@ services:
       - type: bind
         source: .
         target: /tmp/salt_nornir/
+      # bind PICLE package for development
+      - type: bind
+        source: ../PICLE/picle
+        target: /usr/local/lib/python3.9/site-packages/picle/
 
   salt-minion-nrp1:
     container_name: salt-minion-nrp1

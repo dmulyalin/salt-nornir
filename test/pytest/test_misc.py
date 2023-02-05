@@ -1400,6 +1400,282 @@ def test_RetryRunner_with_run_creds_retry():
         assert v == True, "Worker did not removed ceos1-1 ?"
         
         
+def test_RetryRunner_with_run_creds_retry_conn_options():
+    """
+    This test uses connection options to derive per connection
+    parameters while retrying them.
+    """
+    print("Adding ceos1-1 hosts with wrong credentials")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+            "username": "wrong",
+            "password": "wrong",
+            "data": {
+                "credentials": {
+                    "local_creds": {
+                        # these params are for Netmiko
+                        "username": "nornir",
+                        "password": "nornir",
+                        "platform": "arista_eos",
+                        "port": 22,
+                        "extras": {
+                            "conn_timeout": 10,
+                            "auto_connect": True,
+                            "session_timeout": 60
+                        },
+                        "connection_options": {
+                            # Napalm specific parameters
+                            "napalm": {
+                                "username": "nornir",
+                                "platform": "eos",
+                                "port": 80,
+                                "extras": {
+                                    "optional_args": {
+                                        "transport": "http",
+                                        "eos_autoComplete": None
+                                    }
+                                }
+                            },
+                            # Scrapli specific parameters
+                            "scrapli": {
+                                "password": "nornir",
+                                "platform": "arista_eos",
+                                "port": 22,
+                                "extras": {
+                                    "auth_strict_key": False,
+                                    "ssh_config_file": False
+                                }
+                            }
+                        }
+                    },
+                    "local_creds_old": {
+                        "username": "nornir",
+                        "password": "wrong"
+                    }
+                }
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret_add_ceos1_1)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Netmiko")
+    ret1_cli_ceos1_1_netmiko = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "netmiko"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_netmiko)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Scrapli")
+    ret1_cli_ceos1_1_scrapli = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "scrapli"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_scrapli)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Napalm")
+    ret1_cli_ceos1_1_napalm = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "napalm"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_napalm)
+    
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(remove_ceos1_1)
+    
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify command output
+    assert isinstance(ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"]
+    assert isinstance(ret1_cli_ceos1_1_scrapli["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_scrapli["nrp1"]["ceos1-1"]["show clock"]
+    assert isinstance(ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"]
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Workers did not removed ceos1-1?"
+        
+        
+def test_RetryRunner_with_run_creds_retry_conn_options_only():
+    """
+    This test uses connection options to derive per connection
+    parameters while retrying them.
+    """
+    print("Adding ceos1-1 hosts with wrong credentials")
+    ret_add_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg={
+            "name": "ceos1-1",
+            "hostname": "10.0.1.4",
+            "platform": "arista_eos",
+            "groups": ["lab", "eos_params"],
+            "username": "wrong",
+            "password": "wrong",
+            "data": {
+                "credentials": {
+                    "local_creds": {
+                        "username": "nornir",
+                        "password": "nornir",
+                        "connection_options": {
+                            # Napalm specific parameters
+                            "napalm": {
+                                "platform": "eos",
+                                "port": 80,
+                                "extras": {
+                                    "optional_args": {
+                                        "transport": "http",
+                                        "eos_autoComplete": None
+                                    }
+                                }
+                            },
+                            # Scrapli specific parameters
+                            "scrapli": {
+                                "platform": "arista_eos",
+                                "port": 22,
+                                "extras": {
+                                    "auth_strict_key": False,
+                                    "ssh_config_file": False
+                                }
+                            },
+                             # these params are for Netmiko
+                            "netmiko": {
+                                "platform": "arista_eos",
+                                "port": 22,
+                                "extras": {
+                                    "conn_timeout": 10,
+                                    "auto_connect": True,
+                                    "session_timeout": 60
+                                }
+                            }
+                        }
+                    },
+                    "local_creds_old": {
+                        "username": "nornir",
+                        "password": "wrong"
+                    }
+                }
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret_add_ceos1_1)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Netmiko")
+    ret1_cli_ceos1_1_netmiko = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "netmiko"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_netmiko)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Scrapli")
+    ret1_cli_ceos1_1_scrapli = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "scrapli"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_scrapli)
+    
+    print("Connecting to ceos1-1 using run_creds_retry and running show clock using Napalm")
+    ret1_cli_ceos1_1_napalm = client.cmd(
+        tgt="nrp1",
+        fun="nr.cli",
+        arg=["show clock"],
+        kwarg={
+            "run_creds_retry": ["local_creds", "local_creds_old"],
+            "FB": "ceos1-1",
+            "plugin": "napalm"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )   
+    pprint.pprint(ret1_cli_ceos1_1_napalm)
+    
+    print("Removing ceos1-1 from inventory")
+    remove_ceos1_1 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "delete_host"],
+        kwarg={"name": "ceos1-1"},
+        tgt_type="glob",
+        timeout=60,
+    )    
+    pprint.pprint(remove_ceos1_1)
+    
+    # verify device added
+    for v in ret_add_ceos1_1["nrp1"].values():
+        assert v == True, "Worker did not add ceos1-1 ?"
+    # verify command output
+    assert isinstance(ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"]
+    assert isinstance(ret1_cli_ceos1_1_scrapli["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_scrapli["nrp1"]["ceos1-1"]["show clock"]
+    assert isinstance(ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"], str)
+    assert "Traceback" not in ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"]
+    # verify device deleted
+    for v in remove_ceos1_1["nrp1"].values():
+        assert v == True, "Workers did not removed ceos1-1?"
+        
+        
 def test_RetryRunner_with_run_creds_retry_all_failed():
     print("Adding ceos1-1 hosts with wrong credentials")
     ret_add_ceos1_1 = client.cmd(

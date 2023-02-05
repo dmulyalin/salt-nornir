@@ -64,6 +64,7 @@ import os
 import pprint
 import queue
 import copy
+import traceback
 
 from threading import Thread, Event
 from salt_nornir.pydantic_models import (
@@ -72,7 +73,7 @@ from salt_nornir.pydantic_models import (
     model_runner_nr_event,
     model_runner_nr_cfg,
     model_runner_nr_diagram,
-    SaltNornirMasterModel,
+    SaltNornirShell,
 )
 
 log = logging.getLogger(__name__)
@@ -126,7 +127,7 @@ def __virtual__():
         globals()["opts"] = salt.config.master_config(__opts__["conf_file"])
         opts["quiet"] = True  # make runners calls not emit results to cli
         # initialise runner client
-        globals()["runner"] = salt.runner.RunnerClient(opts)
+        # globals()["runner"] = salt.runner.RunnerClient(opts)
         return __virtualname__
     else:
         return False
@@ -188,16 +189,13 @@ def _run_job(
             tgt=tgt, fun=fun, arg=arg, kwarg=kwarg, tgt_type=tgt_type, timeout=timeout
         )
         # check if no minions matched by target
-        # print(pub_data)
         if "jid" not in pub_data:
             # kill local client instance
             if hasattr(client, "destroy"):
                 client.destroy()
             if raise_no_tgt_match:
                 raise CommandExecutionError(
-                    "No minions matched by tgt '{}', tgt_type '{}'".format(
-                        tgt, tgt_type
-                    )
+                    f"No minions matched by tgt '{tgt}', tgt_type '{tgt_type}'"
                 )
             else:
                 return {}
@@ -231,37 +229,31 @@ def _run_job(
             else:
                 minions_no_return = set(pub_data["minions"]) - set(ret.keys())
         else:
-            log.warning(
-                "Nornir-runner:_run_job - {}s timeout; no results from {}; returned {}; jid {}; attempt: {}".format(
-                    timeout,
-                    list(minions_no_return),
-                    list(ret.keys()),
-                    pub_data["jid"],
-                    attempt,
-                )
-            )
-            # retry job but only for minions that did not return results
             attempt += 1
-            tgt = list(minions_no_return)
-            tgt_type = "list"
-            # stop progress thread and wait for 5 seconds
-            stop_signal.set()
-            time.sleep(5)
-            # inform user about retry
-            log.info(
-                "Retrying '{fun}' for '{tgt}', attempt {attempt}\n".format(
-                    fun=fun, tgt=tgt, attempt=attempt
+            # check if need to run onve more loop
+            if attempt <= job_retry:
+                log.warning(
+                    f"Nornir-Runner:run_job - {timeout}s timeout; "
+                    f"no results from '{', '.join(list(minions_no_return))}'; "
+                    f"returned '{', '.join(list(ret.keys()))}'; "
+                    f"jid {pub_data['jid']}; attempt: {attempt}"
                 )
-            )
-            continue
+                # retry job but only for minions that did not return results
+                tgt = list(minions_no_return)
+                tgt_type = "list"
+                # stop progress thread and wait for 5 seconds
+                stop_signal.set()
+                time.sleep(5)
+                # inform user about retry
+                log.info(f"Retrying '{fun}' for '{tgt}', attempt {attempt}\n")
         # if we get to this point - job did not timeout and we received results from all minions
         if minions_no_return is None:
             break
     else:
         log.error(
-            "Nornir-runner:_run_job - no results from minions '{}'; tgt: {}; fun: {}; tgt_type: {}; timeout: {}; job_retry: {}; kwarg: {}".format(
-                minions_no_return, tgt, fun, tgt_type, timeout, job_retry, kwarg
-            )
+            "Nornir-Runner:run_job - no results from minions "
+            f"'{', '.join(minions_no_return)}'; tgt: '{tgt}'; tgt_type: {tgt_type}; "
+            f"fun: {fun}; timeout: {timeout}; job_retry: {job_retry}; kwarg: {kwarg}"
         )
     # stop eventloop thread
     if show_progress:
@@ -306,12 +298,17 @@ def _form_ret_results(ret, job_results, ret_struct):
                     ret[minion_id] += "\n\n" + result["ret"]
                 else:
                     ret[minion_id] = result["ret"]
-            elif isinstance(result["ret"], list):
+            # handle list of dictionaries case
+            elif isinstance(result["ret"], list) and isinstance(result["ret"][0], dict):
                 for i in result["ret"]:
                     i["minion_id"] = minion_id
                     host = i.pop("host")
                     ret.setdefault(host, [])
                     ret[host].append(i)
+            # handle list of strings case
+            elif isinstance(result["ret"], list) and isinstance(result["ret"][0], str):
+                ret.setdefault(minion_id, [])
+                ret[minion_id].extend(result["ret"])
             else:
                 raise TypeError(
                     "Unsupported result type '{}', supported str or list".format(
@@ -1224,23 +1221,19 @@ def diagram(*args, **kwargs):
     return f"'{data_plugin}' diagram in '{diagram_plugin}' format saved at: '{out_folder}{os.sep}{out_filename}'"
 
 
-def service(*args, **kwargs):
+def shell(*args, **kwargs):
     """
-    Function to deploy service on a set of network devices.
+    Function to start Salt-Nornir interactive shell.
 
-    Sample usage::
-
-        salt-run nr.service activate Loopback1234
-        salt-run nr.service deactivate Loopback1234
-        salt-run nr.service activate Loopback1234 FB="host-1" data="{'host-1': {'ip': '10.0.0.1', 'mask': 32}}"
-        salt-run nr.service list Loopback1234
-        salt-run nr.service dry-run Loopback1234
+    'Picle <>'_ module need to be installed
     """
-    pass
+    from picle import App
 
-
-def generate_bash_autocomplete(*args, **kwargs):
-    """
-    Function to generate bash autocompletion for Salt-Nornir functions
-    """
-    pprint(SaltNornirMasterModel.schema())
+    try:
+        shell = App(SaltNornirShell)
+        shell.start()
+    except ImportError:
+        print("Failed importing PICLE module, install: pip install picle")
+    except:
+        tb = traceback.format_exc()
+        print(tb)

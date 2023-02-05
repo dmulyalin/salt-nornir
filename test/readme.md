@@ -200,9 +200,12 @@ To test functions related to integration with Netbox need to
 spun up Netbox container from 
 [netbox-docker repository](https://github.com/netbox-community/netbox-docker)
 
-To test secrets need to add netbox-secretstore plugin to netbox-docker 
+To test netbox-secretstore plugin to netbox-docker 
 container deployment following 
 [documentation instructions](https://github.com/netbox-community/netbox-docker/wiki/Using-Netbox-Plugins)
+
+To test netbox-secrets plugin need to install it following
+[documentation instructions](https://github.com/Onemind-Services-LLC/netbox-secrets/)
 
 Once Netbox instance is up and running, need to update file 
 `salt_nornir/test/pytest/netbox_data.py` with correct URL.
@@ -214,6 +217,9 @@ the script:
 ```
 python3 salt_nornir/test/pytest/netbox_data.py
 ```
+
+Adjust `NB_SECRETS_PLUGIN` value in `netbox_data.py` file to reflect installed
+secrets plugin - `netbox_secrets` or `netbox_secretstore` to populate with data.
 
 Running netbox_data script will prompt user for input to decide on what to do.
 For example, to clean and re-populate Netbox can use option 3:
@@ -267,7 +273,97 @@ Test environment configured to use default netbox-docker credentials of:
 - API Token: 0123456789abcdef0123456789abcdef01234567
 
 If any of above changes, need to make sure to adjust respective `netbox_data.py`
-sript variables.
+script variables.
+
+To enable Netbox TLS interaction, follow 
+[this guide](https://github.com/netbox-community/netbox-docker/wiki/TLS) 
+to confgire Caddy WEB server.
+
+### Sample files
+
+File `docker-compose.override.yml` content to enable plugins and Caddy TLS:
+
+```
+version: '3.4'
+services:
+  netbox:
+    ports:
+      - 8000:8080
+    build:
+      context: .
+      dockerfile: Dockerfile-Plugins
+    image: netbox:latest-plugins
+  netbox-worker:
+    image: netbox:latest-plugins
+    build:
+      context: .
+      dockerfile: Dockerfile-Plugins
+  netbox-housekeeping:
+    image: netbox:latest-plugins
+    build:
+      context: .
+      dockerfile: Dockerfile-Plugins
+  tls:
+    image: caddy:2-alpine
+    depends_on:
+      - netbox
+    volumes:
+      - ./cert.crt:/etc/ssl/private/cert.crt:ro,z
+      - ./key.key:/etc/ssl/private/key.key:ro,z
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - 80:80   # Allows for http redirection
+      - 443:443
+```
+
+File `Caddyfile` to enable Caddy TLS:
+
+```
+192.168.75.200, 0.0.0.0, 172.23.0.7, 127.0.0.1, 172.23.0.8 {   # This line should match the ALLOWED_HOSTS in your NetBox Docker configuration
+    reverse_proxy netbox:8080
+    encode gzip zstd
+    tls /etc/ssl/private/cert.crt /etc/ssl/private/key.key
+    log {
+      level error
+    }
+}
+```
+
+File `Dockerfile-Plugins` to enable plugins:
+
+```
+FROM netboxcommunity/netbox:latest
+
+COPY ./plugin_requirements.txt /
+RUN /opt/netbox/venv/bin/pip install  --no-warn-script-location -r /plugin_requirements.txt
+
+# These lines are only required if your plugin has its own static files.
+COPY configuration/configuration.py /etc/netbox/config/configuration.py
+RUN SECRET_KEY="dummy" /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py collectstatic --no-input
+```
+
+File `plugin_requirements.txt` to install `netbox_secretstore` plugin:
+
+```
+netbox-secretstore
+```
+
+File `configuration/configuration.py` to enable `netbox_secretstore` plugin and Caddy TLS:
+
+```
+...
+
+# Example: ALLOWED_HOSTS = ['netbox.example.com', 'netbox.internal.local']
+ALLOWED_HOSTS = ["192.168.75.200", "0.0.0.0", "172.23.0.7", "127.0.0.1", "172.23.0.8"]
+
+...
+
+# Enable installed plugins. Add the name of each plugin to the list.
+PLUGINS = ["netbox_secretstore"]
+
+...
+```
+
 
 ## Troubleshooting
 

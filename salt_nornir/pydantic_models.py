@@ -2,6 +2,7 @@
 File to contain pydantic models for Salt-Nornir modules functions
 """
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -15,16 +16,38 @@ from pydantic import (
     StrictStr,
     conlist,
 )
-from typing import Union, Optional, List, Any, Dict
+from typing import Union, Optional, List, Any, Dict, Callable
 from nornir_salt.utils.pydantic_models import FilesCallsEnum, model_ffun_fx_filters
 from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
 
+try:
+    from picle import Cache as PicleCache
+
+    HAS_PICLE = True
+except ImportError:
+    HAS_PICLE = False
+
 # import salt libs, wrapping it in try/except for docs to generate
 try:
+    import salt.client
+    import salt.config
+    import salt.utils.event
     from salt.exceptions import CommandExecutionError
-except:
-    log.error("Salt-Nornir Pydantic modesl - failed importing SALT libraries")
 
+    HAS_SALT = True
+except:
+    log.error("Salt-Nornir Pydantic models - failed importing SALT libraries")
+    HAS_SALT = False
+
+if HAS_SALT:
+    opts = salt.config.master_config("/etc/salt/master")
+    opts["quiet"] = True
+    salt_runner = salt.runner.RunnerClient(opts)
+
+# instantiate cache object
+GLOBAL_CACHE = (
+    PicleCache("/var/salt-nornir/master/cache/picle.cache") if HAS_PICLE else {}
+)
 
 # ---------------------------------------------------------------
 # Execution Module Function Models
@@ -99,14 +122,35 @@ class EnumExecNrCliPlugins(str, Enum):
 class model_exec_nr_cli(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.cli function arguments"""
 
-    args: Optional[Union[List[StrictStr], StrictStr]]
-    commands: Optional[Union[List[StrictStr], StrictStr]]
-    plugin: Optional[EnumExecNrCliPlugins] = "netmiko"
-    filename: Optional[StrictStr]
+    args: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, description="CLI arguments list"
+    )
+    commands: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, description="Show commands to collect from devices"
+    )
+    plugin: Optional[EnumExecNrCliPlugins] = Field(
+        "netmiko", description="Connection plugin to use"
+    )
+    filename: Optional[StrictStr] = Field(
+        "netmiko", description="URL to file with multiline commands string"
+    )
 
     class Config:
         arbitrary_types_allowed = True
         extra = "allow"
+
+    @staticmethod
+    def run(*args, **kwargs):
+        return salt_runner.cmd("nr.call", arg=["cli"], kwarg=kwargs)
+
+    @staticmethod
+    def source_filename():
+        try:
+            return os.listdir("/etc/salt/cli/")
+        except FileNotFoundError:
+            return [
+                "Cannot source filenames chaoices, OS path '/etc/salt/cli/' does not exists"
+            ]
 
     @root_validator(pre=True)
     def check_commands_given(cls, values):
@@ -515,9 +559,10 @@ class EnumNrNetboxTasks(str, Enum):
     update_config_context = "update_config_context"
     update_vrf = "update_vrf"
     parse_config = "parse_config"
+    rest = "rest"
 
 
-class model_exec_nr_netbox(ModelExecCommonArgs):
+class model_exec_nr_netbox(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""
 
     args: Optional[List[StrictStr]]
@@ -606,13 +651,18 @@ class model_runner_nr_inventory(model_ffun_fx_filters):
     reverse: Optional[StrictBool]
     sortby: Optional[StrictStr]
     tree: Optional[StrictBool]
+    list_proxy: Optional[StrictBool]
 
     class Config:
         extra = "forbid"
 
     @root_validator(pre=True)
     def check_params_given(cls, values):
-        if not (values.get("args") or any(F in values for F in FFun_functions)):
+        if not (
+            values.get("args")
+            or any(F in values for F in FFun_functions)
+            or values.get("list_proxy")
+        ):
             raise CommandExecutionError("No host filter provided")
         return values
 
@@ -634,7 +684,7 @@ class model_runner_nr_call(model_ffun_fx_filters):
 
     args: Optional[List[StrictStr]]
     fun: Optional[StrictStr]
-    tgt: Optional[StrictStr]
+    tgt: Optional[Union[StrictStr, List[StrictStr]]]
     tgt_type: Optional[StrictStr]
     job_retry: Optional[StrictInt]
     job_timeout: Optional[StrictInt]
@@ -802,28 +852,48 @@ class model_nornir_config(BaseModel):
 
 
 class SaltNornirExecutionFunctions(BaseModel):
-    cli: model_exec_nr_cli
-    tas: model_exec_nr_task
-    cfg: model_exec_nr_cfg
-    tping: model_exec_nr_tping
-    test: model_exec_nr_test
-    nc: model_exec_nr_nc
-    http: model_exec_nr_http
-    do: model_exec_nr_do
-    file: model_exec_nr_file
-    learn: model_exec_nr_learn
-    find: model_exec_nr_find
-    diff: model_exec_nr_diff
-    nornir_fun: model_exec_nr_nornir_fun
-    gnmi: model_exec_nr_gnmi
-    snmp: model_exec_nr_snmp
-    netbox: model_exec_nr_netbox
+    cli: model_exec_nr_cli = Field(None, description="Send show commands to devices")
+    task: model_exec_nr_task = Field(
+        None, description="Run arbitrary Nornir task plugin"
+    )
+    cfg: model_exec_nr_cfg = Field(None, description="Configure devices")
+    tping: model_exec_nr_tping = Field(None, description="Test devices TCP connections")
+    test: model_exec_nr_test = Field(None, description="Run test suites")
+    nc: model_exec_nr_nc = Field(None, description="Manage devices using Netconf")
+    http: model_exec_nr_http = Field(None, description="Manage devices using HTTP(S)")
+    do: model_exec_nr_do = Field(None, description="Run simple workflows")
+    file: model_exec_nr_file = Field(
+        None, description="Work with Salt-Nornir Proxy Minion files"
+    )
+    learn: model_exec_nr_learn = Field(
+        None, description="Save jobs output to Salt-Nornir Proxy Minion files"
+    )
+    find: model_exec_nr_find = Field(
+        None, description="Search across Salt-Nornir Proxy Minion files"
+    )
+    diff: model_exec_nr_diff = Field(
+        None, description="Produce difference for Salt-Nornir Proxy Minion files"
+    )
+    nornir_fun: model_exec_nr_nornir_fun = Field(
+        None, description="Salt-Nornir Proxy Minion utilities"
+    )
+    gnmi: model_exec_nr_gnmi = Field(None, description="Manage devices using gNMI")
+    snmp: model_exec_nr_snmp = Field(None, description="Manage devices using SNMP")
+    netbox: model_exec_nr_netbox = Field(None, description="Interact with Netbox DCIM")
+
+    class PicleConfig:
+        subshell = True
+        prompt = "salt[exec]#"
 
 
 class SaltNornirStateFunctions(BaseModel):
     task: model_exec_nr_task
     cfg: model_exec_nr_cfg
     workflow: model_state_nr_workflow
+
+    class PicleConfig:
+        subshell = True
+        prompt = "salt[state]#"
 
 
 class SaltNornirRunnerFunctions(BaseModel):
@@ -833,9 +903,78 @@ class SaltNornirRunnerFunctions(BaseModel):
     cfg: model_runner_nr_cfg
     diagram: model_runner_nr_diagram
 
+    class PicleConfig:
+        subshell = True
+        prompt = "salt[run]#"
 
-class SaltNornirMasterModel(BaseModel):
-    execution: SaltNornirExecutionFunctions
-    state: SaltNornirStateFunctions
-    runner: SaltNornirRunnerFunctions
-    config: model_nornir_config
+
+class ShowNornirCommandModel(BaseModel):
+    version: Callable = Field(
+        "show_version", description="Show Nornir Proxy Minions software version"
+    )
+    minions: Optional[Union[StrictStr, List[StrictStr]]] = Field(
+        None, description="Proxy Minions to target"
+    )
+
+    @staticmethod
+    def show_version(minions: list = None):
+        minions = minions or []
+        ret = salt_runner.cmd(
+            "nr.call",
+            arg=["nornir", "version"],
+            kwarg={"tgt": minions, "tgt_type": "list"},
+        )
+        for k, v in ret.items():
+            print(f"{k}\n{v}\n\n")
+
+    @classmethod
+    def source_minions(self):
+        return GLOBAL_CACHE["minions"]
+
+
+class ShowCommandModel(BaseModel):
+    version: Callable = Field("show_version", description="Show software version")
+    nornir: ShowNornirCommandModel = Field(None, description="Nornir show commands")
+
+    @staticmethod
+    def show_version():
+        return "Salt-Nornir Version 0.18.0"
+
+
+class SaltNornirShell(BaseModel):
+    execution: SaltNornirExecutionFunctions = Field(
+        None, description="Salt-Nornir Execution modules"
+    )
+    state: SaltNornirStateFunctions = Field(
+        None, description="Salt-Nornir State modules"
+    )
+    runner: SaltNornirRunnerFunctions = Field(
+        None, description="Salt-Nornir Runner modules"
+    )
+    show: ShowCommandModel = Field(None, description="Show commands")
+    hosts: StrictStr = Field(None, description="Nornir Hosts")
+
+    class PicleConfig:
+        subshell = True
+        prompt = "salt#"
+        intro = "Welcome to Salt-Nornir Interactive Shell."
+        methods_override = {"preloop": "cmd_preloop_override"}
+
+    @classmethod
+    def cmd_preloop_override(self):
+        """This Methos called before CMD loop starts"""
+        print("Collecting hosts inventory...")
+        hosts = salt_runner.cmd(
+            "nr.inventory",
+            arg=[],
+            kwarg={"job_retry": 0, "job_timeout": 5, "FB": "*", "table": False},
+        )
+        GLOBAL_CACHE["minions"] = set()
+        GLOBAL_CACHE["hosts"] = {}
+        for host in hosts:
+            GLOBAL_CACHE["minions"].add(host["minion"])
+            GLOBAL_CACHE["hosts"][host.pop("host")] = host
+
+    @classmethod
+    def source_hosts(self):
+        return list(GLOBAL_CACHE["hosts"])

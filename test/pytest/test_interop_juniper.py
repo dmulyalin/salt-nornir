@@ -78,6 +78,32 @@ data: {{}}
 groups: []
 """
 
+ 
+junos_test_device_params_creds_retry = f"""
+name: vSRX-1-creds-retry
+hostname: {JUNOS_DEVICE_IP}
+platform: juniper
+connection_options:
+  napalm:
+    platform: junos
+    username: nornir-wrong
+    extras:
+      optional_args:
+        key_file: /root/.ssh/id_rsa
+        auto_probe: 0
+        config_private: False
+data: 
+  credentials:
+     ssh_key_auth:
+        username: "nornir-ssh-key"
+     local_account:
+        username: "nornir"
+        password: "nornir123"  
+        extras:
+          optional_args:
+            key_file: False
+"""
+
 # check if junos endpoint reachable
 s = socket.socket()
 s.settimeout(5)
@@ -108,14 +134,26 @@ def add_juniper_hosts():
         tgt_type="glob",
         timeout=60,
     )    
+    print(f"Added juniper host to {test_proxy_id}")
     pprint.pprint(ret_add_juniper_box)
+    ret_add_juniper_box_2nd = client.cmd(
+        tgt=test_proxy_id,
+        fun="nr.nornir",
+        arg=["inventory", "create_host"],
+        kwarg=yaml.safe_load(junos_test_device_params_creds_retry),
+        tgt_type="glob",
+        timeout=60,
+    )    
+    print(f"Added second juniper host to {test_proxy_id}")
+    pprint.pprint(ret_add_juniper_box_2nd)
 
+    
 def enable_netconf():
     ret = client.cmd(
         tgt=test_proxy_id,
         fun="nr.cfg",
         arg=["set system services netconf ssh"],
-        kwarg={"FM": "*jun*", "plugin": "netmiko"},
+        kwarg={"FB": "vSRX-1", "plugin": "netmiko"},
         tgt_type="glob",
         timeout=60,
     )    
@@ -127,12 +165,12 @@ if has_junos_device:
 
 @skip_if_not_junos_device
 class TestJunosNrCli:        
-    def test_cli_command(self):
+    def test_cli_command_netmiko(self):
         ret = client.cmd(
             tgt=test_proxy_id,
             fun="nr.cli",
             arg=["show version"],
-            kwarg={"add_details": True, "FM": "*jun*"},
+            kwarg={"add_details": True, "FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -148,12 +186,33 @@ class TestJunosNrCli:
             assert isinstance(data["show version"]["result"], str)   
             assert "Traceback" not in data["show version"]["result"]
 
+    def test_cli_command_napalm(self):
+        ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cli",
+            arg=["show version"],
+            kwarg={"add_details": True, "FB": "vSRX-1", "plugin": "napalm"},
+            tgt_type="glob",
+            timeout=60,
+        )
+        pprint.pprint(ret)
+        assert ret[test_proxy_id] not in [{}, [], None]
+        for host_name, data in ret[test_proxy_id].items():
+            assert "show version" in data, f"No 'show version' output from '{host_name}'"
+            assert isinstance(data["show version"], dict)
+            assert "result" in data["show version"]
+            assert "diff" in data["show version"]
+            assert data["show version"]["exception"] == None
+            assert data["show version"]["failed"] is False
+            assert isinstance(data["show version"]["result"], str)   
+            assert "Traceback" not in data["show version"]["result"]
+            
     def test_cli_configure_use_ps_multiline(self):
         ret = client.cmd(
             tgt=test_proxy_id,
             fun="nr.cli",
             arg=["salt://templates/juniper_jinja_multiline_test.j2"],
-            kwarg={"add_details": True, "FM": "*jun*", "use_ps": True},
+            kwarg={"add_details": True, "FB": "vSRX-1", "use_ps": True},
             tgt_type="glob",
             timeout=60,
         )
@@ -162,7 +221,38 @@ class TestJunosNrCli:
         for host_name, data in ret[test_proxy_id].items():        
             assert "unknown command" not in data["configure"]["result"]
             assert r"test\nbanner\nstring\n" in data["configure"]["result"]
+
+    def test_cli_command_napalm_run_creds_retry(self):
+        """
+        This test uses junos_test_device_params_creds_retry inventory and iterates over
+        ssh key auth first using "nornir-wrong" username, next using "nornir-ssh-key" and
+        at last using username "nornir" and password with key auth disabled.
+        """
+        ret = client.cmd(
+            tgt=test_proxy_id,
+            fun="nr.cli",
+            arg=["show version"],
+            kwarg={
+                "FB": "vSRX-1-creds-retry", 
+                "plugin": "napalm",
+                "run_creds_retry": ["ssh_key_auth", "local_account"],
+                "add_details": True
+            },
+            tgt_type="glob",
+            timeout=60,
+        )
+        pprint.pprint(ret)
+        for host_name, data in ret[test_proxy_id].items():
+            assert "show version" in data, f"No 'show version' output from '{host_name}'"
+            assert isinstance(data["show version"], dict)
+            assert "result" in data["show version"]
+            assert "diff" in data["show version"]
+            assert data["show version"]["exception"] == None
+            assert data["show version"]["failed"] is False
+            assert isinstance(data["show version"]["result"], str)   
+            assert "Traceback" not in data["show version"]["result"]
             
+        
 @skip_if_not_junos_device
 class TestJunosNrCfg:      
     def test_netmiko_config_inline_multiline(self):
@@ -171,7 +261,7 @@ class TestJunosNrCfg:
             tgt=test_proxy_id,
             fun="nr.cfg",
             arg=[f'set system login message "test\\n\\string\\n{rand_id}"'],
-            kwarg={"FM": "*jun*", "plugin": "netmiko"},
+            kwarg={"FB": "vSRX-1", "plugin": "netmiko"},
             tgt_type="glob",
             timeout=60,
         )
@@ -179,7 +269,7 @@ class TestJunosNrCfg:
             tgt=test_proxy_id,
             fun="nr.cli",
             arg=['show configuration system login message'],
-            kwarg={"FM": "*jun*"},
+            kwarg={"FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -207,7 +297,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id, 
             fun="nr.nc", 
             arg=["dir"], 
-            kwarg={"FM": "*jun*"}, 
+            kwarg={"FB": "vSRX-1"}, 
             tgt_type="glob", 
             timeout=60
         )
@@ -222,7 +312,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["connected"],
-            kwarg={"FM": "*jun*"},
+            kwarg={"FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -235,7 +325,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["server_capabilities"],
-            kwarg={"FM": "*jun*"},
+            kwarg={"FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -255,7 +345,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": [
                     "subtree", 
                     "<configuration><interfaces><interface/></interfaces></configuration>"
@@ -282,7 +372,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -324,7 +414,7 @@ class TestJunosNrNc:
             kwarg={
                 "target": "candidate",
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -334,7 +424,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["commit"],
-            kwarg={"FM": "*jun*"},
+            kwarg={"FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -344,7 +434,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -403,7 +493,7 @@ class TestJunosNrNc:
             kwarg={
                 "target": "candidate",
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -413,7 +503,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["commit"],
-            kwarg={"FM": "*jun*"},
+            kwarg={"FB": "vSRX-1"},
             tgt_type="glob",
             timeout=60,
         )
@@ -423,7 +513,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><system><login><message/></login></system></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -482,7 +572,7 @@ class TestJunosNrNc:
             arg=["transaction"],
             kwarg={
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -493,7 +583,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -526,7 +616,7 @@ class TestJunosNrNc:
             arg=["transaction"],
             kwarg={
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "edit_rpc": "load_configuration",
                 "edit_arg": {
                     "action": "set",
@@ -541,7 +631,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -575,7 +665,7 @@ class TestJunosNrNc:
             arg=["transaction"],
             kwarg={
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "edit_rpc": "load_configuration",
                 "edit_arg": {
                     "action": "set",
@@ -595,7 +685,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "ftype": "subtree", 
                 "source": "running",
@@ -609,7 +699,7 @@ class TestJunosNrNc:
             fun="nr.cli",
             arg=["show system commit"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -642,7 +732,7 @@ class TestJunosNrNc:
             arg=["rpc"],
             kwarg={
                 "rpc": "<get-system-uptime-information/>",
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -657,7 +747,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id, 
             fun="nr.nc", 
             arg=["dir"], 
-            kwarg={"FM": "*jun*", "plugin": "scrapli"}, 
+            kwarg={"FB": "vSRX-1", "plugin": "scrapli"}, 
             tgt_type="glob", 
             timeout=60
         )
@@ -672,7 +762,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["server_capabilities"],
-            kwarg={"FM": "*jun*", "plugin": "scrapli"},
+            kwarg={"FB": "vSRX-1", "plugin": "scrapli"},
             tgt_type="glob",
             timeout=60,
         )
@@ -695,7 +785,7 @@ class TestJunosNrNc:
                 "filter_": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "source": "running",
                 "plugin": "scrapli",
-                "FM": "*jun*",
+                "FB": "vSRX-1",
             },
             tgt_type="glob",
             timeout=60,
@@ -733,7 +823,7 @@ class TestJunosNrNc:
             kwarg={
                 "target": "candidate",
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "plugin": "scrapli",
             },
             tgt_type="glob",
@@ -744,7 +834,7 @@ class TestJunosNrNc:
             tgt=test_proxy_id,
             fun="nr.nc",
             arg=["commit"],
-            kwarg={"FM": "*jun*", "plugin": "scrapli"},
+            kwarg={"FB": "vSRX-1", "plugin": "scrapli"},
             tgt_type="glob",
             timeout=60,
         )
@@ -754,7 +844,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter_": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "source": "running",
                 "plugin": "scrapli",
@@ -813,7 +903,7 @@ class TestJunosNrNc:
             arg=["transaction"],
             kwarg={
                 "config": payload,
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "plugin": "scrapli",
             },
             tgt_type="glob",
@@ -825,7 +915,7 @@ class TestJunosNrNc:
             fun="nr.nc",
             arg=["get_config"],
             kwarg={
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "filter_": "<configuration><interfaces><interface/></interfaces></configuration>",
                 "source": "running",
                 "plugin": "scrapli",
@@ -854,7 +944,7 @@ class TestJunosNrNc:
             arg=["rpc"],
             kwarg={
                 "filter_": "<get-system-uptime-information/>",
-                "FM": "*jun*",
+                "FB": "vSRX-1",
                 "plugin": "scrapli",
             },
             tgt_type="glob",
