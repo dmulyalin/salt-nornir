@@ -1106,6 +1106,10 @@ def diagram(*args, **kwargs):
     filegroup = kwargs.pop("filegroup", None)
     last = kwargs.pop("last", 1)
 
+    # increase read timeout value for netmiko
+    if cli["plugin"] == "netmiko":
+        cli.setdefault("read_timeout", 120)
+
     # construct argument for call functions
     call_kwargs = {
         "tgt": kwargs.pop("tgt", "proxy:proxytype:nornir"),

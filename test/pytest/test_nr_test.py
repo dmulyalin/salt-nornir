@@ -701,3 +701,71 @@ def test_nr_test_jinja2_template_suite_rendering_fail():
     assert "Traceback" in ret["nrp1"]
     assert "ERROR" in ret["nrp1"]
     assert "rendering failed for 'ceos2'" in ret["nrp1"]
+    
+    
+def test_nr_test_suite_in_host_data():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "{{ host.tests.suite1 }}",
+            "FB": "ceos1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert ret == {'nrp1': [{'changed': False,
+           'connection_retry': 0,
+           'criteria': '1.2.3',
+           'diff': '',
+           'exception': 'Pattern not in output',
+           'failed': True,
+           'host': 'ceos1',
+           'name': 'check ceos version',
+           'result': 'FAIL',
+           'success': False,
+           'task': 'show version',
+           'task_retry': 0,
+           'test': 'contains'},
+          {'changed': False,
+           'connection_retry': 0,
+           'criteria': 'Clock source: local',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'check local clock',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
+    
+def test_nr_test_suite_list_of_dict():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": [{"task": "show clock", "test": "contains", "pattern": "NTP", "name": "Test NTP"}],
+            "FB": "ceos1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)    
+    assert ret == {'nrp1': [{'changed': False,
+           'connection_retry': 0,
+           'criteria': 'NTP',
+           'diff': '',
+           'exception': 'Pattern not in output',
+           'failed': True,
+           'host': 'ceos1',
+           'name': 'Test NTP',
+           'result': 'FAIL',
+           'success': False,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}

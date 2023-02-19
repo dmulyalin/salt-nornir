@@ -1,0 +1,15 @@
+{% set interfaces = salt['nr.netbox']('get_interfaces', 'ceos1') %}
+  
+{% for interface_name, interface_data in interfaces.items() %}
+- task: "show interface {{ interface_name }}"
+  test: contains_lines
+  pattern: 
+    - {{ interface_data.mtu }}
+    - {{ interface_data.description }}
+{% if interface_data.enabled == True %}
+    - "is up, line protocol is up"
+{% elif interface_data.enabled == False %}
+    - "is down, admin down"
+{% endif %}
+  name: check interface {{ interface_name }} status
+{% endfor %}

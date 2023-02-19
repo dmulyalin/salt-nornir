@@ -88,6 +88,23 @@ groups:
 hosts:
   ceos1:
     connection_options:
+      inband:
+        hostname: 10.0.1.4
+        port: 22
+      console:
+        hostname: 10.0.1.4
+        port: 22
+        username: nornir
+        password: nornir
+        extras:
+          redispatch:
+            username: nornir
+            password: nornir
+            platform: arista_eos
+      console2:
+        hostname: 10.0.1.4
+        extras:
+          redispatch: True      
       puresnmp:
         extras:
           community: public
@@ -128,6 +145,16 @@ hosts:
       syslog:
       - 1.1.1.1
       - 2.2.2.2
+      tests:
+        suite1:
+        - name: check ceos version
+          pattern: 1.2.3
+          task: show version
+          test: contains
+        - name: check local clock
+          pattern: 'Clock source: local'
+          task: show clock
+          test: contains
     groups:
     - lab
     - eos_params

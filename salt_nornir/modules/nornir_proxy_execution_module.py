@@ -1596,11 +1596,13 @@ def test(*args, **kwargs):
         salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" table=brief
         salt nrp1 nr.test commands='["show run | inc ntp"]' test=contains pattern="1.1.1.1" cli='{"enable": True}'
 
-    Sample usage with a suite of test cases::
+    Sample usage with a test cases suite::
 
         salt np1 nr.test suite=salt://tests/suite_1.txt
         salt np1 nr.test suite=salt://tests/suite_1.txt table=brief
         salt np1 nr.test suite=salt://tests/suite_1.txt table=brief subset="config_test*,rib_check*"
+        salt np1 nr.test suite="{{ host.tests.interfaces }}"
+        salt np1 nr.test suite='[{"task": "show clock", "test": "contains", "pattern": "NTP", "name": "Test NTP"}]'
 
     Where ``salt://tests/suite_1.txt`` content is::
 
@@ -1653,7 +1655,8 @@ def test(*args, **kwargs):
     Reference `Nornir Salt TestsProcessor <https://nornir-salt.readthedocs.io/en/latest/Processors/TestsProcessor.html#testsprocessor-plugin>`_
     documentation for more details on using tests suite.
 
-    Each item in a test suite executed individually one after another.
+    Commands in a test suite colected only once even if multiple tests
+    refer to same command.
 
     In test suite, ``task`` argument can reference a list of tasks/commands.
 
@@ -1668,29 +1671,6 @@ def test(*args, **kwargs):
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
     * ``schema`` - used with ``CerberusTest`` test function
     * ``function_file`` - content of the file used with ``CustomFunctionTest`` as ``function_text`` argument
-
-    Starting with Salt-Nornir 0.7.0 support added for ``wait_timeout`` and ``wait_interval`` test item arguments to
-    control the behavior of waiting for test's ``success`` to evaluate to True following these rules:
-
-    1. If ``wait_timeout`` given, keep executing test until result's ``success`` evaluates to True or ``wait_timeout`` expires
-    2. Between test item execution attempts sleep for ``wait_interval``, default is 10 seconds
-    3. If ``wait_timeout`` expires, return results for last test execution attempt, after updating ``exception``, ``failed``
-       and ``success`` fields accordingly
-
-    For example, test below will keep executing for 60 seconds with 20 seconds interval until "show ip route"
-    output contains "1.1.1.1/32" pattern for hosts R1 and R2::
-
-        - task: "show ip route"
-          test: contains
-          pattern: "1.1.1.1/32"
-          name: "Check if has 1.1.1.1/32 route"
-          wait_timeout: 60
-          wait_interval: 20
-          cli:
-            FL: ["R1", "R2"]
-
-    .. warning:: for ``wait_timeout`` feature to work, test result must contain ``success`` field,
-       otherwise test outcome evaluates to False.
 
     **Using Tests Suite Jinja2 Templates**
 
@@ -1788,14 +1768,17 @@ def test(*args, **kwargs):
     reverse = kwargs.pop("reverse", False)  # table
     dump = kwargs.pop("dump", False)  # dump final test results
     test_results = []
-    filtered_suite = []
 
     # if test suite provided, download it from master and render it
-    if isinstance(suite, str) and _is_url(suite):
-        # download suite content
-        suite_content = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
-        if not suite_content:
-            raise CommandExecutionError(f"Tests suite '{suite}' file download failed")
+    if isinstance(suite, str):
+        suite_content = suite
+        # try downloading suite content
+        if _is_url(suite):
+            suite_content = __salt__["cp.get_url"](suite, dest=None, saltenv=saltenv)
+            if not suite_content:
+                raise CommandExecutionError(
+                    f"Tests suite '{suite}' file download failed"
+                )
         # render tests suite on a per-host basis
         per_host_suite = cfg_gen(
             config=suite_content,
@@ -1808,8 +1791,7 @@ def test(*args, **kwargs):
             v = v["salt_cfg_gen"]
             if "Traceback" in v:
                 raise CommandExecutionError(
-                    f"Tests suite '{suite}' rendering failed for '{host_name}', "
-                    f"error:\n{v}"
+                    f"Tests suite '{suite}' rendering failed for '{host_name}':\n{v}"
                 )
             else:
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
@@ -1868,7 +1850,7 @@ def test(*args, **kwargs):
         raise CommandExecutionError("No test suite or inline test&commands provided.")
 
     # validate tests suite
-    _ = modelTestsProcessorSuite(tests=filtered_suite)
+    _ = modelTestsProcessorSuite(tests=suite)
 
     # do dry run - return produced tests suite only
     if dry_run:
@@ -2675,6 +2657,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir workers stats
         salt nrp1 nr.nornir connect conn_name=netmiko username=cisco password=cisco platform=cisco_ios
         salt nrp1 nr.nornir connect scrapli port=2022 close_open=True
+        salt nrp1 nr.nornir connect netmiko via=console FB="R1"
         salt nrp1 nr.nornir connections conn_name=netmiko
         salt nrp1 nr.nornir disconnect conn_name=ncclient
         salt nrp1 nr.nornir refresh workers_only=True

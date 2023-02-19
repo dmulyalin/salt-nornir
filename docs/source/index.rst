@@ -14,5 +14,5 @@ Welcome to salt-nornir's documentation!
    Nornir State Module
    Nornir Netbox Pillar Module
    FAQ
-   Use Cases
+   Examples
    Pillar and Inventory Examples

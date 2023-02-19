@@ -565,10 +565,10 @@ def test_nr_nornir_connect_netmiko_use_inventory():
     )      
     pprint.pprint(ret)
     # verify result contain message: Connected with 'kwargs' parameters
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     
     
 def test_nr_nornir_connect_netmiko_use_kwargs():
@@ -590,10 +590,10 @@ def test_nr_nornir_connect_netmiko_use_kwargs():
     )      
     pprint.pprint(ret)
     # verify result contain message: Connected with 'kwargs' parameters
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     
     
 def test_nr_nornir_connect_netmiko_use_reconnect():
@@ -631,9 +631,9 @@ def test_nr_nornir_connect_netmiko_use_reconnect():
     )      
     pprint.pprint(ret)
     # verify result contain message: "Connected with reconnect index '1'"
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
     assert "index '1'" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     assert "index '1'" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     
 
@@ -669,11 +669,9 @@ def test_nr_nornir_connect_netmiko_use_reconnect_credentials():
     )      
     pprint.pprint(ret)
     # verify result contain message: "Connected with 'local_account' parameters, reconnect index '2'"
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "index '2'" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
     assert "local_account" in ret["nrp1"]["ceos1"]['connections:open:netmiko']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
-    assert "index '2'" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     assert "local_account" in ret["nrp1"]["ceos2"]['connections:open:netmiko']["result"]
     
     
@@ -722,10 +720,10 @@ def test_nr_nornir_connect_netmiko_close_open():
     assert "Connection already open" in connect_close_open_false["nrp1"]["ceos2"]['connections:open:netmiko']
     
     # verify connection re-established on close_open=True
-    assert "Connected" in connect_close_open_true["nrp1"]["ceos1"]['connections:open:netmiko']
-    assert "kwargs" in connect_close_open_true["nrp1"]["ceos1"]['connections:open:netmiko']
-    assert "Connected" in connect_close_open_true["nrp1"]["ceos2"]['connections:open:netmiko']
-    assert "kwargs" in connect_close_open_true["nrp1"]["ceos2"]['connections:open:netmiko']
+    assert "connected" in connect_close_open_true["nrp1"]["ceos1"]['connections:open:netmiko']
+    assert "primary connection parameters" in connect_close_open_true["nrp1"]["ceos1"]['connections:open:netmiko']
+    assert "connected" in connect_close_open_true["nrp1"]["ceos2"]['connections:open:netmiko']
+    assert "primary connection parameters" in connect_close_open_true["nrp1"]["ceos2"]['connections:open:netmiko']
     
     
 def test_nr_nornir_connect_netmiko_all_failed():
@@ -837,10 +835,10 @@ def test_nr_nornir_connect_scrapli_use_inventory():
     )      
     pprint.pprint(ret)
     # verify result contain message: Connected with 'kwargs' parameters
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:scrapli']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos1"]['connections:open:scrapli']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
-    assert "kwargs" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:scrapli']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos1"]['connections:open:scrapli']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
+    assert "primary connection parameters" in ret["nrp1"]["ceos2"]['connections:open:scrapli']["result"]
     
     
 def test_nr_nornir_connect_napalm_reconnect_several_good_creds():
@@ -873,7 +871,86 @@ def test_nr_nornir_connect_napalm_reconnect_several_good_creds():
     )      
     pprint.pprint(ret)
     # verify result contain message: "Connected with reconnect index '1'"
-    assert "Connected" in ret["nrp1"]["ceos1"]['connections:open:napalm']["result"]
+    assert "connected" in ret["nrp1"]["ceos1"]['connections:open:napalm']["result"]
     assert "index '0'" in ret["nrp1"]["ceos1"]['connections:open:napalm']["result"]
-    assert "Connected" in ret["nrp1"]["ceos2"]['connections:open:napalm']["result"]
+    assert "connected" in ret["nrp1"]["ceos2"]['connections:open:napalm']["result"]
     assert "index '0'" in ret["nrp1"]["ceos2"]['connections:open:napalm']["result"]
+    
+    
+def test_connect_netmiko_via():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "netmiko"],
+        kwarg={"add_details": True, "via": "inband"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    assert ret["nrp1"]["ceos1"]["connections:open:netmiko"]["failed"] == False
+    assert "'netmiko' connected via 'inband'" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]
+    assert ret["nrp1"]["ceos2"]["connections:open:netmiko"]["failed"] == True
+    assert "'inband' parameters not found" in ret["nrp1"]["ceos2"]["connections:open:netmiko"]["result"]
+    
+    
+def test_connect_scrapli_via():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "scrapli"],
+        kwarg={"add_details": True, "via": "inband"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    assert ret["nrp1"]["ceos1"]["connections:open:scrapli"]["failed"] == False
+    assert "'scrapli' connected via 'inband'" in ret["nrp1"]["ceos1"]["connections:open:scrapli"]["result"]
+    assert ret["nrp1"]["ceos2"]["connections:open:scrapli"]["failed"] == True
+    assert "'inband' parameters not found" in ret["nrp1"]["ceos2"]["connections:open:scrapli"]["result"]
+    
+    
+def test_connect_netmiko_via_redispatch():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "netmiko"],
+        kwarg={"add_details": True, "via": "console"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    assert ret["nrp1"]["ceos1"]["connections:open:netmiko"]["failed"] == False
+    assert "'netmiko' connected using 'console'" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]
+    assert ret["nrp1"]["ceos2"]["connections:open:netmiko"]["failed"] == True
+    assert "'console' parameters not found" in ret["nrp1"]["ceos2"]["connections:open:netmiko"]["result"]
+    
+    
+def test_connect_scrapli_via_redispatch():
+    """scrapli not supported for redispatch, so shoudl fail"""
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "scrapli"],
+        kwarg={"add_details": True, "via": "console", "FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    assert ret["nrp1"]["ceos1"]["connections:open:scrapli"]["failed"] == True
+    assert "'scrapli' redispatch not supported" in ret["nrp1"]["ceos1"]["connections:open:scrapli"]["result"]
+
+    
+def test_connect_netmiko_via_redispatch_console2():
+    """console2 has reduced set of parameters to establish connection"""
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["connect", "netmiko"],
+        kwarg={"add_details": True, "via": "console2", "FB": "ceos1"},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    assert ret["nrp1"]["ceos1"]["connections:open:netmiko"]["failed"] == False
+    assert "'netmiko' connected using 'console2'" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]
+    assert "redispatch" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]

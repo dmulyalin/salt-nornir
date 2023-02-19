@@ -1,7 +1,7 @@
 .. _salt_nornir_examples:
 
-Use Cases
-#########
+Examples
+########
 
 .. contents:: :local:
 
@@ -157,8 +157,8 @@ Verify configuration applied::
                 logging host 2.2.2.1
 
 
-Using Nornir state module to do configuration changes
-=====================================================
+Using Nornir state module for configuration changes
+===================================================
 
 Sample Salt Master configuration excerpt defining base environment pillar and states location,
 file ``/etc/salt/master`` snippet::
@@ -587,3 +587,62 @@ Save devices output into ``hcache``::
     salt nrp1 nr.cli "show run | inc logging" hcache="log_config"
     salt nrp1 nr.cfg_gen '{{ host.log_config["show run | inc logging"] }}'
     salt nrp1 nr.cfg '{{ host.log_config["show run | inc logging"] }}'
+
+SSH config for NAPALM, Netmiko and Scrapli to use Jumphost
+==========================================================
+
+NAPALM example to configure SSH jumphost in ``~/.ssh/config``::
+
+    host *.*
+        ProxyCommand ssh -W %h:%p myuser@jumphost.company.com -i /run/secrets/ssh_key -o StrictHostKeyChecking=no -o ControlPath=/dev/shm/cm-%r@%h:%p -o ControlMaster=auto -o ControlPersist=10m -o IdentitiesOnly=yes
+
+    host *
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly yes
+    IPQoS=throughput
+    StrictHostKeyChecking no
+
+Netmiko and Scrapli example to configure SSH jumphost in ``~/.ssh/config``::
+
+    host jumphost
+    user myuser
+    hostname jumphost.company.com
+    ControlPath /dev/shm/cm-%r@%h:%p
+    ControlMaster auto
+    ControlPersist 10m
+
+    host *.*
+    ProxyJump jumphost
+    IdentityFile /run/secrets/ssh_key
+    StrictHostKeyChecking no
+
+    host *
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly yes
+    IPQoS=throughput
+
+Salt-Nornir Pillar to use ``~/.ssh/config`` configuration::
+
+    hosts:
+      core-rtr-1:
+        hostname: 192.168.1.10
+        username: GENERIC_USERNAME
+        password: GENERIC_PASSWORD
+        connection_options:
+          scrapli:
+            platform: scrapli_platform
+            extras
+              auth_strict_key: False
+              ssh_config_file: "/home/user_name/ssh/config"
+              transport_options:
+                open_cmd: ["-o", "KexAlgorithms=+diffie-hellman-group-exchange-sha1", "-o", "Ciphers=+aes256-cbc"]
+          napalm:
+            platform: napalm_platform
+            extras:
+              optional_args:
+                ssh_config_file: "/home/user_name/ssh/config"
+          netmiko:
+            platform: netmiko_platform
+            extras:
+              ssh_config_file: "/home/user_name/ssh/config"

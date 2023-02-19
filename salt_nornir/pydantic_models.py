@@ -32,6 +32,7 @@ try:
     import salt.client
     import salt.config
     import salt.utils.event
+    import salt.runner
     from salt.exceptions import CommandExecutionError
 
     HAS_SALT = True
