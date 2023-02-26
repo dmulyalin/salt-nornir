@@ -58,6 +58,7 @@ textfsm = { version = "1.1.2", optional = true }
 jinja2 = { version = "3.1.2", optional = true }
 rich = { version = "12.6.0", optional = true }
 N2G = { version = "0.3.*", optional = true }
+robot = { version = "6.0.2", optional = true }
 
 # docs dependencies for extras definition
 readthedocs-sphinx-search = { version = "0.1.1", optional = true }
@@ -182,6 +183,9 @@ dataprocessor = [
 ]
 netbox = [
     "pynetbox"
+]
+robot = [
+    "robot"
 ]
 
 [tool.poetry.plugins."salt.loader"]

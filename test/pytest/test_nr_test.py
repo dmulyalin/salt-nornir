@@ -769,3 +769,74 @@ def test_nr_test_suite_list_of_dict():
            'task': 'show clock',
            'task_retry': 0,
            'test': 'contains'}]}
+
+
+def test_nr_test_using_tests_host_data():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "tests": ["tests.suite1", "more_tests.suite123"],
+            "FB": "ceos*",
+            "strict": False
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)   
+    assert ret == {'nrp1': [{'changed': False,
+           'connection_retry': 0,
+           'criteria': '1.2.3',
+           'diff': '',
+           'exception': 'Pattern not in output',
+           'failed': True,
+           'host': 'ceos1',
+           'name': 'check ceos version',
+           'result': 'FAIL',
+           'success': False,
+           'task': 'show version',
+           'task_retry': 0,
+           'test': 'contains'},
+          {'changed': False,
+           'connection_retry': 0,
+           'criteria': 'Clock source: local',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'check local clock',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'},
+          {'changed': False,
+           'connection_retry': 0,
+           'criteria': 'FQDN',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'check ceos hostname',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show hostname',
+           'task_retry': 0,
+           'test': 'contains'}]}
+    
+def test_nr_test_using_tests_host_data_strict():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "tests": ["tests.suite1", "more_tests.suite123"],
+            "FB": "ceos*",
+            "strict": True
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)  
+    assert ret == {'nrp1': "ERROR: 'ceos2' no tests found for 'tests.suite1'"}

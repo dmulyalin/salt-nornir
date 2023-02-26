@@ -13,6 +13,7 @@ Welcome to salt-nornir's documentation!
    Nornir Runner Module
    Nornir State Module
    Nornir Netbox Pillar Module
+   ROBOT Framework Integration
    FAQ
    Examples
    Pillar and Inventory Examples

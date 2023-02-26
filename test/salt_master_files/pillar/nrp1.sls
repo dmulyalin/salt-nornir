@@ -88,23 +88,23 @@ groups:
 hosts:
   ceos1:
     connection_options:
+      console:
+        extras:
+          redispatch:
+            password: nornir
+            platform: arista_eos
+            username: nornir
+        hostname: 10.0.1.4
+        password: nornir
+        port: 22
+        username: nornir
+      console2:
+        extras:
+          redispatch: true
+        hostname: 10.0.1.4
       inband:
         hostname: 10.0.1.4
         port: 22
-      console:
-        hostname: 10.0.1.4
-        port: 22
-        username: nornir
-        password: nornir
-        extras:
-          redispatch:
-            username: nornir
-            password: nornir
-            platform: arista_eos
-      console2:
-        hostname: 10.0.1.4
-        extras:
-          redispatch: True      
       puresnmp:
         extras:
           community: public
@@ -154,6 +154,12 @@ hosts:
         - name: check local clock
           pattern: 'Clock source: local'
           task: show clock
+          test: contains
+      more_tests:
+        suite123:
+        - name: check ceos hostname
+          pattern: FQDN
+          task: show hostname
           test: contains
     groups:
     - lab
@@ -256,6 +262,7 @@ nornir:
       description: Learn uptime info
       function: nr.cli
 proxy:
+  connections_idle_timeout: 30
   multiprocessing: true
   proxytype: nornir
 salt_nornir_netbox_pillar:

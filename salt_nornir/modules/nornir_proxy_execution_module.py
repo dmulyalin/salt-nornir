@@ -1551,18 +1551,22 @@ def test(*args, **kwargs):
     :param test: (str) type of test to do e.g.: contains, !contains, equal, custom etc.
     :param pattern: (str) pattern to use for testing, usually string, text or
         reference a text file on salt master. For instance if ``test`` is ``contains``,
-        ``pattern`` value used as a pattern for containment check.
+        ``pattern`` value used as a pattern for containment check
     :param function_file: (str) path to text file on salt master with function content
         to use for ``custom`` function test
     :param dry_run: (bool) if True, returns produced per-host tests suites content only,
-        no tests performed
+        no tests performed, ``subset`` not supported with dry run
     :param saltenv: (str) name of salt environment to download function_file from
     :param suite: (list or str) list of dictionaries with test items or path to file on
         salt-master with a list of test item dictionaries
     :param subset: (list or str) list or string with comma separated glob patterns to
         match tests' names to execute. Patterns are not case-sensitive. Uses
-        ``fnmatch.fnmatch`` Python built-in function to do matching.
+        ``fnmatch.fnmatch`` Python built-in function to do matching
     :param dump: (str) filegroup name to dump results using Nornir-salt ``DumpResults``
+    :param tests: string or list of strings with key path referring to host's tests list
+    :param strict: boolean used with ``tests`` argument, if ``strict`` is True raises
+        error when ``tests`` path item not found in any of the hosts' invenotry data,
+        default is False
     :param kwargs: (dict) any additional arguments to use with test function
 
     ``nr.cli`` function related arguments
@@ -1627,6 +1631,32 @@ def test(*args, **kwargs):
             - "show ntp status"
             - "show ntp associations"
           name: "Is NTP in sync"
+
+    Sample usage with tests argument::
+
+        salt np1 nr.test tests="tests.interfaces"
+        salt np1 nr.test tests=["tests.interfaces", "tests.bgp_peers"]
+
+    Where host's inventory data is::
+
+        hosts:
+          nrp1:
+            data:
+              tests:
+                interfaces:
+                  - name: Test Uplink
+                    task: "show interface Ethernet1"
+                    test: contains
+                    pattern: "line protocol up"
+                    err_msg: "Primary uplink is down"
+                bgp:
+                  - name: Test BGP peers state
+                    task: "show bgp ipv4 un sum"
+                    test: ncontains
+                    pattern: Idle
+                    err_msg: Some BGP peers are not UP
+
+    .. warning:: ``tests`` paths should always refer to a list of tests dictionaries
 
     Sample Python API usage from Salt-Master::
 
@@ -1768,9 +1798,37 @@ def test(*args, **kwargs):
     reverse = kwargs.pop("reverse", False)  # table
     dump = kwargs.pop("dump", False)  # dump final test results
     test_results = []
+    tests = kwargs.pop("tests", None)
+    strict = kwargs.pop("strict", False)
 
+    # if tests given extract them from hosts' inventory data
+    if tests:
+        # transform tests to alist if required
+        tests = tests if isinstance(tests, list) else [tests]
+        # retrieve dictionary keyed by tests path
+        inventory_data = nornir_fun(
+            fun="inventory",
+            call="read_host_data",
+            keys=tests,
+            **{k: v for k, v in kwargs.items() if k in FFun_functions},
+        )
+        # extract tests
+        loaded_suite = {}
+        for host_name, tests_data in inventory_data.items():
+            loaded_suite[host_name] = []
+            for test_path in tests:
+                reference = tests_data[test_path]
+                if isinstance(reference, list):
+                    loaded_suite[host_name].extend(reference)
+                elif strict:
+                    raise CommandExecutionError(
+                        f"'{host_name}' no tests found for '{test_path}'"
+                    )
+                else:
+                    log.warning(f"'{host_name}' no tests found for '{test_path}'")
+        suite = loaded_suite
     # if test suite provided, download it from master and render it
-    if isinstance(suite, str):
+    elif isinstance(suite, str):
         suite_content = suite
         # try downloading suite content
         if _is_url(suite):
@@ -2657,7 +2715,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir workers stats
         salt nrp1 nr.nornir connect conn_name=netmiko username=cisco password=cisco platform=cisco_ios
         salt nrp1 nr.nornir connect scrapli port=2022 close_open=True
-        salt nrp1 nr.nornir connect netmiko via=console FB="R1"
+        salt nrp1 nr.nornir connect netmiko via=console
         salt nrp1 nr.nornir connections conn_name=netmiko
         salt nrp1 nr.nornir disconnect conn_name=ncclient
         salt nrp1 nr.nornir refresh workers_only=True
@@ -2681,6 +2739,7 @@ def nornir_fun(fun, *args, **kwargs):
             "read_host",
             "read",
             "read_inventory",
+            "read_host_data",
             "list_hosts",
             "list_hosts_platforms",
         ]:

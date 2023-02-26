@@ -954,3 +954,21 @@ def test_connect_netmiko_via_redispatch_console2():
     assert ret["nrp1"]["ceos1"]["connections:open:netmiko"]["failed"] == False
     assert "'netmiko' connected using 'console2'" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]
     assert "redispatch" in ret["nrp1"]["ceos1"]["connections:open:netmiko"]["result"]
+    
+
+def test_read_host_data():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "read_host_data"],
+        kwarg={"keys": ["tests.suite1", "interfaces_test", "foo.bar"]},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)
+    assert ret["nrp1"]["ceos1"]["foo.bar"] is None
+    assert ret["nrp1"]["ceos1"]["interfaces_test"] is not None
+    assert ret["nrp1"]["ceos1"]["tests.suite1"] is not None
+    assert ret["nrp1"]["ceos2"]["foo.bar"] is None
+    assert ret["nrp1"]["ceos2"]["interfaces_test"] is None
+    assert ret["nrp1"]["ceos2"]["tests.suite1"] is None

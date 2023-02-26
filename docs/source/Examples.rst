@@ -482,7 +482,7 @@ Targeting devices behind Nornir proxy
 
 Nornir uses ``nornir-salt`` package to provide targeting capabilities built on top of
 Nornir module itself. Because of that it is good idea to read
-`FFun <https://nornir-salt.readthedocs.io/en/latest/Functions.html#ffun>`_ function
+`FFun <https://nornir-salt.readthedocs.io/en/latest/Functions/FFun.html>`_ function
 documentation first.
 
 Combining SaltStack and ``nornir-salt`` targeting capabilities can help to address various usecase.

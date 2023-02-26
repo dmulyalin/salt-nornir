@@ -238,6 +238,7 @@ class model_exec_nr_test(BaseModel):
     headers: Optional[Union[StrictStr, List[StrictStr]]]
     sortby: Optional[StrictStr]
     reverse: Optional[StrictBool]
+    tests: Optional[Union[StrictStr, List[StrictStr]]]
 
     class Config:
         extra = "allow"
