@@ -553,6 +553,33 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
         return values
 
 
+class EnumNrNetwork(str, Enum):
+    resolve_dns = "resolve_dns"
+
+
+class model_exec_nr_network(ModelExecCommonArgs):
+    """Model for salt_nornir.modules.nornir_proxy_execution_module.network function arguments"""
+
+    fun: EnumNrNetwork
+    args: Optional[List[StrictStr]]
+
+    class Config:
+        extra = "allow"
+
+    @root_validator(pre=True)
+    def check_params_given(cls, values):
+        fun = values.get("fun")
+        if not fun:
+            raise CommandExecutionError("No 'fun' argument provided")
+        if not any(fun == i.value for i in EnumNrNetwork):
+            raise CommandExecutionError(
+                "Unsupported function '{}', supported {}".format(
+                    fun, ", ".join([i.value for i in EnumNrNetwork])
+                )
+            )
+        return values
+
+
 class EnumNrNetboxTasks(str, Enum):
     dir_ = "dir"
     query = "query"

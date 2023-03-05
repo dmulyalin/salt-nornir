@@ -974,6 +974,8 @@ Table to summarize functions available in Nornir Proxy Execution Module and thei
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.netbox`_    | Integration with Netbox DCIM                      |                    |
 +-----------------+---------------------------------------------------+--------------------+
+| `nr.network`_   | Network related utilities                         |                    |
++-----------------+---------------------------------------------------+--------------------+
 | `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
 +-----------------+---------------------------------------------------+--------------------+
 | `nr.snmp`_      | Function to manage davices over SNMP protocol     |                    |
@@ -1046,6 +1048,11 @@ nr.netbox
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.netbox
 
+nr.network
+++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.network
+
 nr.nornir
 +++++++++
 
@@ -1098,6 +1105,7 @@ from salt_nornir.pydantic_models import (
     model_exec_nr_do_action,
     model_exec_nr_snmp,
     model_exec_nr_netbox,
+    model_exec_nr_network,
 )
 from salt_nornir.netbox_utils import netbox_tasks
 
@@ -3127,4 +3135,40 @@ def netbox(*args, **kwargs):
         salt_jobs_results=salt_jobs_results,
         *args[1:],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")},
+    )
+
+
+@ValidateFuncArgs(model_exec_nr_network)
+def network(fun, *args, **kwargs):
+    """
+    Function to call various network related utility functions.
+
+    :param fun: (str) utility function name to call
+    :param kwargs: (dict) function arguments
+
+    Available utility functions:
+
+    * ``resolve_dns`` - resolve hosts' hostname DNS returning IP addresses
+
+    Sample Usage::
+
+        salt nrp1 nr.network resolve_dns
+
+    Sample Python API usage from Salt-Master::
+
+        import salt.client
+        client = salt.client.LocalClient()
+
+        task_result = client.cmd(
+            tgt="nrp1",
+            fun="nr.network",
+            arg=["resolve_dns"],
+        )
+    """
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
+    kwargs["call"] = fun
+    return __proxy__["nornir.execute_job"](
+        task_fun="nornir_salt.plugins.tasks.network",
+        kwargs=kwargs,
+        identity=_form_identity(kwargs, "network"),
     )

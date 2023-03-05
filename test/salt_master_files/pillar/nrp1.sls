@@ -129,6 +129,7 @@ hosts:
                   username: nornir
               os: eos
     data:
+      tags: ["core"]
       interfaces_test:
       - admin_status: is up
         description: Description
@@ -141,6 +142,12 @@ hosts:
         mtu: IP MTU 65535
         name: Loopback1
       location: North West Hall DC1
+      more_tests:
+        suite123:
+        - name: check ceos hostname
+          pattern: FQDN
+          task: show hostname
+          test: contains
       software_version: cEOS
       syslog:
       - 1.1.1.1
@@ -154,12 +161,6 @@ hosts:
         - name: check local clock
           pattern: 'Clock source: local'
           task: show clock
-          test: contains
-      more_tests:
-        suite123:
-        - name: check ceos hostname
-          pattern: FQDN
-          task: show hostname
           test: contains
     groups:
     - lab
@@ -185,6 +186,7 @@ hosts:
             ceos2: {}
         platform: eos
     data:
+      tags: ["access"]
       location: East City Warehouse
       netbox_import_data:
         device_role:
@@ -262,7 +264,6 @@ nornir:
       description: Learn uptime info
       function: nr.cli
 proxy:
-  connections_idle_timeout: 30
   multiprocessing: true
   proxytype: nornir
 salt_nornir_netbox_pillar:

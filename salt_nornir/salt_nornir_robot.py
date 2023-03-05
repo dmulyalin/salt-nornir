@@ -16,11 +16,15 @@ Keywords
     ``FB` filter
 * ``nr.test`` - run Salt-Nornir ``nr.test`` execution function with 
     provided arguments and key-word arguments
-
+* ``nr.cli`` - run Salt-Nornir ``nr.cli`` execution function with 
+    provided arguments and key-word arguments, returns result for 
+    first host first command only, does not support multiple commands 
+    or hosts targeting
+    
 Examples
 ++++++++
 
-This test suite runs two tests::
+This test suite runs two tests using ``nr.test``::
 
     *** Settings ***
     Library    salt_nornir.salt_nornir_robot
@@ -40,6 +44,23 @@ to run it using ``robot`` command line tool::
 
     robot /path/to//salt_nornir_robot_suite.robot
     
+This test suite runs two tests using ``nr.cli``::
+
+    *** Settings ***
+    Library    salt_nornir.salt_nornir_robot
+    
+    *** Test Cases ***
+    Test NTP ceos1
+        Minions           nrp1    
+        Hosts             ceos1
+        ${result} =       nr.cli    show clock
+        Should Contain    ${result}   NTP
+    
+    Test NTP ceos2
+        Minions           nrp1    
+        Hosts             ceos2
+        ${result} =       nr.cli    show clock
+        Should Contain    ${result}   local
 """
 import logging
 import pprint
@@ -175,3 +196,43 @@ def nr_test(*args, **kwargs):
         raise ContinuableFailure(ret_html_table)
     # return ret with no errors in structured format
     return ret
+
+
+@keyword("nr.cli")
+def nr_cli(*args, **kwargs):
+    """Run Salt-Nornir nr.cli execution function"""
+    log.info(
+        f"Running nr.cli with args '{args}', kwargs '{kwargs}', global DATA '{DATA}'"
+    )
+    has_errors = False
+    # run this function
+    ret = client.cmd(
+        **DATA["minions"],
+        fun="nr.cli",
+        arg=args,
+        kwarg={
+            **DATA.get("hosts", {}),
+            **kwargs,
+            "to_dict": False,
+            "add_details": True,
+        },
+    )
+    # extract results for the host
+    for minion_name, minion_results in ret.items():
+        result = minion_results[0]
+        if (
+            result["failed"]
+            or result["exception"]
+            or "traceback" in str(result["result"]).lower()
+        ):
+            has_errors = True
+            log.error(
+                f"{minion_name} minion, {result['host']} cli command '{result['name']}' failed"
+            )
+    # clean global state to prep for next test
+    clean_global_data()
+    # raise exception if cli command failed
+    if has_errors:
+        raise ContinuableFailure(result)
+    # return ret with no errors in structured format
+    return result["result"]

@@ -2155,3 +2155,55 @@ def test_nornir_refresh_workers_only():
     )
     assert "show clock" in res_check["nrp1"]["ceos1"], "Nornir not working after refresh"
     assert "show clock" in res_check["nrp1"]["ceos2"], "Nornir not working after refresh"
+    
+    
+def test_ffun_FT_function_by_string():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={"FT": "core"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    assert "ceos1" in res["nrp1"]
+    assert len(res["nrp1"]) == 1
+    
+    
+def test_ffun_FT_function_by_list():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={"FT": ["core", "access"]},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    assert "ceos1" in res["nrp1"] and "ceos2" in res["nrp1"]
+    assert len(res["nrp1"]) == 2
+    
+    
+def test_ffun_FT_function_no_match():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={"FT": ["EDGE"]},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    assert len(res["nrp1"]) == 0
+    
+    
+def test_ffun_FT_function_comma_string():
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["hosts"],
+        kwarg={"FT": "core, access"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    assert "ceos1" in res["nrp1"] and "ceos2" in res["nrp1"]
+    assert len(res["nrp1"]) == 2    
+    

@@ -295,7 +295,7 @@ following these rules:
 3. If ``platform`` not defined in Netbox device's configuration context ``nornir`` section,
    platform value set equal to the value of device's platform NAPALM Driver. If Netbox
    device has no platform associated and no platform given in configuration context ``nornir``
-   section, KeyError raised and device excluded from pillar data
+   section, warning message logged statring with version 0.19.0 instead of raising KeyError
 4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir``
    section, ``hostname`` value set equal to device primary IPv4 address if ``host_primary_ip``
    is set to ``ip4`` or not configured at all, if primary IPv4 address is not defined, primary 
@@ -1224,7 +1224,7 @@ def _process_device(device, inventory, params):
         if device["platform"]:
             host["platform"] = device["platform"]["napalm_driver"]
         else:
-            raise KeyError(f"salt_nornir_netbox no platform found for '{name}' device")
+            log.warning(f"salt_nornir_netbox no platform found for '{name}' device")
     # add hostname if not provided in config context
     if not host.get("hostname"):
         if device["primary_ip4"] and host_primary_ip in ["ip4", None]:

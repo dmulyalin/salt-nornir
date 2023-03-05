@@ -926,7 +926,7 @@ def test_connect_netmiko_via_redispatch():
     
     
 def test_connect_scrapli_via_redispatch():
-    """scrapli not supported for redispatch, so shoudl fail"""
+    """scrapli not supported for redispatch, so should fail"""
     ret = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
