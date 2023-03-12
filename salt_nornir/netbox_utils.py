@@ -184,7 +184,7 @@ def nb_rest(
 
     :param method: requests method name e.g. get, post, put etc.
     :param api: api url to query e.g. "extras" or "dcim/interfaces" etc.
-    :param salt_jobs_results: dictionary of saltstack job results to extract Netbox comnfiguration
+    :param salt_jobs_results: dictionary of saltstack job results to extract Netbox configuration
     :param kwargs: any additional requests method's arguments
     """
     nb_params = extract_salt_nornir_netbox_params(salt_jobs_results)
@@ -327,7 +327,7 @@ def get_connections(
     :param device_name: name of the device to retrieve interfaces for
     :param params: dictionary with salt_nornir_netbox parameters
     :param salt_jobs_results: list with config.get job results
-    :param trace: if True traces full connection path between device interfaces,
+    :param trace: if True traces full connection path between device interfaces
 
     .. warning:: Get connections only supported for Netbox of 3.4 and above.
 

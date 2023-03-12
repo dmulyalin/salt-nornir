@@ -96,6 +96,64 @@ Sample Jumphost definition in host's inventory data of proxy-minion pillar::
 ``RetryRunner`` on first task execution will initiate single connection to Jumphost,
 and will use it to proxy connections to actual devices.
 
+Execution Module Functions Summary
+----------------------------------
+
+Table to summarize functions available in Nornir Proxy Execution Module and their purpose.
+
++-----------------+---------------------------------------------------+--------------------+
+| nr.function     | description                                       | supported plugins  |
++=================+===================================================+====================+
+| `nr.cfg`_       | Function to modify devices configuration over     | napalm (default),  |
+|                 | ssh or telnet connections                         | netmiko, scrapli   |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.cfg_gen`_   | Function to generate devices configuration using  |                    |
+|                 | SALT templating system with Nornir inventory,     |                    |
+|                 | mainly for testing purposes                       |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.cli`_       | Function for show commands output collection over | netmiko (default), |
+|                 | ssh or telnet                                     | scrapli            |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.diff`_      | To diff content of files or network with files    |                    |
+|                 | saved by ``ToFileProcessor``                      |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.do`_        | Function to execute actions with a set of steps   |                    |
+|                 | calling other execution functions. Allows to      |                    |
+|                 | construct simple work flows.                      |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.file`_      | Function to work with files saved by              |                    |
+|                 | ``ToFileProcessor`` - read, delete, list etc.     |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.find`_      | To search for various information in files saved  |                    |
+|                 | by ``ToFileProcessor``                            |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.gnmi`_      | Interact with devices using gNMI protocol         | pygnmi             |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.http`_      | To run HTTP requests against API endpoints        | requests           |
+|                 |                                                   |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.learn`_     | This function is to save task results in files    |                    |
+|                 | using ``ToFileProcessor`` and ``nr.do`` actions   |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.nc`_        | Function to work with devices using NETCONF       | ncclient (default),|
+|                 |                                                   | scrapli_netconf    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.netbox`_    | Integration with Netbox DCIM                      |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.network`_   | Network related utilities                         |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.snmp`_      | Function to manage davices over SNMP protocol     |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.task`_      | Function to run any Nornir task plugin            |                    |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.test`_      | Function to test show commands output             | netmiko (default), |
+|                 | produced by nr.cli function                       | scrapli            |
++-----------------+---------------------------------------------------+--------------------+
+| `nr.tping`_     | Function to run TCP ping to devices' hostnames    |                    |
++-----------------+---------------------------------------------------+--------------------+
+
 Common CLI Arguments
 --------------------
 
@@ -932,61 +990,6 @@ Sample usage::
 
 Execution Module Functions
 --------------------------
-
-Table to summarize functions available in Nornir Proxy Execution Module and their purpose.
-
-+-----------------+---------------------------------------------------+--------------------+
-| nr.function     | description                                       | supported plugins  |
-+=================+===================================================+====================+
-| `nr.cfg`_       | Function to modify devices configuration over     | napalm (default),  |
-|                 | ssh or telnet connections                         | netmiko, scrapli   |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.cfg_gen`_   | Function to generate devices configuration using  |                    |
-|                 | SALT templating system with Nornir inventory,     |                    |
-|                 | mainly for testing purposes                       |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.cli`_       | Function for show commands output collection over | netmiko (default), |
-|                 | ssh or telnet                                     | scrapli            |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.diff`_      | To diff content of files or network with files    |                    |
-|                 | saved by ``ToFileProcessor``                      |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.do`_        | Function to execute actions with a set of steps   |                    |
-|                 | calling other execution functions. Allows to      |                    |
-|                 | construct simple work flows.                      |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.file`_      | Function to work with files saved by              |                    |
-|                 | ``ToFileProcessor`` - read, delete, list etc.     |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.find`_      | To search for various information in files saved  |                    |
-|                 | by ``ToFileProcessor``                            |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.gnmi`_      | Interact with devices using gNMI protocol         | pygnmi             |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.http`_      | To run HTTP requests against API endpoints        | requests           |
-|                 |                                                   |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.learn`_     | This function is to save task results in files    |                    |
-|                 | using ``ToFileProcessor`` and ``nr.do`` actions   |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.nc`_        | Function to work with devices using NETCONF       | ncclient (default),|
-|                 |                                                   | scrapli_netconf    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.netbox`_    | Integration with Netbox DCIM                      |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.network`_   | Network related utilities                         |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.nornir`_    | Function to call Nornir Utility Functions         |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.snmp`_      | Function to manage davices over SNMP protocol     |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.task`_      | Function to run any Nornir task plugin            |                    |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.test`_      | Function to test show commands output             | netmiko (default), |
-|                 | produced by nr.cli function                       | scrapli            |
-+-----------------+---------------------------------------------------+--------------------+
-| `nr.tping`_     | Function to run TCP ping to devices' hostnames    |                    |
-+-----------------+---------------------------------------------------+--------------------+
 
 nr.cfg
 ++++++
@@ -3061,52 +3064,120 @@ def netbox(*args, **kwargs):
 
     Why? Because data is the key.
 
-    This execution module uses Nornir-Salt
-    `netbox_tasks <https://nornir-salt.readthedocs.io/en/latest/Tasks/netbox_tasks.html>`_
-    collection that contains individual task functions to work with Netbox.
-
     :param task: (str) name of Netbox task function to run
     :param kwargs: (dict) any additional keyword arguments to use with task function
     :return: task results
 
-    Available ``task`` functions:
+    Available ``task`` functions are listed below.
 
-    * ``dir`` - returns a list of supported tasks functions
-    * ``sync_from`` - sync data from Netbox device to Nornir host's inventory
-    * ``sync_to`` - sync Nornir host's inventory data to Netbox device
-    * ``query`` - query Netbox GraphQL API
-    * ``rest`` - query Netbox REST API using requests
-    * ``get_interfaces`` - queries Device interfaces details from Netbox, supports
-      ``add_ip`` and ``add_inventory_items`` arguments to add IP addresses and
-      inventory items information for interfaces
-    * ``get_connections`` - queries device interfaces connections from Netbox
-    * ``update_config_context`` - parse device configuration and save results
-      in configuration context
-    * ``parse_config`` - parse device configuratoion using TTP templates and
-      return results
-    * ``update_vrf`` - create or update VRFs and Route-Targets in Netbox from
-      device configuration
+    **dir task**
+    
+    Returns a list of supported tasks functions. Sample usage::
+
+        salt nrp1 nr.netbox dir
+        
+    **query task**
+    
+    Helps to retrieve data from Netbox over GraphQL API.
+    
+    Supported arguments:
+    
+    * ``query_string`` - GraphQL query string to send to Netbox GraphQL API
+    * ``field`` - name of the the fields to retirieve e.g. device_list, interface_list
+    * ``filters`` - dictionary of filters to use
+    * ``fields`` - dictionary of fields to retrieve
+    * ``queries`` - dictionary keyed by GraphQL aliases with values being a dictionary of
+      `field``, ``filters`` and ``fields`` parameters.
+        
+    To use ``query`` task need to provide one of
+    
+    - ``query_string`` or 
+    - ``field``, ``filters`` and ``fields`` parameters to form query string or 
+    - ``queries`` dictionary to form query strings with aliases
 
     For ``query`` function to work, Netbox token and url parameters should be
     defined in master's configuration ``ext_pillar`` section::
 
+        pillar_opts: True
         ext_pillar:
           - salt_nornir_netbox:
               url: 'http://192.168.115.129:8000'
               token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
-
+              
+    To be able to source Netbox parameters from Salt-Master, Master's configuration file
+    need to have ``pillar_opts`` set to ``True``.
+              
     Sample usage::
-
-        salt nrp1 nr.netbox dir
-        salt nrp1 nr.netbox sync_from FB="ceos1"
-        salt nrp1 nr.netbox task="sync_to" FB="ceos1" via=prod
+    
         salt nrp1 nr.netbox query field="device_list" filters='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
         salt nrp1 nr.netbox query queries='{"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}'
         salt nrp1 nr.netbox query query_string='query{device_list(platform: "eos") {name}}'
-        salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
-        salt nrp1 nr.netbox get_connections device_name="ceos1"
+        
+    **rest task**
+    
+    Qquery Netbox REST API using requests. This task supports any requests module
+    arguments in additiona to these arguments:
+    
+    * ``method`` - get, ports, put, patch, delete action to query
+    * ``api`` - Netbox API endpoint to query e.g. ``dcim/interfaces``
+    
+    Sample usage::
+    
         salt nrp1 nr.netbox rest get "dcim/interfaces" params='{"name__ic": "eth1", "device": "fceos4"}'
         salt nrp1 nr.netbox rest method=get api="dcim/interfaces" params='{"device": "fceos4"}'
+    
+    **get_interfaces task**
+    
+    Retrieves devices' interfaces details from Netbox, supported arguments:
+    
+    * ``add_ip`` - boolean, if True adds IP addresses information to interfaces
+    * ``add_inventory_items`` - boolean, if True adds inventory items information to interfaces
+    
+    Sample usage::
+    
+        salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
+    
+    **get_connections task** 
+
+    Retrieves devices' interfaces connections from Netbox. Supported arguments:
+    
+    * ``trace`` - if True traces full connection path between device interfaces
+    
+    Sample usage::
+    
+        salt nrp1 nr.netbox get_connections device_name="ceos1"
+        
+    **update_config_context task**
+    
+    Task to parse device configuration and save results into Netbox device's 
+    configuration context.
+    
+    Dependency: TTP, ``pip install ttp``
+    
+    Sample usage::
+    
+        salt nrp1 nr.netbox update_config_context
+    
+    **parse_config task**
+
+    Task to parse device configuratoion using TTP templates and return results.
+    This task used by ``update_config_context`` to retrieve configuration
+    parsing results.
+    
+    Dependency: TTP, ``pip install ttp``
+    
+    Sample usage::
+    
+        salt nrp1 nr.netbox parse_config
+        
+    **update_vrf task**
+
+    This task helps to create or update VRFs and Route-Targets in Netbox from
+    device configuration.
+    
+    Sample usage::
+    
+        salt nrp1 nr.netbox update_vrf
     """
     task_name = args[0] if args else kwargs.pop("task")
     salt_jobs_results = []
