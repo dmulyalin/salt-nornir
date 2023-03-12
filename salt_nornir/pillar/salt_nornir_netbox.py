@@ -125,76 +125,76 @@ Base Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * ``url`` - example: ``http://192.168.115.129:8000``; Netbox URL value, mandatory to define 
-    parameter
+  parameter
 * ``token`` - Netbox API Token, mandatory to define parameter
 * ``ssl_verify`` - default: ``True``; Configure SSL verification, disabled if set to ``False``   
 * ``use_minion_id_device`` - default: ``False``; If True, configuration context data of 
-    device with name equal to proxy minion-id merged with proxy minion pillar
+  device with name equal to proxy minion-id merged with proxy minion pillar
 * ``use_minion_id_tag`` - default: ``False``; If True, Netbox devices that have tag assigned 
-    with value equal to proxy minion-id included into pillar data
+  with value equal to proxy minion-id included into pillar data
 * ``use_hosts_filters`` - default: ``False``; If True, devices matched by ``hosts_filters`` 
-    processed and included into pillar data, filters processed in sequence, devices matched 
-    by at least one filter added into proxy minion pillar. Filters nomenclature available at 
-    Netbox `documentation <https://demo.netbox.dev/static/docs/rest-api/filtering/>`_
+  processed and included into pillar data, filters processed in sequence, devices matched 
+  by at least one filter added into proxy minion pillar. Filters nomenclature available at 
+  Netbox `documentation <https://demo.netbox.dev/static/docs/rest-api/filtering/>`_
 * ``use_pillar`` - default: ``False``; If True, Master's ext_pillar ``salt_nornir_netbox`` 
-    configuration augmented with pillar ``salt_nornir_netbox_pillar`` configuration
+  configuration augmented with pillar ``salt_nornir_netbox_pillar`` configuration
 * ``host_add_netbox_data`` - default: ``False``, supported values: ``True``, ``False`` or
-    string e.g. ``netbox_data``; If True, Netbox device data merged with Nornir host's data, 
-    if ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's 
-    data under key with ``host_add_netbox_data`` value
+  string e.g. ``netbox_data``; If True, Netbox device data merged with Nornir host's data, 
+  if ``host_add_netbox_data`` is a string, Netbox device data saved into Nornir host's 
+  data under key with ``host_add_netbox_data`` value
 * ``host_add_interfaces`` - default: ``False``, supported values: ``True``, ``False`` or
-    string e.g. ``interfaces``; If True, Netbox device's interfaces data added into Nornir 
-    host's data under ``interfaces`` key. If ``host_add_interfaces`` is a string, interfaces 
-    data added into Nornir host's data under key with ``host_add_interfaces`` value
+  string e.g. ``interfaces``; If True, Netbox device's interfaces data added into Nornir 
+  host's data under ``interfaces`` key. If ``host_add_interfaces`` is a string, interfaces 
+  data added into Nornir host's data under key with ``host_add_interfaces`` value
 * ``host_add_connections`` - default: ``False``, supported values: ``True``, ``False`` or
-    string e.g. ``nb_connections``; If True, Netbox device's interface and console connections 
-    data added into Nornir host's data under ``conections`` key. If ``host_add_connections``
-    is a string, connections data added into Nornir host's data under key with 
-    ``host_add_connections`` value
+  string e.g. ``nb_connections``; If True, Netbox device's interface and console connections 
+  data added into Nornir host's data under ``conections`` key. If ``host_add_connections``
+  is a string, connections data added into Nornir host's data under key with 
+  ``host_add_connections`` value
 * ``host_primary_ip`` - default: ``None``, supported values: ``ip4``, ``ip6`` or ``None``;
-    Control which primary IP to use as host's hostname
+  Control which primary IP to use as host's hostname
 * ``hosts_filters`` - default: N/A, example: ``"name__ic": "ceos1"``; List of dictionaries 
-    where each dictionary contains filtering parameters to filter Netbox devices, Netbox 
-    devices that matched, processed further and included into pillar data
+  where each dictionary contains filtering parameters to filter Netbox devices, Netbox 
+  devices that matched, processed further and included into pillar data
 * ``secrets`` - Secrets Configuration Parameters indicating how to retrieve secrets values 
-    from Netbox
+  from Netbox
 * ``data_retrieval_timeout`` - default: ``50``; Python concurrent futures ``as_completed`` 
-    function timeout to impose hard limit on time to retrieve data from Netbox 
+  function timeout to impose hard limit on time to retrieve data from Netbox 
 * ``data_retrieval_num_workers`` - default: ``10``; Number of multi-threading workers to run 
-    to retrive data from Netbox
+  to retrive data from Netbox
 
 Secrets Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * ``resolve_secrets`` - default: ``True``; If True, attempts to resolve secrets values 
-    defined using URL like strings
+  defined using URL like strings
 * ``fetch_username`` - default: ``True``; If True, attempts to retrieve host's username 
-    from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
-    data.
+  from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
+  data.
 * ``fetch_password`` - default: ``True``; If True, attempts to retrieve host's password 
-    from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
-    data.
+  from Netbox secrets plugins, raises error if fails to do so, removing host from pillar 
+  data.
 * ``secret_device`` - default: N/A, example: ``keymaster-1``; Name of netbox device to 
-    retrieve secrets from by default
+  retrieve secrets from by default
 * ``secret_name_map`` - default: N/A, example: ``password: username``; List of dictionaries 
-    keyed by secret key names with values of the of the inventory data key name to assign 
-    secret name to
+  keyed by secret key names with values of the of the inventory data key name to assign 
+  secret name to
 * ``plugins`` - Netbox Secrets Plugins Configuration Parameters, supported values: 
-    ``netbox_secretstore``
+  ``netbox_secretstore``
 
 netbox_secretstore Secrets Plugin Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * ``private_key`` - default: N/A, example: ``/etc/salt/nb_secretstore.key``
-    OS Path to file with netbox_secretstore RSA Private Key content
+  OS Path to file with netbox_secretstore RSA Private Key content
 * ``url_override`` - default: ``netbox_secretstore``, example: ``netbox_secretstore_fork``;
-    Used to customize plugin URL ``{netbox_url}/api/plugins/{url_override}/secrets/``
+  Used to customize plugin URL ``{netbox_url}/api/plugins/{url_override}/secrets/``
     
 netbox_secrets Secrets Plugin Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * ``private_key`` - default: N/A, example: ``/etc/salt/nb_secrets.key``
-    OS Path to file with netbox_secrets RSA Private Key content
+  OS Path to file with netbox_secrets RSA Private Key content
 
 Sourcing Data from Netbox
 +++++++++++++++++++++++++
@@ -429,7 +429,7 @@ Any of inventory keys can use value of URL string in one of the formats:
    rule for ``device-name`` as in case 2
 
 .. note:: `secret-role` refers to secret role name, but starting with version 
-    0.18.1 `secret-role` can refer to secret role slug as well
+  0.18.1 `secret-role` can refer to secret role slug as well
     
 salt_nornir_netbox recursively iterates over entire data sourced from Netbox
 and attempts to resolve keys using specified secrets URLs.
