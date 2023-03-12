@@ -108,6 +108,8 @@ def nb_graphql(
     queries: dict = None,
     query_string: str = None,
     raise_for_status: bool = False,
+    __salt__=None,
+    hosts=None,
 ):
     """
     Function to send query to Netbox GraphQL API and return results.
@@ -120,6 +122,7 @@ def nb_graphql(
     :param queries: dictionary keyed by GraphQL aliases with query data
     :param query_string: string with GraphQL query
     :param raise_for_status: raise exception if requests response is not ok
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
@@ -177,7 +180,12 @@ def nb_graphql(
 
 
 def nb_rest(
-    method: str = "get", api: str = "", salt_jobs_results: dict = None, **kwargs
+    method: str = "get", 
+    api: str = "", 
+    salt_jobs_results: dict = None, 
+    __salt__=None, 
+    hosts=None,
+    **kwargs
 ) -> dict:
     """
     Function to query Netbox REST API.
@@ -186,6 +194,7 @@ def nb_rest(
     :param api: api url to query e.g. "extras" or "dcim/interfaces" etc.
     :param salt_jobs_results: dictionary of saltstack job results to extract Netbox configuration
     :param kwargs: any additional requests method's arguments
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     nb_params = extract_salt_nornir_netbox_params(salt_jobs_results)
 
@@ -216,6 +225,9 @@ def get_interfaces(
     params=None,
     add_ip=False,
     add_inventory_items=False,
+    sync=False,
+    __salt__=None,
+    hosts=None,
 ):
     """
     Function to retrieve device interfaces from Netbox using GraphQL API.
@@ -224,8 +236,12 @@ def get_interfaces(
     :param add_inventory_items: if True, retrieves interface inventory items
     :param device_name: name of the device to retrieve interfaces for
     :param salt_jobs_results: list with config.get job results
-
-    .. note:: ``add_inventory_items`` only supported for Netbox 3.4 and above.
+    :param sync: if True, saves get interfaces results to host's in-memory 
+        inventory data under ``interfaces`` key, if sync is a string, provided 
+        value used as a key.
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    
+    .. note:: ``add_inventory_items`` only supported with Netbox 3.4 and above.
     """
     # if salt_jobs_results provided, extract Netbox params from it
     params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
@@ -312,7 +328,25 @@ def get_interfaces(
         _ = intf.pop("id")
         intf_dict[intf.pop("name")] = intf
 
-    return intf_dict
+    # save results to hosts inventory if requested to do so
+    if sync:
+        key = sync if isinstance(sync, str) else "interfaces"
+        ret = __salt__["nr.nornir"](
+            fun="inventory", 
+            call="load",
+            data=[
+                {
+                    "call": "update_host",
+                    "name": device_name,
+                    "data": {key: intf_dict}
+                }
+            ]
+        )
+        return {
+            f"{device_name} sync interfaces": ret
+        }
+    else:
+        return intf_dict
 
 
 def get_connections(
@@ -320,6 +354,9 @@ def get_connections(
     salt_jobs_results: dict = None,
     params: list = None,
     trace: bool = False,
+    sync=False,
+    __salt__=None,
+    hosts=None,
 ) -> dict:
     """
     Function to retrieve connections details from Netbox
@@ -328,7 +365,11 @@ def get_connections(
     :param params: dictionary with salt_nornir_netbox parameters
     :param salt_jobs_results: list with config.get job results
     :param trace: if True traces full connection path between device interfaces
-
+    :param sync: if True, saves get connections results to host's in-memory 
+        inventory data under ``connections`` key, if sync is a string, provided 
+        value used as a key.
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    
     .. warning:: Get connections only supported for Netbox of 3.4 and above.
 
     When ``trace`` set to False, only first segment of connection path returned. If
@@ -734,7 +775,25 @@ def get_connections(
                     "breakout": False if len(link_peers) == 1 else True,
                 }
 
-    return connections_dict
+    # save results to hosts inventory if requested to do so
+    if sync:
+        key = sync if isinstance(sync, str) else "connections"
+        ret = __salt__["nr.nornir"](
+            fun="inventory", 
+            call="load",
+            data=[
+                {
+                    "call": "update_host",
+                    "name": device_name,
+                    "data": {key: connections_dict}
+                }
+            ]
+        )
+        return {
+            f"{device_name} sync connections": ret
+        }
+    else:
+        return connections_dict
 
 
 def get_netbox_params_salt_jobs(hosts: dict):
@@ -820,133 +879,6 @@ def parse_config(salt_jobs_results: dict, **kwargs):
     return salt_jobs_results[0]
 
 
-def get_create_devices_salt_jobs(hosts: dict):
-    """
-    To create devices need to retrieve their inventory data.
-
-    Hosts to platform mapping retrieved separately in case platform
-    for host defined using groups.
-    """
-    ret = [
-        {
-            "salt_exec_fun_name": "nr.nornir",
-            "args": ["inventory", "list_hosts_platforms"],
-            "kwargs": {"FL": list(hosts.keys())},
-        },
-        {
-            "salt_exec_fun_name": "nr.nornir",
-            "args": ["inventory"],
-            "kwargs": {"FL": list(hosts.keys())},
-        },
-    ]
-    ret.extend(get_netbox_params_salt_jobs(hosts))
-    return ret
-
-
-def create_devices(salt_jobs_results: list, **kwargs):
-    """
-    Function to interate over hosts inventory data and create
-    or update devices in Netbox.
-    """
-    return "Not Implemented"
-
-    hosts_platforms = salt_jobs_results[0]
-    inventory = salt_jobs_results[1]
-    netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[2:])
-
-    new_manufacturers = []
-    new_device_types = []
-    new_platforms = []
-    new_devices = []
-
-    # instantiate pynetbox object
-    nb = get_pynetbox(netbox_params)
-
-    # get a list of all existing manufacturers from Netbox
-    existing_manufacturers = nb_graphql(
-        field="manufacturer_list",
-        filters={"name": ""},
-        fields=["name"],
-        params=netbox_params,
-    )
-    existing_manufacturers = [i["name"] for i in existing_manufacturers]
-
-    # get a list of all existing platforms from Netbox
-    existing_platforms = nb_graphql(
-        field="platform_list",
-        filters={"name": ""},
-        fields=["name"],
-        params=netbox_params,
-    )
-    existing_platforms = [i["name"] for i in existing_platforms]
-
-    # get a list of existing devices from Netbox
-    existing_devices = nb_graphql(
-        field="device_list",
-        filters={"name": list(hosts_platforms.keys())},
-        fields=["name"],
-        params=netbox_params,
-    )
-    existing_devices = [i["name"] for i in existing_devices]
-
-    # iterate over hosts and create them in Netbox
-    for host_name, platform in hosts_platforms.items():
-        host_inventory = inventory[host_name]
-
-        # skip already existing devices
-        if host_name in existing_devices:
-            continue
-
-        # determine device manufacturer
-        for manufacturer, platforms in manufacturers_platforms.items():
-            for m_platform in platforms:
-                if platform in m_platform:
-                    if manufacturer not in existing_manufacturers:
-                        new_manufacturers.append({"name": manufacturer})
-                        # add generic device type
-                        new_device_types.append(
-                            {
-                                "manufacturer": manufacturer,
-                                "model": f"{manufacturer} Network Device",
-                            }
-                        )
-                    break
-        else:
-            log.info(
-                f"netbox_utils: failed determine manufacturer for "
-                f"'{host_name}' platform '{platform}', skipping host"
-            )
-            continue
-
-        # decide if need to create device platform
-        if platform not in existing_platforms:
-            new_platforms.append({"name": platform})
-
-        new_devices.append(
-            {
-                "name": host_name,
-            }
-        )
-
-        # create host vendor
-
-    # Decided to skip this for know, as need to create manufacturer, platform and
-    # device type, device hardware type is the most dificult one as have to define
-    # based on output from device, not sure yet on the most reliable way to do that,
-    # especially for multichassis devices, it seems support for device types need to
-    # be added on a case by case basis mapping information obtained from device to
-    # device-type in https://github.com/netbox-community/devicetype-library, which lead
-    # ro neccesaty to create device type templates and modules templates, which in turn
-    # coud rely on code here - https://github.com/minitriga/Netbox-Device-Type-Library-Import
-    # Because of above, decided for now to skip adding devcies from Nornir Inventory
-    #
-    # To create device need to provide device_type, site, device_role attributes,
-    # site and device role are usually not derivable from Nornir inventory, possible workaround
-    # is to use data.netbox... path data and instruct user to populate that section with
-    # device details required to create it in netbox, but IMHO simple csv import into netbox
-    # is a better alternative
-
-
 def get_params_parse_config_salt_jobs(hosts):
     """
     Function to produce a list of jobs to run to parse devices configs
@@ -959,11 +891,12 @@ def get_params_parse_config_salt_jobs(hosts):
     return jobs
 
 
-def update_config_context(salt_jobs_results: list, **kwargs):
+def update_config_context(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
     """
     Function to populate device configuration context with parsed results.
 
     :param salt_jobs_results: list with Netbox Params and config parsing job results
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     ret = {}
     netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[:2])
@@ -992,7 +925,7 @@ def update_config_context(salt_jobs_results: list, **kwargs):
     return ret
 
 
-def update_vrf(salt_jobs_results: list, **kwargs):
+def update_vrf(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
     """
     Function to create or update VRFs and Route-Targets in Netbox.
 
@@ -1003,6 +936,7 @@ def update_vrf(salt_jobs_results: list, **kwargs):
     * Reference to import and export RT for VRFs
 
     :param salt_jobs_results: list with Netbox Params and config parsing job results
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     all_rt, all_vrf = set(), {}  # variables to hold all parsed RT and VRFs names
     rt_create, rt_update, vrf_create, vrf_update = {}, {}, {}, {}
@@ -1148,19 +1082,6 @@ def run_dir(salt_jobs_results: list = None, **kwargs):
     return list(netbox_tasks.keys())
 
 
-def update_interfaces(salt_jobs_results: list, **kwargs):
-    """
-    Function to create or update devices' interfaces in Netbox.
-
-    This function creates or updates:
-
-    * Device interfaces and their parameters
-
-    :param salt_jobs_results: list with Netbox Params and config parsing job results
-    """
-    pass
-
-
 # dispatch dictionary of Netbox tasks exposed for calling
 # salt_jobs - returns a list of salt jobs to run to retrieve data for task function
 # task_function - callable function to run on data from salt jobs
@@ -1176,10 +1097,6 @@ netbox_tasks = {
     "update_vrf": {
         "salt_jobs": get_params_parse_config_salt_jobs,
         "task_function": update_vrf,
-    },
-    "update_interfaces": {
-        "salt_jobs": get_params_parse_config_salt_jobs,
-        "task_function": update_interfaces,
     },
     "query": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_graphql},
     "rest": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_rest},

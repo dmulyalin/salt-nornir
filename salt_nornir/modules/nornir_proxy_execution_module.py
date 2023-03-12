@@ -3180,7 +3180,7 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox update_vrf
     """
     task_name = args[0] if args else kwargs.pop("task")
-    salt_jobs_results = []
+    prep_fun_results = []
 
     # get a list of hosts to run Salt Jobs for
     task_hosts = nornir_fun(
@@ -3192,18 +3192,21 @@ def netbox(*args, **kwargs):
         raise CommandExecutionError("No hosts matched")
 
     # source list of Salt Jobs to run
-    tasks_list = netbox_tasks[task_name]["salt_jobs"](hosts=task_hosts)
-    # execute Salt Jobs to retrieve data
-    for task_data in tasks_list:
-        salt_jobs_results.append(
-            __salt__[task_data["salt_exec_fun_name"]](
-                *task_data.get("args", []), **task_data.get("kwargs", {})
+    prep_functions = netbox_tasks[task_name]["salt_jobs"](hosts=task_hosts)
+    
+    # execute prep_functions to retrieve data
+    for item in prep_functions:
+        prep_fun_results.append(
+            __salt__[item["salt_exec_fun_name"]](
+                *item.get("args", []), **item.get("kwargs", {})
             )
         )
 
     # run Netbox task using Salt Jobs results
     return netbox_tasks[task_name]["task_function"](
-        salt_jobs_results=salt_jobs_results,
+        salt_jobs_results=prep_fun_results,
+        __salt__=__salt__,
+        hosts=task_hosts,
         *args[1:],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")},
     )
