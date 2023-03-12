@@ -269,3 +269,99 @@ def test_netbox_rest_using_kwargs():
     pprint.pprint(ret)
     assert isinstance(ret["nrp3"]["results"], list), "Non list data returned"
     assert all(i["device"]["name"] == "fceos4" for i in ret["nrp3"]["results"]), "Not all interfaces belong to fceos4"
+    
+    
+@skip_if_not_has_netbox
+
+def test_netbox_get_interfaces_sync():
+    update_ceos = client.cmd(
+        tgt="nrp1", 
+        fun="nr.nornir", 
+        arg=["inventory", "update_host"], 
+        kwarg={
+            "data": {
+                "interfaces": []
+            },
+            "name": "ceos1",
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Deleted ceos interfaces data:")
+    pprint.pprint(update_ceos)
+    sync_ret = client.cmd(
+        tgt="nrp1", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={
+            "sync": True,
+            "device_name": "ceos1"
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Updated ceos interfaces:")
+    pprint.pprint(sync_ret)
+    updated_inventory = client.cmd(
+        tgt="nrp1", 
+        fun="nr.nornir", 
+        arg=["inventory"], 
+        kwarg={"FB": "ceos1"},
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Ceos inventory:")
+    pprint.pprint(updated_inventory)
+    
+    assert sync_ret["nrp1"]["ceos1 sync interfaces"]["nornir-worker-1"] == [True]
+    assert sync_ret["nrp1"]["ceos1 sync interfaces"]["nornir-worker-2"] == [True]    
+    assert sync_ret["nrp1"]["ceos1 sync interfaces"]["nornir-worker-3"] == [True]    
+    assert "Ethernet1" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]
+    assert "Loopback0" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]    
+    
+    
+def test_netbox_get_connections_sync():
+    update_ceos = client.cmd(
+        tgt="nrp3", 
+        fun="nr.nornir", 
+        arg=["inventory", "update_host"], 
+        kwarg={
+            "data": {
+                "connections": []
+            },
+            "name": "fceos4",
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Deleted fceos interfaces data:")
+    pprint.pprint(update_ceos)
+    sync_ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_connections"], 
+        kwarg={
+            "sync": True,
+            "device_name": "fceos4"
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Updated ceos interfaces:")
+    pprint.pprint(sync_ret)
+    updated_inventory = client.cmd(
+        tgt="nrp3", 
+        fun="nr.nornir", 
+        arg=["inventory"], 
+        kwarg={"FB": "fceos4"},
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("Ceos inventory:")
+    pprint.pprint(updated_inventory)
+
+    assert sync_ret["nrp3"]["fceos4 sync connections"]["nornir-worker-1"] == [True]
+    assert sync_ret["nrp3"]["fceos4 sync connections"]["nornir-worker-2"] == [True]    
+    assert sync_ret["nrp3"]["fceos4 sync connections"]["nornir-worker-3"] == [True]    
+    assert "ConsolePort1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"]
+    assert "eth1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"] 
