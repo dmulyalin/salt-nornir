@@ -3082,11 +3082,11 @@ def netbox(*args, **kwargs):
     
     Supported arguments:
     
-    * ``query_string`` - GraphQL query string to send to Netbox GraphQL API
-    * ``field`` - name of the the fields to retirieve e.g. device_list, interface_list
-    * ``filters`` - dictionary of filters to use
-    * ``fields`` - dictionary of fields to retrieve
-    * ``queries`` - dictionary keyed by GraphQL aliases with values being a dictionary of
+    :param query_string: GraphQL query string to send to Netbox GraphQL API
+    :param field: name of the the fields to retirieve e.g. device_list, interface_list
+    :param filters: dictionary of filters to use
+    :param fields: dictionary of fields to retrieve
+    :param queries: dictionary keyed by GraphQL aliases with values being a dictionary of
       `field``, ``filters`` and ``fields`` parameters.
         
     To use ``query`` task need to provide one of
@@ -3118,8 +3118,8 @@ def netbox(*args, **kwargs):
     Qquery Netbox REST API using requests. This task supports any requests module
     arguments in additiona to these arguments:
     
-    * ``method`` - get, ports, put, patch, delete action to query
-    * ``api`` - Netbox API endpoint to query e.g. ``dcim/interfaces``
+    :param method: get, ports, put, patch, delete action to query
+    :param api: Netbox API endpoint to query e.g. ``dcim/interfaces``
     
     Sample usage::
     
@@ -3130,8 +3130,8 @@ def netbox(*args, **kwargs):
     
     Retrieves devices' interfaces details from Netbox, supported arguments:
     
-    * ``add_ip`` - boolean, if True adds IP addresses information to interfaces
-    * ``add_inventory_items`` - boolean, if True adds inventory items information to interfaces
+    :param add_ip: boolean, if True adds IP addresses information to interfaces
+    :param add_inventory_items: boolean, if True adds inventory items information to interfaces
     
     Sample usage::
     
@@ -3141,7 +3141,7 @@ def netbox(*args, **kwargs):
 
     Retrieves devices' interfaces connections from Netbox. Supported arguments:
     
-    * ``trace`` - if True traces full connection path between device interfaces
+    :param trace: if True traces full connection path between device interfaces
     
     Sample usage::
     
