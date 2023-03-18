@@ -24,8 +24,8 @@ log = logging.getLogger(__name__)
 try:
     from nornir_salt.plugins.functions import FFun_functions
 except ImportError:
-    log.warning("Failed importing Nornir-Salt library")  
-    
+    log.warning("Failed importing Nornir-Salt library")
+
 try:
     import requests
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -41,23 +41,23 @@ try:
     from salt.exceptions import CommandExecutionError
 except:
     log.warning("Failed importing SALT libraries")
-    
-    
+
+
 def get_salt_nornir_netbox_params(__salt__) -> dict:
     """
-    Function to retreive Netbox Params from minion pillar or salt-master 
+    Function to retreive Netbox Params from minion pillar or salt-master
     configuration.
 
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
-    # get Netbox params from Pillar and Master config 
+    # get Netbox params from Pillar and Master config
     params = __salt__["config.get"](
         key="salt_nornir_netbox_pillar",
         omit_pillar=False,
         omit_opts=True,
         omit_master=True,
         omit_grains=True,
-        default={},    
+        default={},
     )
     ext_pillar_params = __salt__["config.get"](
         key="ext_pillar",
@@ -65,7 +65,7 @@ def get_salt_nornir_netbox_params(__salt__) -> dict:
         omit_opts=True,
         omit_master=False,
         omit_grains=True,
-        default={},    
+        default={},
     )
     # extraxt Netbox ext pillar config if any
     for i in ext_pillar_params:
@@ -197,12 +197,7 @@ def nb_graphql(
         return None
 
 
-def nb_rest(
-    method: str = "get", 
-    api: str = "", 
-    __salt__=None, 
-    **kwargs
-) -> dict:
+def nb_rest(method: str = "get", api: str = "", __salt__=None, **kwargs) -> dict:
     """
     Function to query Netbox REST API.
 
@@ -240,6 +235,7 @@ def get_interfaces(
     sync=False,
     params=None,
     __salt__=None,
+    hosts=None,
     **kwargs,
 ):
     """
@@ -247,18 +243,26 @@ def get_interfaces(
 
     :param add_ip: if True, retrieves interface IPs
     :param add_inventory_items: if True, retrieves interface inventory items
-    :param sync: if True, saves get interfaces results to host's in-memory 
-        inventory data under ``interfaces`` key, if sync is a string, provided 
+    :param sync: if True, saves get interfaces results to host's in-memory
+        inventory data under ``interfaces`` key, if sync is a string, provided
         value used as a key.
     :param __salt__: reference to ``__salt__`` execution modules dictionary
-    
+    :param kwargs: Fx filters to filter hosts to retrieve interfaces for
+    :param hosts: list of hosts to retrieve interface for
+    :return: dictionary keyed by device name with interface details
+
     .. note:: ``add_inventory_items`` only supported with Netbox 3.4 and above.
+
+    .. note: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
+    otherwise ``CommandExecutionError`` raised.
     """
     # retrieve a list of hosts to get interfaces for
-    hosts = __salt__["nr.nornir"](
+    hosts = hosts or __salt__["nr.nornir"](
         "hosts",
         **{k: v for k, v in kwargs.items() if k in FFun_functions},
     )
+    if not hosts:
+        raise CommandExecutionError("No hosts matched")
     # if no params provided extract them from minion pillar of master config
     params = params or get_salt_nornir_netbox_params(__salt__)
     intf_fields = [
@@ -355,18 +359,17 @@ def get_interfaces(
     if sync:
         key = sync if isinstance(sync, str) else "interfaces"
         return __salt__["nr.nornir"](
-            fun="inventory", 
+            fun="inventory",
             call="load",
             data=[
-                {
-                    "call": "update_host",
-                    "name": host,
-                    "data": {key: intf_data}
-                }
+                {"call": "update_host", "name": host, "data": {key: intf_data}}
                 for host, intf_data in intf_dict.items()
-            ]
-        ) 
+            ],
+        )
     else:
+        # make sure all hosts included in return data
+        for host in hosts:
+            intf_dict.setdefault(host, {})
         return intf_dict
 
 
@@ -375,18 +378,25 @@ def get_connections(
     trace: bool = False,
     sync=False,
     __salt__=None,
+    hosts=None,
+    **kwargs,
 ) -> dict:
     """
     Function to retrieve connections details from Netbox
 
     :param params: dictionary with salt_nornir_netbox parameters
-    :param trace: if True traces full connection path between device interfaces
-    :param sync: if True, saves get connections results to host's in-memory 
-        inventory data under ``connections`` key, if sync is a string, provided 
+    :param trace: if True traces full connection path between devices interfaces
+    :param sync: if True, saves get connections results to host's in-memory
+        inventory data under ``connections`` key, if sync is a string, provided
         value used as a key.
     :param __salt__: reference to ``__salt__`` execution modules dictionary
-    
+    :param kwargs: Fx filters to filter hosts to retrieve interfaces for
+    :return: dictionary keyed by device name with connections details
+
     .. warning:: Get connections only supported for Netbox of 3.4 and above.
+
+    .. note:: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
+    otherwise ``CommandExecutionError`` raised.
 
     When ``trace`` set to False, only first segment of connection path returned. If
     first segment is a circuit termination, ``circuit`` details included, otherwise
@@ -399,11 +409,12 @@ def get_connections(
     .. warning:: trace operation performed on an interface by interface basis and may
         take significant amount of time to complete for all device's interfaces.
 
-    Get connections returns a dictionary keyed by device local interface name.
+    Get connections returns a dictionary keyed by device name with value being a
+    dictionary keyed by local interface names.
 
     Sample return data with ``trace`` set to ``True``::
 
-        {'ConsolePort1': {'breakout': False,
+        {'fceos4': {'ConsolePort1': {'breakout': False,
                           'cable': {'custom_fields': {},
                                     'label': '',
                                     'last_updated': '2022-12-29T04:16:49.919563+00:00',
@@ -515,95 +526,97 @@ def get_connections(
 
     Same connections but with ``trace`` set to ``False``::
 
-        {'ConsolePort1': {'breakout': False,
-                           'cable': {'custom_fields': {},
-                                     'label': '',
-                                     'last_updated': '2022-12-29T04:16:49.919563+00:00',
-                                     'length': None,
-                                     'length_unit': None,
-                                     'status': 'CONNECTED',
-                                     'tags': [],
-                                     'tenant': {'name': 'SALTNORNIR'},
-                                     'type': 'CAT6A'},
-                           'reachable': True,
-                           'remote_device': 'fceos5',
-                           'remote_interface': 'ConsoleServerPort1',
-                           'remote_termination_type': 'consoleserverport',
-                           'termination_type': 'consoleport'},
-          'eth1': {'breakout': True,
-                   'cable': {'custom_fields': {},
-                             'label': '',
-                             'last_updated': '2022-12-29T06:54:16.036814+00:00',
-                             'length': None,
-                             'length_unit': None,
-                             'status': 'CONNECTED',
-                             'tags': [],
-                             'tenant': {'name': 'SALTNORNIR'},
-                             'type': 'CAT6A'},
-                   'reachable': True,
-                   'remote_device': 'fceos5',
-                   'remote_interface': ['eth1', 'eth10'],
-                   'remote_termination_type': 'interface',
-                   'termination_type': 'interface'},
-          'eth101': {'cable': {'custom_fields': {},
-                               'label': '',
-                               'last_updated': '2022-12-29T09:43:21.761420+00:00',
-                               'length': None,
-                               'length_unit': None,
-                               'status': 'CONNECTED',
-                               'tags': [],
-                               'tenant': None,
-                               'type': None},
-                     'circuit': {'cid': 'CID1',
-                                 'commit_rate': None,
-                                 'custom_fields': {},
-                                 'description': '',
-                                 'provider': {'name': 'Provider1'},
-                                 'status': 'ACTIVE',
-                                 'tags': []},
-                     'reachable': True,
-                     'remote_termination_type': 'circuittermination',
-                     'termination_type': 'interface'},
-          'eth3': {'breakout': False,
-                   'cable': {'custom_fields': {},
-                             'label': '',
-                             'last_updated': '2022-12-29T06:56:23.629652+00:00',
-                             'length': None,
-                             'length_unit': None,
-                             'status': 'CONNECTED',
-                             'tags': [],
-                             'tenant': {'name': 'SALTNORNIR'},
-                             'type': 'CAT6A'},
-                   'reachable': True,
-                   'remote_device': 'fceos5',
-                   'remote_interface': 'eth3',
-                   'remote_termination_type': 'interface',
-                   'termination_type': 'interface'},
-          'eth7': {'breakout': False,
-                   'cable': {'custom_fields': {},
-                             'label': '',
-                             'last_updated': '2022-12-29T08:52:26.546559+00:00',
-                             'length': None,
-                             'length_unit': None,
-                             'status': 'CONNECTED',
-                             'tags': [],
-                             'tenant': None,
-                             'type': 'SMF'},
-                   'reachable': True,
-                   'remote_device': 'PatchPanel1',
-                   'remote_interface': 'FrontPort1',
-                   'remote_termination_type': 'frontport',
-                   'termination_type': 'interface'}}}
+        {'fceos4': {'ConsolePort1': {'breakout': False,
+                               'cable': {'custom_fields': {},
+                                         'label': '',
+                                         'last_updated': '2022-12-29T04:16:49.919563+00:00',
+                                         'length': None,
+                                         'length_unit': None,
+                                         'status': 'CONNECTED',
+                                         'tags': [],
+                                         'tenant': {'name': 'SALTNORNIR'},
+                                         'type': 'CAT6A'},
+                               'reachable': True,
+                               'remote_device': 'fceos5',
+                               'remote_interface': 'ConsoleServerPort1',
+                               'remote_termination_type': 'consoleserverport',
+                               'termination_type': 'consoleport'},
+              'eth1': {'breakout': True,
+                       'cable': {'custom_fields': {},
+                                 'label': '',
+                                 'last_updated': '2022-12-29T06:54:16.036814+00:00',
+                                 'length': None,
+                                 'length_unit': None,
+                                 'status': 'CONNECTED',
+                                 'tags': [],
+                                 'tenant': {'name': 'SALTNORNIR'},
+                                 'type': 'CAT6A'},
+                       'reachable': True,
+                       'remote_device': 'fceos5',
+                       'remote_interface': ['eth1', 'eth10'],
+                       'remote_termination_type': 'interface',
+                       'termination_type': 'interface'},
+              'eth101': {'cable': {'custom_fields': {},
+                                   'label': '',
+                                   'last_updated': '2022-12-29T09:43:21.761420+00:00',
+                                   'length': None,
+                                   'length_unit': None,
+                                   'status': 'CONNECTED',
+                                   'tags': [],
+                                   'tenant': None,
+                                   'type': None},
+                         'circuit': {'cid': 'CID1',
+                                     'commit_rate': None,
+                                     'custom_fields': {},
+                                     'description': '',
+                                     'provider': {'name': 'Provider1'},
+                                     'status': 'ACTIVE',
+                                     'tags': []},
+                         'reachable': True,
+                         'remote_termination_type': 'circuittermination',
+                         'termination_type': 'interface'},
+              'eth3': {'breakout': False,
+                       'cable': {'custom_fields': {},
+                                 'label': '',
+                                 'last_updated': '2022-12-29T06:56:23.629652+00:00',
+                                 'length': None,
+                                 'length_unit': None,
+                                 'status': 'CONNECTED',
+                                 'tags': [],
+                                 'tenant': {'name': 'SALTNORNIR'},
+                                 'type': 'CAT6A'},
+                       'reachable': True,
+                       'remote_device': 'fceos5',
+                       'remote_interface': 'eth3',
+                       'remote_termination_type': 'interface',
+                       'termination_type': 'interface'},
+              'eth7': {'breakout': False,
+                       'cable': {'custom_fields': {},
+                                 'label': '',
+                                 'last_updated': '2022-12-29T08:52:26.546559+00:00',
+                                 'length': None,
+                                 'length_unit': None,
+                                 'status': 'CONNECTED',
+                                 'tags': [],
+                                 'tenant': None,
+                                 'type': 'SMF'},
+                       'reachable': True,
+                       'remote_device': 'PatchPanel1',
+                       'remote_interface': 'FrontPort1',
+                       'remote_termination_type': 'frontport',
+                       'termination_type': 'interface'}}}}
 
     Each connection has ``reachable`` status calculated based on cables status - set to
     ``True`` if all cables in the path have status ``connected``, path circuits' status
     not taken into account.
     """
     # retrieve a list of hosts to get interfaces for
-    hosts = __salt__["nr.nornir"](
+    hosts = hosts or __salt__["nr.nornir"](
         "hosts",
         **{k: v for k, v in kwargs.items() if k in FFun_functions},
     )
+    if not hosts:
+        raise CommandExecutionError("No hosts matched")
     # if no params provided, extract Netbox params from mater config or minion pillar
     params = params or get_salt_nornir_netbox_params(__salt__)
     connections_dict = {}
@@ -725,12 +738,14 @@ def get_connections(
             # skip circuit termination point
             if termination_type == "circuittermination":
                 continue
-            # skip non local termination points
-            if termination["device"]["name"] != device_name:
-                continue
             # skip if cable has no peers
             if not termination["link_peers"]:
                 continue
+            device_name = termination["device"]["name"]
+            # skip connections for non requested devices
+            if device_name not in hosts:
+                continue
+            connections_dict.setdefault(device_name, {})
             link_peers = termination.pop("link_peers")
             remote_termination_type = (
                 link_peers[0]["__typename"].replace("Type", "").lower()
@@ -750,10 +765,10 @@ def get_connections(
                 elif termination_type == "consoleserverport":
                     far_end_termination_type = "consoleport"
                     api = f"dcim/console-server-ports/{termination['id']}/trace"
-                path_trace = nb_rest(method="get", api=api)
+                path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
                 # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
                 remote_device_terminations = path_trace[-1][-1]
-                connections_dict[termination["name"]] = {
+                connections_dict[device_name][termination["name"]] = {
                     # path is reachable if all segments' cables are connected
                     "reachable": all(
                         c[1]["status"].lower() == "connected" for c in path_trace
@@ -771,7 +786,7 @@ def get_connections(
                 }
             # retrieve local cable connection to the circuit
             elif remote_termination_type == "circuittermination":
-                connections_dict[termination["name"]] = {
+                connections_dict[device_name][termination["name"]] = {
                     "reachable": cable["status"].lower() == "connected",
                     "cable": cable,
                     "circuit": link_peers[0]["circuit"],
@@ -780,7 +795,7 @@ def get_connections(
                 }
             # retrieve local cable connections only, no full path trace
             else:
-                connections_dict[termination["name"]] = {
+                connections_dict[device_name][termination["name"]] = {
                     "reachable": cable["status"].lower() == "connected",
                     "cable": cable,
                     "remote_device": link_peers[0]["device"]["name"],
@@ -797,21 +812,18 @@ def get_connections(
     # save results to hosts inventory if requested to do so
     if sync:
         key = sync if isinstance(sync, str) else "connections"
-        ret = __salt__["nr.nornir"](
-            fun="inventory", 
+        return __salt__["nr.nornir"](
+            fun="inventory",
             call="load",
             data=[
-                {
-                    "call": "update_host",
-                    "name": device_name,
-                    "data": {key: connections_dict}
-                }
-            ]
+                {"call": "update_host", "name": host, "data": {key: connections}}
+                for host, connections in connections_dict.items()
+            ],
         )
-        return {
-            f"{device_name} sync connections": ret
-        }
     else:
+        # make sure all hosts included in return data
+        for host in hosts:
+            connections_dict.setdefault(host, {})
         return connections_dict
 
 
@@ -819,22 +831,22 @@ def parse_config(__salt__=None, **kwargs):
     """
     Function to return results of devices configuration parsing
     produced by TTP Templates for Netbox.
-    
+
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     :param kwargs: dictionary of Fx filters
     """
-    ret = []
+    ret = {}
     platforms_added = set()
 
     # get a list of hosts and their platforms to run Salt Jobs for
-    hosts = nornir_fun(
+    hosts = __salt__["nr.nornir"](
         "inventory",
         "list_hosts_platforms",
         **{k: v for k, v in kwargs.items() if k in FFun_functions},
     )
     if not hosts:
         raise CommandExecutionError("No hosts matched")
-        
+
     for host_name, platform in hosts.items():
         task_kwargs = {}
         if platform in platforms_added:
@@ -852,7 +864,7 @@ def parse_config(__salt__=None, **kwargs):
                 f"platform '{platform}', host name '{host_name}'"
             )
             continue
-        ret.append(
+        ret.update(
             __salt__["nr.cli"](
                 **task_kwargs,
                 FL=[h for h, p in hosts.items() if p == platform],
@@ -879,21 +891,20 @@ def update_config_context(__salt__=None, **kwargs):
     nb = get_pynetbox(netbox_params)
 
     # update devices context
-    for hosts_results in parsing_job_results:
-        for host_name, host_data in hosts_results.items():
-            nb_device = nb.dcim.devices.get(name=host_name)
-            if not nb_device:
-                ret[host_name] = f"ERROR: '{host_name}' device not found in Netbox;"
-            elif not host_data.get("run_ttp", {}).get("netbox_data", {}):
-                ret[
-                    host_name
-                ] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
-            else:
-                context_data = nb_device.local_context_data or {}
-                context_data.update(host_data["run_ttp"]["netbox_data"])
-                nb_device.update(data={"local_context_data": context_data})
-                nb_device.save()
-                ret[host_name] = "Configuration Context data updated;"
+    for host_name, host_data in parsing_job_results.items():
+        nb_device = nb.dcim.devices.get(name=host_name)
+        if not nb_device:
+            ret[host_name] = f"ERROR: '{host_name}' device not found in Netbox;"
+        elif not host_data.get("run_ttp", {}).get("netbox_data", {}):
+            ret[
+                host_name
+            ] = f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}';"
+        else:
+            context_data = nb_device.local_context_data or {}
+            context_data.update(host_data["run_ttp"]["netbox_data"])
+            nb_device.update(data={"local_context_data": context_data})
+            nb_device.save()
+            ret[host_name] = "Configuration Context data updated;"
 
     return ret
 
@@ -920,64 +931,63 @@ def update_vrf(__salt__=None, **kwargs):
 
     # iterate over VRF parsing results
     hosts_done = []
-    for hosts_results in parsing_job_results:
-        for host_name, host_data in hosts_results.items():
-            hosts_done.append(host_name)
-            # check if parsing results are good
-            if not host_data.get("run_ttp", {}).get("netbox_data", {}):
-                log.error(
-                    f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}'"
-                )
-                continue
-            # process parsing results
-            for vrf in host_data["run_ttp"]["netbox_data"]["vrf"]:
-                vrf_import_rt, vrf_export_rt = [], []
-                # update IPv4 import route-targets
-                for rt in (
-                    vrf.get("afi", {})
-                    .get("ipv4_unicast", {})
-                    .get("route_target", {})
-                    .get("import", [])
-                ):
-                    vrf_import_rt.append(rt)
-                # update IPv4 export route-targets
-                for rt in (
-                    vrf.get("afi", {})
-                    .get("ipv4_unicast", {})
-                    .get("route_target", {})
-                    .get("export", [])
-                ):
-                    vrf_export_rt.append(rt)
-                # update IPv6 import route-targets
-                for rt in (
-                    vrf.get("afi", {})
-                    .get("ipv6_unicast", {})
-                    .get("route_target", {})
-                    .get("import", [])
-                ):
-                    vrf_import_rt.append(rt)
-                # update IPv6 export route-targets
-                for rt in (
-                    vrf.get("afi", {})
-                    .get("ipv6_unicast", {})
-                    .get("route_target", {})
-                    .get("export", [])
-                ):
-                    vrf_export_rt.append(rt)
+    for host_name, host_data in parsing_job_results.items():
+        hosts_done.append(host_name)
+        # check if parsing results are good
+        if not host_data.get("run_ttp", {}).get("netbox_data", {}):
+            log.error(
+                f"ERROR: '{host_name}' device has bad parsing results: '{host_data.get('run_ttp')}'"
+            )
+            continue
+        # process parsing results
+        for vrf in host_data["run_ttp"]["netbox_data"]["vrf"]:
+            vrf_import_rt, vrf_export_rt = [], []
+            # update IPv4 import route-targets
+            for rt in (
+                vrf.get("afi", {})
+                .get("ipv4_unicast", {})
+                .get("route_target", {})
+                .get("import", [])
+            ):
+                vrf_import_rt.append(rt)
+            # update IPv4 export route-targets
+            for rt in (
+                vrf.get("afi", {})
+                .get("ipv4_unicast", {})
+                .get("route_target", {})
+                .get("export", [])
+            ):
+                vrf_export_rt.append(rt)
+            # update IPv6 import route-targets
+            for rt in (
+                vrf.get("afi", {})
+                .get("ipv6_unicast", {})
+                .get("route_target", {})
+                .get("import", [])
+            ):
+                vrf_import_rt.append(rt)
+            # update IPv6 export route-targets
+            for rt in (
+                vrf.get("afi", {})
+                .get("ipv6_unicast", {})
+                .get("route_target", {})
+                .get("export", [])
+            ):
+                vrf_export_rt.append(rt)
 
-                # form RT data
-                for i in vrf_import_rt:
-                    all_rt.add(i)
-                for i in vrf_export_rt:
-                    all_rt.add(i)
+            # form RT data
+            for i in vrf_import_rt:
+                all_rt.add(i)
+            for i in vrf_export_rt:
+                all_rt.add(i)
 
-                # form VRF data dictionary
-                all_vrf[vrf["name"]] = {
-                    "name": vrf["name"],
-                    "description": vrf.get("description", ""),
-                    "import_targets": vrf_import_rt,
-                    "export_targets": vrf_export_rt,
-                }
+            # form VRF data dictionary
+            all_vrf[vrf["name"]] = {
+                "name": vrf["name"],
+                "description": vrf.get("description", ""),
+                "import_targets": vrf_import_rt,
+                "export_targets": vrf_export_rt,
+            }
 
     # retrieve a list of existing route-targets
     existing_rt = nb_graphql(
@@ -1058,6 +1068,6 @@ netbox_tasks = {
     "query": nb_graphql,
     "rest": nb_rest,
     "get_interfaces": get_interfaces,
-    "get_connections":  get_connections,
+    "get_connections": get_connections,
     "dir": run_dir,
 }

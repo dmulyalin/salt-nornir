@@ -3071,28 +3071,28 @@ def netbox(*args, **kwargs):
     Available ``task`` functions are listed below.
 
     **dir task**
-    
+
     Returns a list of supported tasks functions. Sample usage::
 
         salt nrp1 nr.netbox dir
-        
+
     **query task**
-    
+
     Helps to retrieve data from Netbox over GraphQL API.
-    
+
     Supported arguments:
-    
+
     :param query_string: GraphQL query string to send to Netbox GraphQL API
     :param field: name of the the fields to retirieve e.g. device_list, interface_list
     :param filters: dictionary of filters to use
     :param fields: dictionary of fields to retrieve
     :param queries: dictionary keyed by GraphQL aliases with values being a dictionary of
       `field``, ``filters`` and ``fields`` parameters.
-        
+
     To use ``query`` task need to provide one of
-    
-    - ``query_string`` or 
-    - ``field``, ``filters`` and ``fields`` parameters to form query string or 
+
+    - ``query_string`` or
+    - ``field``, ``filters`` and ``fields`` parameters to form query string or
     - ``queries`` dictionary to form query strings with aliases
 
     For ``query`` function to work, Netbox token and url parameters should be
@@ -3103,80 +3103,81 @@ def netbox(*args, **kwargs):
           - salt_nornir_netbox:
               url: 'http://192.168.115.129:8000'
               token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
-              
+
     To be able to source Netbox parameters from Salt-Master, Master's configuration file
     need to have ``pillar_opts`` set to ``True``.
-              
+
     Sample usage::
-    
+
         salt nrp1 nr.netbox query field="device_list" filters='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
         salt nrp1 nr.netbox query queries='{"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}'
         salt nrp1 nr.netbox query query_string='query{device_list(platform: "eos") {name}}'
-        
+
     **rest task**
-    
+
     Qquery Netbox REST API using requests. This task supports any requests module
     arguments in additiona to these arguments:
-    
+
     :param method: get, ports, put, patch, delete action to query
     :param api: Netbox API endpoint to query e.g. ``dcim/interfaces``
-    
+
     Sample usage::
-    
+
         salt nrp1 nr.netbox rest get "dcim/interfaces" params='{"name__ic": "eth1", "device": "fceos4"}'
         salt nrp1 nr.netbox rest method=get api="dcim/interfaces" params='{"device": "fceos4"}'
-    
+
     **get_interfaces task**
-    
+
     Retrieves devices' interfaces details from Netbox, supported arguments:
-    
+
     :param add_ip: boolean, if True adds IP addresses information to interfaces
     :param add_inventory_items: boolean, if True adds inventory items information to interfaces
-    
+
     Sample usage::
-    
-        salt nrp1 nr.netbox get_interfaces device_name="ceos1" add_ip=True add_inventory_items=True
-    
-    **get_connections task** 
+
+        salt nrp1 nr.netbox get_interfaces FB="ceos1" add_ip=True add_inventory_items=True
+
+    **get_connections task**
 
     Retrieves devices' interfaces connections from Netbox. Supported arguments:
-    
+
     :param trace: if True traces full connection path between device interfaces
-    
+
     Sample usage::
-    
-        salt nrp1 nr.netbox get_connections device_name="ceos1"
-        
+
+        salt nrp1 nr.netbox get_connections FB="ceos1"
+        salt nrp1 nr.netbox get_connections FB="ceos1" trace=True
+
     **update_config_context task**
-    
-    Task to parse device configuration and save results into Netbox device's 
+
+    Task to parse device configuration and save results into Netbox device's
     configuration context.
-    
+
     Dependency: TTP, ``pip install ttp``
-    
+
     Sample usage::
-    
-        salt nrp1 nr.netbox update_config_context
-    
+
+        salt nrp1 nr.netbox update_config_context FB=ceos1
+
     **parse_config task**
 
     Task to parse device configuratoion using TTP templates and return results.
     This task used by ``update_config_context`` to retrieve configuration
     parsing results.
-    
+
     Dependency: TTP, ``pip install ttp``
-    
+
     Sample usage::
-    
+
         salt nrp1 nr.netbox parse_config
-        
+
     **update_vrf task**
 
     This task helps to create or update VRFs and Route-Targets in Netbox from
     device configuration.
-    
+
     Sample usage::
-    
+
         salt nrp1 nr.netbox update_vrf
     """
     task_name = args[0] if args else kwargs.pop("task")

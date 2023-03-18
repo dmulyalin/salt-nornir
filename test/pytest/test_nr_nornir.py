@@ -972,3 +972,42 @@ def test_read_host_data():
     assert ret["nrp1"]["ceos2"]["foo.bar"] is None
     assert ret["nrp1"]["ceos2"]["interfaces_test"] is None
     assert ret["nrp1"]["ceos2"]["tests.suite1"] is None
+    
+    
+def test_nr_nornir_inventory_update_defaults():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "update_defaults"],
+        kwarg={
+            "username": "foo",
+            "password": "bar",
+            "data": {"foo1": "bar1"},
+            "connection_options": {"foo_conn": {"platform": "bar", "username": "bar2"}},
+            "port": 1234,
+            "platform": "foobar",
+            "foo123": "bar123",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(inventory_data)
+    assert ret == {'nrp1': {'nornir-worker-1': True,
+          'nornir-worker-2': True,
+          'nornir-worker-3': True}}
+    assert inventory_data["nrp1"]["defaults"]["connection_options"]["foo_conn"]["username"] == "bar2"
+    assert inventory_data["nrp1"]["defaults"]["connection_options"]["foo_conn"]["platform"] == "bar"
+    assert inventory_data["nrp1"]["defaults"]["data"]["foo1"] == "bar1"
+    assert inventory_data["nrp1"]["defaults"]["data"]["foo123"] == "bar123"    
+    assert inventory_data["nrp1"]["defaults"]["platform"] == "foobar"    
+    assert inventory_data["nrp1"]["defaults"]["port"] == 1234        
+    assert inventory_data["nrp1"]["defaults"]["username"] == "foo"   

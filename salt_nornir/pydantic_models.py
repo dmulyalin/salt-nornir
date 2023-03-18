@@ -604,7 +604,7 @@ class model_exec_nr_netbox(model_ffun_fx_filters):
     queries: Optional[Dict]
     query_string: Optional[StrictStr]
     sync: Optional[StrictBool]
-        
+
     class Config:
         extra = "allow"
 
