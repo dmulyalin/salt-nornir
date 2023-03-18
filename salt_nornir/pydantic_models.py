@@ -599,12 +599,12 @@ class model_exec_nr_netbox(model_ffun_fx_filters):
     field: Optional[StrictStr]
     filters: Optional[Dict[StrictStr, StrictStr]]
     fields: Optional[List[StrictStr]]
-    device_name: Optional[Union[StrictStr, List[StrictStr]]]
     add_ip: Optional[StrictBool]
     add_inventory_items: Optional[StrictBool]
     queries: Optional[Dict]
     query_string: Optional[StrictStr]
-
+    sync: Optional[StrictBool]
+        
     class Config:
         extra = "allow"
 

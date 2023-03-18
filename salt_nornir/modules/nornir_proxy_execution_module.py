@@ -3180,35 +3180,12 @@ def netbox(*args, **kwargs):
         salt nrp1 nr.netbox update_vrf
     """
     task_name = args[0] if args else kwargs.pop("task")
-    prep_fun_results = []
-
-    # get a list of hosts to run Salt Jobs for
-    task_hosts = nornir_fun(
-        "inventory",
-        "list_hosts_platforms",
-        **{k: v for k, v in kwargs.items() if k in FFun_functions},
-    )
-    if not task_hosts:
-        raise CommandExecutionError("No hosts matched")
-
-    # source list of Salt Jobs to run
-    prep_functions = netbox_tasks[task_name]["salt_jobs"](hosts=task_hosts)
-    
-    # execute prep_functions to retrieve data
-    for item in prep_functions:
-        prep_fun_results.append(
-            __salt__[item["salt_exec_fun_name"]](
-                *item.get("args", []), **item.get("kwargs", {})
-            )
-        )
 
     # run Netbox task using Salt Jobs results
-    return netbox_tasks[task_name]["task_function"](
-        salt_jobs_results=prep_fun_results,
-        __salt__=__salt__,
-        hosts=task_hosts,
+    return netbox_tasks[task_name](
         *args[1:],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")},
+        __salt__=__salt__,
     )
 
 

@@ -22,6 +22,11 @@ import json
 log = logging.getLogger(__name__)
 
 try:
+    from nornir_salt.plugins.functions import FFun_functions
+except ImportError:
+    log.warning("Failed importing Nornir-Salt library")  
+    
+try:
     import requests
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 except ImportError:
@@ -32,32 +37,48 @@ try:
 except ImportError:
     log.warning("Failed importing pynetbox module")
 
-manufacturers_platforms = {
-    "Cisco": ["cisco", "iosxr", "ios", "nxos"],
-    "Juniper": ["juniper", "junos"],
-    "Arista": ["arista", "eos"],
-}
-
-
-def extract_salt_nornir_netbox_params(salt_jobs_results):
+try:
+    from salt.exceptions import CommandExecutionError
+except:
+    log.warning("Failed importing SALT libraries")
+    
+    
+def get_salt_nornir_netbox_params(__salt__) -> dict:
     """
-    Function to retreive Netbox Params from salt_jobs_results.
+    Function to retreive Netbox Params from minion pillar or salt-master 
+    configuration.
 
-    :param salt_jobs_results: list with config.get jobs results
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
-    # extract salt_nornir_netbox pillar configuration
-    for i in salt_jobs_results[0]:
+    # get Netbox params from Pillar and Master config 
+    params = __salt__["config.get"](
+        key="salt_nornir_netbox_pillar",
+        omit_pillar=False,
+        omit_opts=True,
+        omit_master=True,
+        omit_grains=True,
+        default={},    
+    )
+    ext_pillar_params = __salt__["config.get"](
+        key="ext_pillar",
+        omit_pillar=True,
+        omit_opts=True,
+        omit_master=False,
+        omit_grains=True,
+        default={},    
+    )
+    # extraxt Netbox ext pillar config if any
+    for i in ext_pillar_params:
         if "salt_nornir_netbox" in i:
             master_params = i["salt_nornir_netbox"]
-            if master_params.get("use_pillar") is True:
-                pillar_params = salt_jobs_results[1]
-                params = {**master_params, **pillar_params}
-            else:
-                params = master_params
+            params = {**master_params, **params}
             break
-    else:
-        raise KeyError("Failed to find salt_nornir_netbox pillar configuration")
-
+    # sanity check sourced params
+    if not all(k in params for k in ["url", "token"]):
+        raise RuntimeError(
+            "Failed to source Netbox configuration from minion pillar "
+            f"or salt master configuration, 'url' and 'token' not defined"
+        )
     return params
 
 
@@ -104,12 +125,10 @@ def nb_graphql(
     filters: dict = None,
     fields: list = None,
     params: dict = None,
-    salt_jobs_results: dict = None,
     queries: dict = None,
     query_string: str = None,
     raise_for_status: bool = False,
     __salt__=None,
-    hosts=None,
 ):
     """
     Function to send query to Netbox GraphQL API and return results.
@@ -118,14 +137,13 @@ def nb_graphql(
     :param filters: dictionary of key-value pairs to filter by
     :param fields: list of data fields to return
     :param params: dictionary with salt_nornir_netbox parameters
-    :param salt_jobs_results: dictionary of saltstack job results to extract params from
     :param queries: dictionary keyed by GraphQL aliases with query data
     :param query_string: string with GraphQL query
     :param raise_for_status: raise exception if requests response is not ok
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
-    # if salt_jobs_results provided, extract Netbox params from it
-    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
+    # if no params provided, extract Netbox params from pillar or master config
+    params = params or get_salt_nornir_netbox_params(__salt__)
     # disable SSL warnings if requested so
     if params.get("ssl_verify") == False:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -182,9 +200,7 @@ def nb_graphql(
 def nb_rest(
     method: str = "get", 
     api: str = "", 
-    salt_jobs_results: dict = None, 
     __salt__=None, 
-    hosts=None,
     **kwargs
 ) -> dict:
     """
@@ -192,11 +208,10 @@ def nb_rest(
 
     :param method: requests method name e.g. get, post, put etc.
     :param api: api url to query e.g. "extras" or "dcim/interfaces" etc.
-    :param salt_jobs_results: dictionary of saltstack job results to extract Netbox configuration
     :param kwargs: any additional requests method's arguments
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
-    nb_params = extract_salt_nornir_netbox_params(salt_jobs_results)
+    nb_params = get_salt_nornir_netbox_params(__salt__)
 
     # disable SSL warnings if requested so
     if nb_params.get("ssl_verify") == False:
@@ -220,22 +235,18 @@ def nb_rest(
 
 
 def get_interfaces(
-    device_name,
-    salt_jobs_results=None,
-    params=None,
     add_ip=False,
     add_inventory_items=False,
     sync=False,
+    params=None,
     __salt__=None,
-    hosts=None,
+    **kwargs,
 ):
     """
     Function to retrieve device interfaces from Netbox using GraphQL API.
 
     :param add_ip: if True, retrieves interface IPs
     :param add_inventory_items: if True, retrieves interface inventory items
-    :param device_name: name of the device to retrieve interfaces for
-    :param salt_jobs_results: list with config.get job results
     :param sync: if True, saves get interfaces results to host's in-memory 
         inventory data under ``interfaces`` key, if sync is a string, provided 
         value used as a key.
@@ -243,8 +254,13 @@ def get_interfaces(
     
     .. note:: ``add_inventory_items`` only supported with Netbox 3.4 and above.
     """
-    # if salt_jobs_results provided, extract Netbox params from it
-    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
+    # retrieve a list of hosts to get interfaces for
+    hosts = __salt__["nr.nornir"](
+        "hosts",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
+    )
+    # if no params provided extract them from minion pillar of master config
+    params = params or get_salt_nornir_netbox_params(__salt__)
     intf_fields = [
         "name",
         "enabled",
@@ -267,6 +283,7 @@ def get_interfaces(
         "duplex",
         "speed",
         "id",
+        "device {name}",
     ]
     # add IP addresses to interfaces fields
     if add_ip:
@@ -277,13 +294,13 @@ def get_interfaces(
     queries = {
         "interfaces": {
             "field": "interface_list",
-            "filters": {"device": device_name},
+            "filters": {"device": hosts},
             "fields": intf_fields,
         }
     }
     # add query to retrieve inventory items
     if add_inventory_items:
-        inv_filters = {"device": device_name, "component_type": "dcim.interface"}
+        inv_filters = {"device": hosts, "component_type": "dcim.interface"}
         inv_fields = [
             "name",
             "component {... on InterfaceType {id}}",
@@ -314,56 +331,55 @@ def get_interfaces(
         inventory_items_dict = {}
         while inventory_items_list:
             inv_item = inventory_items_list.pop()
-            intf_id = str(inv_item.pop("component")["id"])
+            # skip inventory items that does not assigned to components
+            if inv_item.get("component") is None:
+                continue
+            intf_id = str(inv_item.pop("component").pop("id"))
             inventory_items_dict.setdefault(intf_id, [])
             inventory_items_dict[intf_id].append(inv_item)
         # iterate over interfaces and add inventory items
         for intf in interfaces:
             intf["inventory_items"] = inventory_items_dict.pop(intf["id"], [])
 
-    # transform interfaces list to dictionary keyed by interfaces names
+    # transform interfaces list to dictionary keyed by device and interfaces names
     intf_dict = {}
     while interfaces:
         intf = interfaces.pop()
         _ = intf.pop("id")
-        intf_dict[intf.pop("name")] = intf
+        device_name = intf.pop("device").pop("name")
+        intf_name = intf.pop("name")
+        intf_dict.setdefault(device_name, {})
+        intf_dict[device_name][intf_name] = intf
 
     # save results to hosts inventory if requested to do so
     if sync:
         key = sync if isinstance(sync, str) else "interfaces"
-        ret = __salt__["nr.nornir"](
+        return __salt__["nr.nornir"](
             fun="inventory", 
             call="load",
             data=[
                 {
                     "call": "update_host",
-                    "name": device_name,
-                    "data": {key: intf_dict}
+                    "name": host,
+                    "data": {key: intf_data}
                 }
+                for host, intf_data in intf_dict.items()
             ]
-        )
-        return {
-            f"{device_name} sync interfaces": ret
-        }
+        ) 
     else:
         return intf_dict
 
 
 def get_connections(
-    device_name: str,
-    salt_jobs_results: dict = None,
     params: list = None,
     trace: bool = False,
     sync=False,
     __salt__=None,
-    hosts=None,
 ) -> dict:
     """
     Function to retrieve connections details from Netbox
 
-    :param device_name: name of the device to retrieve interfaces for
     :param params: dictionary with salt_nornir_netbox parameters
-    :param salt_jobs_results: list with config.get job results
     :param trace: if True traces full connection path between device interfaces
     :param sync: if True, saves get connections results to host's in-memory 
         inventory data under ``connections`` key, if sync is a string, provided 
@@ -583,8 +599,13 @@ def get_connections(
     ``True`` if all cables in the path have status ``connected``, path circuits' status
     not taken into account.
     """
-    # if salt_jobs_results provided, extract Netbox params from it
-    params = params or extract_salt_nornir_netbox_params(salt_jobs_results)
+    # retrieve a list of hosts to get interfaces for
+    hosts = __salt__["nr.nornir"](
+        "hosts",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
+    )
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
     connections_dict = {}
 
     # retrieve full list of device cables with all terminations
@@ -693,9 +714,9 @@ def get_connections(
              }""",
     ]
 
-    all_cables = nb_graphql("cable_list", {"device": device_name}, cable_fields, params)
+    all_cables = nb_graphql("cable_list", {"device": hosts}, cable_fields, params)
 
-    # form connections_dict keyed by device's local interface name
+    # form connections_dict keyed by device name and device's local interface name
     for cable in all_cables:
         terminations = cable.pop("terminations")
         for termination in terminations:
@@ -729,9 +750,7 @@ def get_connections(
                 elif termination_type == "consoleserverport":
                     far_end_termination_type = "consoleport"
                     api = f"dcim/console-server-ports/{termination['id']}/trace"
-                path_trace = nb_rest(
-                    method="get", api=api, salt_jobs_results=salt_jobs_results
-                )
+                path_trace = nb_rest(method="get", api=api)
                 # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
                 remote_device_terminations = path_trace[-1][-1]
                 connections_dict[termination["name"]] = {
@@ -796,46 +815,26 @@ def get_connections(
         return connections_dict
 
 
-def get_netbox_params_salt_jobs(hosts: dict):
+def parse_config(__salt__=None, **kwargs):
     """
-    Function to return a list of __salt__ execution functions to run
-    to retrieve Netbox configuration parameters.
-    """
-    return [
-        {
-            "salt_exec_fun_name": "config.get",
-            "kwargs": {
-                "key": "ext_pillar",
-                "omit_pillar": True,
-                "omit_opts": True,
-                "omit_grains": True,
-                "omit_master": False,
-                "default": [],
-            },
-        },
-        {
-            "salt_exec_fun_name": "config.get",
-            "kwargs": {
-                "key": "salt_nornir_netbox_pillar",
-                "omit_pillar": False,
-                "omit_opts": True,
-                "omit_master": True,
-                "omit_grains": True,
-                "default": {},
-            },
-        },
-    ]
-
-
-def get_parse_config_salt_jobs(hosts: dict):
-    """
-    Function to produce a list of tasks to collect output from devices
-    for parse_config function.
-
-    :param data: dictionary with Nornir Inventory data of hosts to produce tasks for
+    Function to return results of devices configuration parsing
+    produced by TTP Templates for Netbox.
+    
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param kwargs: dictionary of Fx filters
     """
     ret = []
     platforms_added = set()
+
+    # get a list of hosts and their platforms to run Salt Jobs for
+    hosts = nornir_fun(
+        "inventory",
+        "list_hosts_platforms",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
+    )
+    if not hosts:
+        raise CommandExecutionError("No hosts matched")
+        
     for host_name, platform in hosts.items():
         task_kwargs = {}
         if platform in platforms_added:
@@ -854,53 +853,27 @@ def get_parse_config_salt_jobs(hosts: dict):
             )
             continue
         ret.append(
-            {
-                "salt_exec_fun_name": "nr.cli",
-                "kwargs": {
-                    **task_kwargs,
-                    "FL": [h for h, p in hosts.items() if p == platform],
-                    "run_ttp": template,
-                    "ttp_structure": "dictionary",
-                },
-            }
+            __salt__["nr.cli"](
+                **task_kwargs,
+                FL=[h for h, p in hosts.items() if p == platform],
+                run_ttp=template,
+                ttp_structure="dictionary",
+            )
         )
         platforms_added.add(platform)
 
     return ret
 
 
-def parse_config(salt_jobs_results: dict, **kwargs):
-    """
-    Function to return results of devices confgiuration parsing
-    produced by TTP Templates for Netbox.
-
-    :param salt_jobs_results: dictionary keyed by hosts with run_ttp results
-    """
-    return salt_jobs_results[0]
-
-
-def get_params_parse_config_salt_jobs(hosts):
-    """
-    Function to produce a list of jobs to run to parse devices configs
-    and to retrieve Netbox connection details.
-    """
-    # get a list of jobs to retrieve Netbox params
-    jobs = get_netbox_params_salt_jobs(hosts)
-    # add jobs to parse devices configs
-    jobs.extend(get_parse_config_salt_jobs(hosts))
-    return jobs
-
-
-def update_config_context(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
+def update_config_context(__salt__=None, **kwargs):
     """
     Function to populate device configuration context with parsed results.
 
-    :param salt_jobs_results: list with Netbox Params and config parsing job results
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     ret = {}
-    netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[:2])
-    parsing_job_results = salt_jobs_results[2:]
+    netbox_params = get_salt_nornir_netbox_params(__salt__)
+    parsing_job_results = parse_config(__salt__, **kwargs)
 
     # instantiate pynetbox object
     nb = get_pynetbox(netbox_params)
@@ -925,7 +898,7 @@ def update_config_context(salt_jobs_results: list, __salt__=None, hosts=None, **
     return ret
 
 
-def update_vrf(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
+def update_vrf(__salt__=None, **kwargs):
     """
     Function to create or update VRFs and Route-Targets in Netbox.
 
@@ -935,13 +908,12 @@ def update_vrf(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
     * Route-Targets values
     * Reference to import and export RT for VRFs
 
-    :param salt_jobs_results: list with Netbox Params and config parsing job results
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     """
     all_rt, all_vrf = set(), {}  # variables to hold all parsed RT and VRFs names
     rt_create, rt_update, vrf_create, vrf_update = {}, {}, {}, {}
-    netbox_params = extract_salt_nornir_netbox_params(salt_jobs_results[:2])
-    parsing_job_results = salt_jobs_results[2:]
+    netbox_params = get_salt_nornir_netbox_params(__salt__)
+    parsing_job_results = parse_config(__salt__, **kwargs)
 
     # instantiate pynetbox object
     nb = get_pynetbox(netbox_params)
@@ -1071,11 +1043,7 @@ def update_vrf(salt_jobs_results: list, __salt__=None, hosts=None, **kwargs):
     )
 
 
-def no_jobs(hosts):
-    return []
-
-
-def run_dir(salt_jobs_results: list = None, **kwargs):
+def run_dir(**kwargs):
     """
     Function to return a list of supported Netbox Utils tasks
     """
@@ -1083,30 +1051,13 @@ def run_dir(salt_jobs_results: list = None, **kwargs):
 
 
 # dispatch dictionary of Netbox tasks exposed for calling
-# salt_jobs - returns a list of salt jobs to run to retrieve data for task function
-# task_function - callable function to run on data from salt jobs
 netbox_tasks = {
-    "parse_config": {
-        "salt_jobs": get_parse_config_salt_jobs,
-        "task_function": parse_config,
-    },
-    "update_config_context": {
-        "salt_jobs": get_params_parse_config_salt_jobs,
-        "task_function": update_config_context,
-    },
-    "update_vrf": {
-        "salt_jobs": get_params_parse_config_salt_jobs,
-        "task_function": update_vrf,
-    },
-    "query": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_graphql},
-    "rest": {"salt_jobs": get_netbox_params_salt_jobs, "task_function": nb_rest},
-    "get_interfaces": {
-        "salt_jobs": get_netbox_params_salt_jobs,
-        "task_function": get_interfaces,
-    },
-    "get_connections": {
-        "salt_jobs": get_netbox_params_salt_jobs,
-        "task_function": get_connections,
-    },
-    "dir": {"salt_jobs": no_jobs, "task_function": run_dir},
+    "parse_config": parse_config,
+    "update_config_context": update_config_context,
+    "update_vrf": update_vrf,
+    "query": nb_graphql,
+    "rest": nb_rest,
+    "get_interfaces": get_interfaces,
+    "get_connections":  get_connections,
+    "dir": run_dir,
 }

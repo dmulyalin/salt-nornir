@@ -1158,7 +1158,7 @@ def _host_add_interfaces(device, host, params):
     host_add_interfaces = params["host_add_interfaces"]
 
     interfaces = get_interfaces(
-        device_name=device["name"],
+        hosts=[device["name"]],
         params=params,
         add_ip=params.get("host_add_interfaces_ip", False),
         add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
@@ -1167,7 +1167,7 @@ def _host_add_interfaces(device, host, params):
     # save data into Nornir host's inventory
     dk = host_add_interfaces if isinstance(host_add_interfaces, str) else "interfaces"
     host.setdefault("data", {})
-    host["data"][dk] = interfaces
+    host["data"][dk] = interfaces[device["name"]]
 
 
 def _host_add_connections(device, host, params):
@@ -1182,7 +1182,7 @@ def _host_add_connections(device, host, params):
     host_add_connections = params["host_add_connections"]
 
     cables = get_connections(
-        device_name=device["name"],
+        hosts=[device["name"]],
         params=params,
     )
 
@@ -1191,7 +1191,7 @@ def _host_add_connections(device, host, params):
         host_add_connections if isinstance(host_add_connections, str) else "connections"
     )
     host.setdefault("data", {})
-    host["data"][dk] = cables
+    host["data"][dk] = cables[device["name"]]
 
 
 def _process_device(device, inventory, params):

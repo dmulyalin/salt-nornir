@@ -129,7 +129,6 @@ hosts:
                   username: nornir
               os: eos
     data:
-      tags: ["core"]
       interfaces_test:
       - admin_status: is up
         description: Description
@@ -152,6 +151,8 @@ hosts:
       syslog:
       - 1.1.1.1
       - 2.2.2.2
+      tags:
+      - core
       tests:
         suite1:
         - name: check ceos version
@@ -186,7 +187,6 @@ hosts:
             ceos2: {}
         platform: eos
     data:
-      tags: ["access"]
       location: East City Warehouse
       netbox_import_data:
         device_role:
@@ -199,6 +199,8 @@ hosts:
       syslog:
       - 1.1.1.2
       - 2.2.2.1
+      tags:
+      - access
     groups:
     - lab
     - eos_params
@@ -265,6 +267,7 @@ nornir:
       function: nr.cli
 proxy:
   multiprocessing: true
+  nornir_filter_required: false
   proxytype: nornir
 salt_nornir_netbox_pillar:
   host_add_netbox_data: salt_nornir_netbox_pillar_test
