@@ -7,6 +7,7 @@ import json
 import time
 import yaml
 import pytest
+import copy
 
 try:
     import salt.client
@@ -22,6 +23,34 @@ if HAS_SALT:
     client = salt.client.LocalClient()
     
 def refresh_nornir_proxy(target):   
+    print(f"refresh_nornir_proxy:nr.nornir refreshing {target}")
+    refresh_res = client.cmd(
+        tgt=target,
+        fun="nr.nornir",
+        arg=["refresh"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )     
+    print(f"refresh_nornir_proxy:nr.nornir '{target}' refresh call result: {refresh_res}")
+    time.sleep(10)
+    # wait for pillar to refresh
+    start_time = time.time()
+    while (time.time() - start_time) < 60:
+        hosts = client.cmd(
+            tgt=target,
+            fun="nr.nornir",
+            arg=["hosts"],
+            kwarg={"FB": "*"},
+            tgt_type="glob",
+            timeout=60,
+        ) 
+        print(f"refresh_nornir_proxy:nornir hosts retrieved: {hosts}")
+        if isinstance(hosts[target], list):
+            break
+        time.sleep(5)
+    else:
+        raise TimeoutError(f"'{target}' nr.nornir hosts no return in 60 seconds")
     client.cmd(
         tgt=target,
         fun="nr.nornir",
@@ -31,15 +60,7 @@ def refresh_nornir_proxy(target):
         timeout=60,
     )     
     time.sleep(10) # give proxy minion some time to refresh
-    client.cmd(
-        tgt=target,
-        fun="nr.nornir",
-        arg=["refresh"],
-        kwarg={},
-        tgt_type="glob",
-        timeout=60,
-    )     
-    time.sleep(10) # give proxy minion some time to refresh
+    
     
 def updata_proxy_params_pillar(target, add=None, remove=None):
     """
@@ -53,6 +74,7 @@ def updata_proxy_params_pillar(target, add=None, remove=None):
     # first update proxy pillar and refresh it
     with open("/etc/salt/pillar/{}.sls".format(target), "r") as f:
         pillar_data = yaml.safe_load(f.read())
+        old_pillar_data = copy.deepcopy(pillar_data)
     # add items
     pillar_data["proxy"].update(add)
     # delete items
@@ -61,6 +83,7 @@ def updata_proxy_params_pillar(target, add=None, remove=None):
     # save updates to pillar file
     with open("/etc/salt/pillar/nrp1.sls", "w") as f:
         yaml.dump(pillar_data, f, default_flow_style=False)
+    time.sleep(5)
     # refresh nornir proxy
     refresh_nornir_proxy(target)
     # retrieve loaded pillar data
@@ -72,15 +95,21 @@ def updata_proxy_params_pillar(target, add=None, remove=None):
         tgt_type="glob",
         timeout=60,
     )   
-    print("Refreshed '{}' proxy params pillar:".format(target))
+    print("Refreshed '{}', retrieved new proxy params pillar:".format(target))
     pprint.pprint(proxy_pillar["nrp1"]["proxy"])
     # verify pillar content
-    for k, v in add.items():
-        assert proxy_pillar["nrp1"]["proxy"][k] == v, "Proxy '{}' add param not added".format(k)
-    for k in remove:
-        assert k not in proxy_pillar["nrp1"]["proxy"], "Proxy '{}' del param not deleted".format(k)
-        
+    try:
+        for k, v in add.items():
+            assert proxy_pillar["nrp1"]["proxy"][k] == v, "Proxy '{}' add param not added".format(k)
+        for k in remove:
+            assert k not in proxy_pillar["nrp1"]["proxy"], "Proxy '{}' del param not deleted".format(k)
+    except Exception as e:
+        print(f"Experienced error '{e}', restoring old pillar data.")
+        with open("/etc/salt/pillar/nrp1.sls", "w") as f:
+            yaml.dump(old_pillar_data, f, default_flow_style=False)        
+        raise e
 
+        
 @pytest.fixture
 def fixture_modify_proxy_pillar(request):
     """
