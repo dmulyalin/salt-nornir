@@ -5,6 +5,13 @@ Netbox Utils
 Collection of functions for Salt-Nornir to interact with Netbox
 using Execution module ``nr.netbox`` function.
 
+To be able to retrieve data from netbox need to define Netbox URL 
+and API token parameters either under proxy minion pillar 
+``salt_nornir_netbox_pillar`` section or in salt-master' ext pillar 
+configuration. To be able to retrieve URL and toekn parameters from 
+master need to set ``pillar_opts`` parameter to True in salt-master's 
+configuration.
+
 Reference
 +++++++++
 
