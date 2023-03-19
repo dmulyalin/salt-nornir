@@ -2718,6 +2718,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir inventory update_host name="R1" data='{"foo": bar}'
         salt nrp1 nr.nornir inventory read_host FB="R1"
         salt nrp1 nr.nornir inventory call=delete_host name="R1"
+        salt nrp1 nr.nornir inventory update_defaults username=foo password=bar data='{"f": "b"}'
         salt nrp1 nr.nornir stats stat="proxy_minion_id"
         salt nrp1 nr.nornir version
         salt nrp1 nr.nornir shutdown
@@ -3079,7 +3080,7 @@ def netbox(*args, **kwargs):
               url: 'http://192.168.115.129:8000'
               token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
 
-    Alternatively, Netbox parameters can be defined in proxy minioon pillar settings::
+    Alternatively, Netbox parameters can be defined in proxy minion pillar settings::
     
         salt_nornir_netbox_pillar:
           url: 'http://192.168.115.129:8000'

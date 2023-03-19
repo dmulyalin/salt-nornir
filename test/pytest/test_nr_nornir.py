@@ -1,5 +1,6 @@
 import logging
 import pprint
+import time
 
 log = logging.getLogger(__name__)
 
@@ -1001,6 +1002,16 @@ def test_nr_nornir_inventory_update_defaults():
         timeout=60,
     )      
     pprint.pprint(inventory_data)
+    # trigger inventory refresh to wipe out defaults changes
+    _ = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["refresh"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    time.sleep(20)
     assert ret == {'nrp1': {'nornir-worker-1': True,
           'nornir-worker-2': True,
           'nornir-worker-3': True}}
