@@ -1022,3 +1022,77 @@ def test_nr_nornir_inventory_update_defaults():
     assert inventory_data["nrp1"]["defaults"]["platform"] == "foobar"    
     assert inventory_data["nrp1"]["defaults"]["port"] == 1234        
     assert inventory_data["nrp1"]["defaults"]["username"] == "foo"   
+    assert inventory_data["nrp1"]["defaults"]["password"] == "bar" 
+
+    
+def test_nr_nornir_inventory_update_defaults_to_none():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "update_defaults"],
+        kwarg={
+            "username": "foo",
+            "password": "bar",
+            "port": 1234,
+            "platform": "foobar",
+        },
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(ret)    
+    inventory_data = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )      
+    pprint.pprint(inventory_data)
+    ret2 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory", "update_defaults"],
+        kwarg={
+            "username": None,
+            "password": None,
+            "port": None,
+            "platform": None,
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    inventory_data2 = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["inventory"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    )  
+    # trigger inventory refresh to wipe out defaults changes
+    _ = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["refresh"],
+        kwarg={},
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    time.sleep(20)
+    # verify inventory was updated
+    assert ret == {'nrp1': {'nornir-worker-1': True,
+          'nornir-worker-2': True,
+          'nornir-worker-3': True}}  
+    assert inventory_data["nrp1"]["defaults"]["platform"] == "foobar"    
+    assert inventory_data["nrp1"]["defaults"]["port"] == 1234        
+    assert inventory_data["nrp1"]["defaults"]["username"] == "foo" 
+    assert inventory_data["nrp1"]["defaults"]["password"] == "bar" 
+    # verify params set to None
+    assert ret2 == {'nrp1': {'nornir-worker-1': True,
+          'nornir-worker-2': True,
+          'nornir-worker-3': True}}
+    assert inventory_data2["nrp1"]["defaults"]["platform"] == None 
+    assert inventory_data2["nrp1"]["defaults"]["port"] == None        
+    assert inventory_data2["nrp1"]["defaults"]["username"] == None
+    assert inventory_data2["nrp1"]["defaults"]["password"] == None
