@@ -349,7 +349,7 @@ def test_inventory_create_and_delete_host_all_workers():
     print("ceos1-1 host add results:")
     pprint.pprint(res)
     for worker_name, res_data in res["nrp1"].items():
-        assert res_data == True, "Failed to create new host, worker: {}".format(worker_name)
+        assert res_data == {"ceos1-1": True}, "Failed to create new host, worker: {}".format(worker_name)
     
     # verify new host added
     hosts_list = client.cmd(
@@ -390,7 +390,7 @@ def test_inventory_create_and_delete_host_all_workers():
     print("ceos1-1 host delete results:")
     pprint.pprint(delete_res)
     for worker_name, res_data in res["nrp1"].items():
-        assert res_data == True, "Failed to delete host ceos1-1, worker: {}".format(worker_name)
+        assert res_data == {"ceos1-1": True}, "Failed to delete host ceos1-1, worker: {}".format(worker_name)
     
     # verify host deleted
     hosts_list = client.cmd(

@@ -5,6 +5,10 @@ Salt Nornir Robot
 SaltNornirRobot is a Robot Framework test library to use with
 Salt-Nornir.
 
+Robot Framework need to bs installed on Salt Master::
+
+    pip install robotframework
+    
 Keywords
 ++++++++
 
@@ -40,9 +44,9 @@ This test suite runs two tests using ``nr.test``::
         Hosts      FM=arista_eos
         nr.test    show version    contains    7.3.2
     
-to run it using ``robot`` command line tool::
+Run test suite from Salt Master using ``robot`` command line tool::
 
-    robot /path/to//salt_nornir_robot_suite.robot
+    robot /path/to/salt_nornir_robot_suite.robot
     
 This test suite runs two tests using ``nr.cli``::
 
@@ -61,9 +65,26 @@ This test suite runs two tests using ``nr.cli``::
         Hosts             ceos2
         ${result} =       nr.cli    show clock
         Should Contain    ${result}   local
+        
+To run nr.test tests suite::
+
+    *** Settings ***
+    Library    salt_nornir.salt_nornir_robot
+    
+    *** Test Cases ***
+    Run Test suite 1
+        Minions    nrp1    
+        Hosts      ceos*
+        nr.test    suite=salt://tests/test_suite_1.txt
+        
+    Run Test suite 2
+        Minions    nrp1    
+        Hosts      FM=arista_eos
+        nr.test    suite=salt://tests/test_suite_2.txt
 """
 import logging
 import pprint
+from robot.api import logger
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +155,7 @@ def minions(*args, **kwargs):
 @keyword("nr.test")
 def nr_test(*args, **kwargs):
     """Run Salt-Nornir nr.test execution function"""
-    log.info(
+    logger.info(
         f"Running nr.test with args '{args}', kwargs '{kwargs}', global DATA '{DATA}'"
     )
     has_errors = False
@@ -150,7 +171,7 @@ def nr_test(*args, **kwargs):
             "add_details": True,
         },
     )
-    # iterate over results and report statuses
+    # iterate over results and log tests statuses
     for minion, minion_results in ret.items():
         for result in minion_results:
             host = result["host"]
@@ -163,37 +184,72 @@ def nr_test(*args, **kwargs):
                     or "traceback" in str(result["result"]).lower()
                 ):
                     has_errors = True
-                    log.error(f"{minion} minion, {host} test '{result['name']}' failed")
+                    logger.error(
+                        (
+                            f'{minion} minion, {host} test "{result["name"]}" - '
+                            f'<span style="background-color: #CE3E01">failure: "{result["exception"]}"</span>'
+                        ),
+                        html=True
+                    )
                 else:
-                    log.info(
-                        f"{minion} minion, {host} test '{result['name']}' succeeded"
+                    logger.info(
+                        (
+                            f'{minion} minion, {host} test "{result["name"]}" - '
+                            f'<span style="background-color: #97BD61">success</span>'
+                        ),
+                        html=True
                     )
     # clea global state to prep for next test
     clean_global_data()
-    # raise exception if test failed
+    
+    # transform results into HTML tables
+    tests_results = [
+        {"minion": minion, **result}
+        for minion, results in ret.items()
+        for result in results if "success" in result
+    ]
+    commands_output = [
+        {"minion": minion, **result}
+        for minion, results in ret.items()
+        for result in results if "success" not in result
+    ]
+    tests_results_html_table = TabulateFormatter(
+        tests_results,
+        tabulate={"tablefmt": "html"},
+        headers=[
+            "minion",
+            "host",
+            "name",
+            "result",
+            "failed",
+            "task",
+            "test",
+            "criteria",
+            "exception",
+        ],
+    )
+    commands_output_html_table = TabulateFormatter(
+        commands_output,
+        tabulate={"tablefmt": "html"},
+        headers=[
+            "minion",
+            "host",
+            "name",
+            "result",
+            "exception",
+        ],
+    )
+    ret = (
+        f"<h3>Test Suite Results</h3>"
+        f"<details><summary>...</summary><p>{tests_results_html_table}</p></details>"
+        f"<h3>Collected Devices Output</h3>"
+        f"<details><summary>...</summary><p>{commands_output_html_table}</p></details>"
+    )
+    logger.info(ret, html=True)
+    
+    # raise if has errors
     if has_errors:
-        # transform results into HTML table
-        ret_list = [
-            {"minion": minion, **result}
-            for minion, results in ret.items()
-            for result in results
-        ]
-        ret_html_table = TabulateFormatter(
-            ret_list,
-            tabulate={"tablefmt": "html"},
-            headers=[
-                "minion",
-                "host",
-                "name",
-                "result",
-                "failed",
-                "test",
-                "criteria",
-                "exception",
-            ],
-        )
-        ret_html_table = f"*HTML* {ret_html_table}"
-        raise ContinuableFailure(ret_html_table)
+        raise ContinuableFailure("Tests failed")
     # return ret with no errors in structured format
     return ret
 

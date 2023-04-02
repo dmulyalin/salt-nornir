@@ -361,9 +361,9 @@ def test_netbox_get_interfaces_sync():
     print("Ceos inventory:")
     pprint.pprint(updated_inventory)
     
-    assert sync_ret["nrp1"]["nornir-worker-1"] == [True]
-    assert sync_ret["nrp1"]["nornir-worker-2"] == [True]    
-    assert sync_ret["nrp1"]["nornir-worker-3"] == [True]    
+    assert sync_ret["nrp1"]["nornir-worker-1"] == [{"ceos1": True}]
+    assert sync_ret["nrp1"]["nornir-worker-2"] == [{"ceos1": True}]    
+    assert sync_ret["nrp1"]["nornir-worker-3"] == [{"ceos1": True}]    
     assert "Ethernet1" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]
     assert "Loopback0" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]    
     
@@ -408,8 +408,8 @@ def test_netbox_get_connections_sync():
     print("Ceos inventory:")
     pprint.pprint(updated_inventory)
 
-    assert sync_ret["nrp3"]["nornir-worker-1"] == [True]
-    assert sync_ret["nrp3"]["nornir-worker-2"] == [True]    
-    assert sync_ret["nrp3"]["nornir-worker-3"] == [True]    
+    assert sync_ret["nrp3"]["nornir-worker-1"] == [{"fceos4": True}]
+    assert sync_ret["nrp3"]["nornir-worker-2"] == [{"fceos4": True}]    
+    assert sync_ret["nrp3"]["nornir-worker-3"] == [{"fceos4": True}]    
     assert "ConsolePort1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"]
     assert "eth1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"] 
