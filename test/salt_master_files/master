@@ -2,6 +2,9 @@ auto_accept: True
 file_recv: True
 interface: 0.0.0.0
 pki_dir: /etc/salt/pki/master
+log_level_logfile: trace
+log_file: /var/log/salt/master
+sock_pool_size: 15
 
 file_roots:
   base:
@@ -21,7 +24,10 @@ rest_cherrypy:
   host: 0.0.0.0
   port: 8000
   disable_ssl: True
-  
+
+netapi_enable_clients:
+  - local
+
 external_auth:
   sharedsecret:
     # Allow saltuser to execute anything.
@@ -41,7 +47,7 @@ jinja_env:
   
 ext_pillar:
   - salt_nornir_netbox:
-      url: 'http://192.168.75.200:8000'
+      url: 'http://192.168.75.129:8000'
       token: '0123456789abcdef0123456789abcdef01234567'
       use_minion_id_device: False
       use_minion_id_tag: False

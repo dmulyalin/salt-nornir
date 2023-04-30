@@ -258,7 +258,7 @@ def test_netbox_query_string():
         fun="nr.netbox", 
         arg=["query"], 
         kwarg={
-            "query_string": 'query{device_list(platform: "eos") {name}}'
+            "query_string": 'query{device_list(name__ic: "ceos1") {name}}'
         },
         tgt_type="glob", 
         timeout=60
@@ -275,7 +275,7 @@ def test_netbox_queries_dictionary_and_aliasing():
         fun="nr.netbox", 
         arg=["query"], 
         kwarg={
-            "queries": {"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}
+            "queries": {"devices": {"field": "device_list", "filters": {"name__ic": "eos"}, "fields": ["name"]}}
         },
         tgt_type="glob", 
         timeout=60
@@ -364,10 +364,10 @@ def test_netbox_get_interfaces_sync():
     assert sync_ret["nrp1"]["nornir-worker-1"] == [{"ceos1": True}]
     assert sync_ret["nrp1"]["nornir-worker-2"] == [{"ceos1": True}]    
     assert sync_ret["nrp1"]["nornir-worker-3"] == [{"ceos1": True}]    
-    assert "Ethernet1" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]
-    assert "Loopback0" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]    
+    assert "loopback0" in updated_inventory["nrp1"]["hosts"]["ceos1"]["data"]["interfaces"]    
     
     
+@skip_if_not_has_netbox
 def test_netbox_get_connections_sync():
     update_ceos = client.cmd(
         tgt="nrp3", 

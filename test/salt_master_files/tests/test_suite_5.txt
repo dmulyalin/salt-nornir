@@ -1,0 +1,4 @@
+- task: "show version"
+  test: contains
+  pattern: "cEOS"
+  name: check ceos version

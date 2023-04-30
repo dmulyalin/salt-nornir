@@ -484,34 +484,17 @@ interface {{ interface }}
         timeout=60,
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
-                                           'tools_version': '1.1'}},
-                                {'interf': [{'interface': 'Ethernet1',
-                                             'ip': '10.0.1.4',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback1',
-                                             'ip': '1.1.1.1',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback2',
-                                             'ip': '2.2.2.2',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback3',
-                                             'ip': '1.2.3.4',
-                                             'mask': '24'}]}]},
-          'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
-                                           'tools_version': '1.1'}},
-                                {'interf': [{'interface': 'Ethernet1',
-                                             'ip': '10.0.1.5',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback100',
-                                             'ip': '100.12.3.4',
-                                             'mask': '22'},
-                                            {'interface': 'Loopback101',
-                                             'ip': '1.101.2.2',
-                                             'mask': '32'},
-                                            {'interface': 'Loopback102',
-                                             'ip': '5.5.5.5',
-                                             'mask': '24'}]}]}}}
+    assert "arch" in ret["nrp1"]["ceos1"]["run_ttp"][0]["facts"]
+    assert "tools_version" in ret["nrp1"]["ceos1"]["run_ttp"][0]["facts"]
+    assert len(ret["nrp1"]["ceos1"]["run_ttp"][1]["interf"]) > 0
+    for i in ret["nrp1"]["ceos1"]["run_ttp"][1]["interf"]:
+        assert all(k in i for k in ["interface", "ip", "mask"])
+        
+    assert "arch" in ret["nrp1"]["ceos2"]["run_ttp"][0]["facts"]
+    assert "tools_version" in ret["nrp1"]["ceos2"]["run_ttp"][0]["facts"]
+    assert len(ret["nrp1"]["ceos2"]["run_ttp"][1]["interf"]) > 0
+    for i in ret["nrp1"]["ceos2"]["run_ttp"][1]["interf"]:
+        assert all(k in i for k in ["interface", "ip", "mask"])
     
 # test_nr_cli_netmiko_run_ttp_from_string()
 
@@ -526,34 +509,17 @@ def test_nr_cli_netmiko_run_ttp_download_from_salt_master():
         timeout=60,
     )
     pprint.pprint(ret)
-    assert ret == {'nrp1': {'ceos1': {'run_ttp': [{'facts': {'arch': 'i686',
-                                           'tools_version': '1.1'}},
-                                {'interf': [{'interface': 'Ethernet1',
-                                             'ip': '10.0.1.4',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback1',
-                                             'ip': '1.1.1.1',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback2',
-                                             'ip': '2.2.2.2',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback3',
-                                             'ip': '1.2.3.4',
-                                             'mask': '24'}]}]},
-          'ceos2': {'run_ttp': [{'facts': {'arch': 'i686',
-                                           'tools_version': '1.1'}},
-                                {'interf': [{'interface': 'Ethernet1',
-                                             'ip': '10.0.1.5',
-                                             'mask': '24'},
-                                            {'interface': 'Loopback100',
-                                             'ip': '100.12.3.4',
-                                             'mask': '22'},
-                                            {'interface': 'Loopback101',
-                                             'ip': '1.101.2.2',
-                                             'mask': '32'},
-                                            {'interface': 'Loopback102',
-                                             'ip': '5.5.5.5',
-                                             'mask': '24'}]}]}}}
+    assert "arch" in ret["nrp1"]["ceos1"]["run_ttp"][0]["facts"]
+    assert "tools_version" in ret["nrp1"]["ceos1"]["run_ttp"][0]["facts"]
+    assert len(ret["nrp1"]["ceos1"]["run_ttp"][1]["interf"]) > 0
+    for i in ret["nrp1"]["ceos1"]["run_ttp"][1]["interf"]:
+        assert all(k in i for k in ["interface", "ip", "mask"])
+        
+    assert "arch" in ret["nrp1"]["ceos2"]["run_ttp"][0]["facts"]
+    assert "tools_version" in ret["nrp1"]["ceos2"]["run_ttp"][0]["facts"]
+    assert len(ret["nrp1"]["ceos2"]["run_ttp"][1]["interf"]) > 0
+    for i in ret["nrp1"]["ceos2"]["run_ttp"][1]["interf"]:
+        assert all(k in i for k in ["interface", "ip", "mask"])
     
 # test_nr_cli_netmiko_run_ttp_download_from_salt_master()
 

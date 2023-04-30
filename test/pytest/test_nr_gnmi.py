@@ -62,7 +62,7 @@ def test_gnmi_get_call_path_list():
         tgt="nrp1", 
         fun="nr.gnmi", 
         arg=["get"], 
-        kwarg={"path": ["openconfig-interfaces:interfaces", "openconfig-network-instance:network-instances"]}, 
+        kwarg={"path": ["interfaces", "network-instances"]}, 
         tgt_type="glob", 
         timeout=60
     )
@@ -82,7 +82,7 @@ def test_gnmi_get_call_path_string():
         tgt="nrp1", 
         fun="nr.gnmi", 
         arg=["get"], 
-        kwarg={"path": "openconfig-interfaces:interfaces, openconfig-network-instance:network-instances"}, 
+        kwarg={"path": "interfaces, network-instances"}, 
         tgt_type="glob", 
         timeout=60
     )
@@ -101,7 +101,7 @@ def test_gnmi_get_call_path_as_arg():
     ret = client.cmd(
         tgt="nrp1", 
         fun="nr.gnmi", 
-        arg=["get", "openconfig-interfaces:interfaces", "openconfig-network-instance:network-instances"], 
+        arg=["get", "interfaces", "network-instances"], 
         kwarg={}, 
         tgt_type="glob", 
         timeout=60
@@ -123,7 +123,7 @@ def test_gnmi_set_call_update():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "update": [["openconfig-interfaces:interfaces/interface[name=Loopback100]/config", {"description": "MGMT Range xYz"}]],
+            "update": [["interfaces/interface[name=Loopback100]/config", {"description": "MGMT Range xYz"}]],
             "FB": "ceos2"
         },
         tgt_type="glob", 
@@ -145,7 +145,7 @@ def test_gnmi_set_call_replace():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "replace": [["openconfig-interfaces:interfaces/interface[name=Loopback1234]/config", {"name": "Loopback1234", "description": "New"}]],
+            "replace": [["interfaces/interface[name=Loopback1234]/config", {"name": "Loopback1234", "description": "New"}]],
         },
         tgt_type="glob", 
         timeout=60
@@ -156,7 +156,7 @@ def test_gnmi_set_call_replace():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "delete": "openconfig-interfaces:interfaces/interface[name=Loopback1234]",
+            "delete": "interfaces/interface[name=Loopback1234]",
         },
         tgt_type="glob", 
         timeout=60
@@ -181,7 +181,7 @@ def test_gnmi_set_call_delete():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "update": [["openconfig-interfaces:interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
+            "update": [["interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
         },
         tgt_type="glob", 
         timeout=60
@@ -191,7 +191,7 @@ def test_gnmi_set_call_delete():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "delete": "openconfig-interfaces:interfaces/interface[name=Loopback555]",
+            "delete": "interfaces/interface[name=Loopback555]",
         },
         tgt_type="glob", 
         timeout=60
@@ -231,7 +231,7 @@ def test_gnmi_delete_call_args():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "update": [["openconfig-interfaces:interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
+            "update": [["interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
         },
         tgt_type="glob", 
         timeout=60
@@ -239,7 +239,7 @@ def test_gnmi_delete_call_args():
     ret = client.cmd(
         tgt="nrp1", 
         fun="nr.gnmi", 
-        arg=["delete", "openconfig-interfaces:interfaces/interface[name=Loopback555]"], 
+        arg=["delete", "interfaces/interface[name=Loopback555]"], 
         kwarg={},
         tgt_type="glob", 
         timeout=60
@@ -265,7 +265,7 @@ def test_gnmi_delete_call_path_arg():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "update": [["openconfig-interfaces:interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
+            "update": [["interfaces/interface[name=Loopback555]/config", {"name": "Loopback555"}]],
         },
         tgt_type="glob", 
         timeout=60
@@ -275,7 +275,7 @@ def test_gnmi_delete_call_path_arg():
         fun="nr.gnmi", 
         arg=["delete"], 
         kwarg={
-            "path": ["openconfig-interfaces:interfaces/interface[name=Loopback555]"]
+            "path": ["interfaces/interface[name=Loopback555]"]
         },
         tgt_type="glob", 
         timeout=60
@@ -298,7 +298,7 @@ def test_gnmi_update_call():
     ret = client.cmd(
         tgt="nrp1", 
         fun="nr.gnmi", 
-        arg=["update", "openconfig-interfaces:interfaces/interface[name=Loopback100]/config"], 
+        arg=["update", "interfaces/interface[name=Loopback100]/config"], 
         kwarg={
             "description": "MGMT Range xYz",
             "FB": "ceos2"
@@ -320,7 +320,7 @@ def test_gnmi_replace_call():
     ret = client.cmd(
         tgt="nrp1", 
         fun="nr.gnmi", 
-        arg=["replace", "openconfig-interfaces:interfaces/interface[name=Loopback1234]/config"], 
+        arg=["replace", "interfaces/interface[name=Loopback1234]/config"], 
         kwarg={
             "name": "Loopback1234", 
             "description": "New",
@@ -334,7 +334,7 @@ def test_gnmi_replace_call():
         fun="nr.gnmi", 
         arg=["set"], 
         kwarg={
-            "delete": "openconfig-interfaces:interfaces/interface[name=Loopback1234]",
+            "delete": "interfaces/interface[name=Loopback1234]",
         },
         tgt_type="glob", 
         timeout=60
@@ -371,8 +371,8 @@ def test_gnmi_set_call_from_filename():
         arg=["set"], 
         kwarg={
             "delete": [
-                "openconfig-interfaces:interfaces/interface[name=Loopback35]",
-                "openconfig-interfaces:interfaces/interface[name=Loopback36]"
+                "interfaces/interface[name=Loopback35]",
+                "interfaces/interface[name=Loopback36]"
             ],
         },
         tgt_type="glob", 

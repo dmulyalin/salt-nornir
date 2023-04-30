@@ -487,7 +487,7 @@ def __virtual__():
 # -----------------------------------------------------------------------------
 
 
-def init(opts, loader=None, init_queues=True):
+def init(opts, loader=None, init_queues=True, wkr_stats=None):
     """
     Initiate Nornir by calling InitNornir()
 
@@ -495,6 +495,7 @@ def init(opts, loader=None, init_queues=True):
     :param loader: (obj) SaltStack loader context object
     :param init_queues: (bool) if True, initializes multiprocessing queues,
         set to False if "nr.nornir refresh workers_only=True" called
+    :param wkr_stats: list of worker stats dictionaries to preserve them across Nornir refresh
     """
     # validate Salt-Nornir minion configuration
     _ = model_nornir_config(
@@ -561,6 +562,9 @@ def init(opts, loader=None, init_queues=True):
                 "worker_jobs_queue": multiprocessing.Queue(),
             }
         )
+        # add previous stats
+        if wkr_stats:
+            nornir_data["nrs"][-1].update(wkr_stats[i])
     # add parameters from proxy configuration
     nornir_data["nornir_filter_required"] = opts["proxy"].get(
         "nornir_filter_required", False
@@ -1534,6 +1538,24 @@ def _refresh_nornir(loader_, workers_only=False, **kwargs):
     :param loader_: (obj) ``__salt__.loader`` object instance for ``init``
     :param workers_only: (bool) if True, only refreshes Nornir workers
     """
+    # extract worker stats to preserve them
+    wkr_stats = [
+        {  # make a copy of the stats
+            k: int(wkr[k])
+            for k in [
+                "worker_jobs_started",
+                "worker_jobs_completed",
+                "worker_jobs_failed",
+                "worker_tasks_completed",
+                "worker_tasks_failed",
+                "worker_hosts_tasks_failed",
+            ]
+        }
+        for wkr in nornir_data["nrs"]
+    ]
+    log.debug(
+        f"Nornir-proxy MAIN PID {os.getpid()} extracted worker stats prior to refresh: {wkr_stats}"
+    )
     if workers_only:
         log.info(
             "Nornir-proxy MAIN PID {}, doing inventory only refresh".format(os.getpid())
@@ -1567,7 +1589,7 @@ def _refresh_nornir(loader_, workers_only=False, **kwargs):
         )
     )
     # re-init proxy module
-    init(__opts__, loader_, init_queues)
+    init(__opts__, loader_, init_queues, wkr_stats)
     # refresh in memory pillar one more time for salt to read updated data
     __salt__["saltutil.refresh_pillar"]()
     log.info("Nornir-proxy MAIN PID {}, process refreshed!".format(os.getpid()))

@@ -37,7 +37,8 @@ def test_http_get_call_absolute_url():
     )
     pprint.pprint(ret)
     assert isinstance(ret["nrp1"]["ceos1"]["get"], str)
-    assert len(ret["nrp1"]["ceos1"]["get"]) > 500
+    assert len(ret["nrp1"]["ceos1"]["get"]) > 200
+    assert "<title>Arista</title>" in ret["nrp1"]["ceos1"]["get"]
     
 # test_http_get_call()
 

@@ -1,9 +1,3 @@
-configuration:
-  netbox:
-    instances:
-      prod_in_user_defined_config:
-        token: 6ab1cb37719fc2871fd62cfcb16e556d4353436c
-        url: http://192.168.75.200:8000/
 defaults:
   data:
     credentials:
@@ -39,22 +33,6 @@ groups:
           allow_agent: false
           hostkey_verify: false
         port: 830
-      netbox:
-        extras:
-          instances:
-            dev:
-              url: http://192.168.75.200:8000/
-            dev_wrong:
-              auth:
-              - username
-              - wrong
-              url: http://192.168.75.200:8000/
-            production:
-              default: true
-              token: 0123456789abcdef0123456789abcdef01234567
-              url: http://192.168.75.200:8000/
-        password: admin
-        username: admin
       pygnmi:
         extras:
           insecure: true
@@ -267,7 +245,6 @@ nornir:
       function: nr.cli
 proxy:
   multiprocessing: true
-  nornir_filter_required: false
   proxytype: nornir
 salt_nornir_netbox_pillar:
   host_add_netbox_data: salt_nornir_netbox_pillar_test

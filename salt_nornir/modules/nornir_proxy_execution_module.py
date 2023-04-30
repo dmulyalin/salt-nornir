@@ -3069,9 +3069,9 @@ def netbox(*args, **kwargs):
     :param kwargs: (dict) any additional keyword arguments to use with task function
     :return: task results
 
-    For nr.netbox functions to work, Netbox token and url parameters should be defined in 
-    master's configuration ``ext_pillar`` section and Master's configuration file need 
-    to have ``pillar_opts`` set to ``True`` for minion to be able to source parameters from 
+    For nr.netbox functions to work, Netbox token and url parameters should be defined in
+    master's configuration ``ext_pillar`` section and Master's configuration file need
+    to have ``pillar_opts`` set to ``True`` for minion to be able to source parameters from
     Salt-Master configuration::
 
         pillar_opts: True
@@ -3081,13 +3081,13 @@ def netbox(*args, **kwargs):
               token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
 
     Alternatively, Netbox parameters can be defined in proxy minion pillar settings::
-    
+
         salt_nornir_netbox_pillar:
           url: 'http://192.168.115.129:8000'
-          token: '837494d786ff420c97af9cd76d3e7f1115a913b4'    
+          token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
 
     Pillar defined parameters take precendence over master's configuration.
-    
+
     Available ``task`` functions are listed below.
 
     **dir task**

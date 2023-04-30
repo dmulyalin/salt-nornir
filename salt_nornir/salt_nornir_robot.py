@@ -189,7 +189,7 @@ def nr_test(*args, **kwargs):
                             f'{minion} minion, {host} test "{result["name"]}" - '
                             f'<span style="background-color: #CE3E01">failure: "{result["exception"]}"</span>'
                         ),
-                        html=True
+                        html=True,
                     )
                 else:
                     logger.info(
@@ -197,21 +197,23 @@ def nr_test(*args, **kwargs):
                             f'{minion} minion, {host} test "{result["name"]}" - '
                             f'<span style="background-color: #97BD61">success</span>'
                         ),
-                        html=True
+                        html=True,
                     )
     # clea global state to prep for next test
     clean_global_data()
-    
+
     # transform results into HTML tables
     tests_results = [
         {"minion": minion, **result}
         for minion, results in ret.items()
-        for result in results if "success" in result
+        for result in results
+        if "success" in result
     ]
     commands_output = [
         {"minion": minion, **result}
         for minion, results in ret.items()
-        for result in results if "success" not in result
+        for result in results
+        if "success" not in result
     ]
     tests_results_html_table = TabulateFormatter(
         tests_results,
@@ -246,7 +248,7 @@ def nr_test(*args, **kwargs):
         f"<details><summary>...</summary><p>{commands_output_html_table}</p></details>"
     )
     logger.info(ret, html=True)
-    
+
     # raise if has errors
     if has_errors:
         raise ContinuableFailure("Tests failed")

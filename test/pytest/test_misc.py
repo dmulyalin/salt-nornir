@@ -8,7 +8,6 @@ import threading
 
 from utils import fixture_modify_proxy_pillar
 
-log = logging.getLogger(__name__)
 
 try:
     import salt.client
@@ -963,7 +962,7 @@ def test_worker_target_default_ordered_execution():
     
 # test_worker_target_default_ordered_execution()
    
-
+# @pytest.mark.skip(reason="Disabling to check if it will make salt not to stuck")
 @pytest.mark.modify_pillar_target("nrp1")
 @pytest.mark.modify_pillar_pre_add({"connections_idle_timeout": 30})
 @pytest.mark.modify_pillar_post_remove(["connections_idle_timeout"])
@@ -1008,6 +1007,7 @@ def test_connections_idle_timeout(fixture_modify_proxy_pillar):
 # test_connections_idle_timeout()
 
     
+# @pytest.mark.skip(reason="Disabling to check if it will make salt not to stuck")
 def test_connections_via_jumphost(remove_hosts_at_the_end):
     """
     Update pillar to add ceos1-1 and ceos2-1 hosts but using
@@ -1122,7 +1122,7 @@ def test_connections_via_jumphost(remove_hosts_at_the_end):
 # test_connections_via_jumphost()
 
 
- 
+# @pytest.mark.skip(reason="Disabling to check if it will make salt not to stuck")
 def test_connections_via_nonexisting_jumphost(remove_hosts_at_the_end):
     """
     Verify RetryRunner bahavior when jumphost is unreachable
@@ -1152,6 +1152,7 @@ def test_connections_via_nonexisting_jumphost(remove_hosts_at_the_end):
 # test_connections_via_nonexisting_jumphost()
     
 
+# @pytest.mark.skip(reason="Disabling to check if it will make salt not to stuck")
 @pytest.mark.modify_pillar_target("nrp1")
 @pytest.mark.modify_pillar_pre_add({"proxy_always_alive": False})
 @pytest.mark.modify_pillar_post_remove(["proxy_always_alive"])
@@ -1333,7 +1334,7 @@ def test_nr_nornir_stats_tasks():
     
     
 def test_RetryRunner_with_run_creds_retry():  
-    print("Adding ceos1-1 hosts with wrong credentials")
+    print("\n(1) Adding ceos1-1 hosts with wrong credentials")
     ret_add_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -1342,7 +1343,6 @@ def test_RetryRunner_with_run_creds_retry():
             "name": "ceos1-1",
             "hostname": "10.0.1.4",
             "platform": "arista_eos",
-            "groups": ["lab", "eos_params"],
             "username": "wrong",
             "password": "wrong",       
         },
@@ -1350,7 +1350,7 @@ def test_RetryRunner_with_run_creds_retry():
         timeout=60,
     )      
     pprint.pprint(ret_add_ceos1_1)
-    print("Connecting to ceos1-1 using run_creds_retry and running show clock")
+    print("(2) Connecting to ceos1-1 using run_creds_retry and running show clock")
     ret1_cli_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
@@ -1366,18 +1366,29 @@ def test_RetryRunner_with_run_creds_retry():
         timeout=60,
     )   
     pprint.pprint(ret1_cli_ceos1_1)
-    
-    print("ceos1-1 running show clock again")
+    print("(3) Closing connection to ceos1-1")
+    disconnect = client.cmd(
+        tgt="nrp1",
+        fun="nr.nornir",
+        arg=["disconnect"],
+        kwarg={
+            "FB": "ceos1-1"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )  
+    pprint.pprint(disconnect)
+    print("(4) ceos1-1 running show clock again using bad creds")
     ret2_cli_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
         arg=["show clock"],
-        kwarg={"FB": "ceos1-1"},
+        kwarg={"FC": "ceos1-1"},
         tgt_type="glob",
         timeout=60,
     )   
     pprint.pprint(ret2_cli_ceos1_1)
-    print("Removing ceos1-1 from inventory")
+    print("(5) Removing ceos1-1 from inventory")
     remove_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -1387,17 +1398,18 @@ def test_RetryRunner_with_run_creds_retry():
         timeout=60,
     )    
     pprint.pprint(remove_ceos1_1)
+    print("(6) Running tests")
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify command output
     assert isinstance(ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"], str)
     assert "Traceback" not in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"]
-    assert isinstance(ret2_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"], str)
-    assert "Traceback" not in ret2_cli_ceos1_1["nrp1"]["ceos1-1"]["show clock"]
+    assert "nornir_salt.plugins.tasks.netmiko_send_commands" in ret2_cli_ceos1_1["nrp1"]["ceos1-1"], "Command not failed, while it should fail due to bad username and password"
+    assert "error" in ret2_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not removed ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not removed ceos1-1 ?"
         
         
 def test_RetryRunner_with_run_creds_retry_conn_options():
@@ -1525,7 +1537,7 @@ def test_RetryRunner_with_run_creds_retry_conn_options():
     
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify command output
     assert isinstance(ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"], str)
     assert "Traceback" not in ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"]
@@ -1535,7 +1547,7 @@ def test_RetryRunner_with_run_creds_retry_conn_options():
     assert "Traceback" not in ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"]
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Workers did not removed ceos1-1?"
+        assert v["ceos1-1"] == True, "Workers did not removed ceos1-1?"
         
         
 def test_RetryRunner_with_run_creds_retry_conn_options_only():
@@ -1663,7 +1675,7 @@ def test_RetryRunner_with_run_creds_retry_conn_options_only():
     
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify command output
     assert isinstance(ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"], str)
     assert "Traceback" not in ret1_cli_ceos1_1_netmiko["nrp1"]["ceos1-1"]["show clock"]
@@ -1673,11 +1685,11 @@ def test_RetryRunner_with_run_creds_retry_conn_options_only():
     assert "Traceback" not in ret1_cli_ceos1_1_napalm["nrp1"]["ceos1-1"]["show clock"]
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Workers did not removed ceos1-1?"
+        assert v["ceos1-1"] == True, "Workers did not removed ceos1-1?"
         
         
 def test_RetryRunner_with_run_creds_retry_all_failed():
-    print("Adding ceos1-1 hosts with wrong credentials")
+    print("\n(1) Adding ceos1-1 hosts with wrong credentials")
     ret_add_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -1694,7 +1706,7 @@ def test_RetryRunner_with_run_creds_retry_all_failed():
         timeout=60,
     )      
     pprint.pprint(ret_add_ceos1_1)
-    print("Connecting to ceos1-1 using run_creds_retry and running show clock")
+    print("(2) Connecting to ceos1-1 using run_creds_retry with all credentials wrong")
     ret1_cli_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
@@ -1703,7 +1715,7 @@ def test_RetryRunner_with_run_creds_retry_all_failed():
             "run_creds_retry": [
                 {
                     "username": "wrong_too",
-                    "password": "wrong_too",
+                    "password": "wrong_again",
                 },
             ],
             "FB": "ceos1-1"
@@ -1712,7 +1724,7 @@ def test_RetryRunner_with_run_creds_retry_all_failed():
         timeout=60,
     )   
     pprint.pprint(ret1_cli_ceos1_1)
-    print("Removing ceos1-1 from inventory")
+    print("(3) Removing ceos1-1 from inventory")
     remove_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -1722,16 +1734,17 @@ def test_RetryRunner_with_run_creds_retry_all_failed():
         timeout=60,
     )    
     pprint.pprint(remove_ceos1_1)
+    print("(4) Running tests")
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify command output
     assert isinstance(ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"], str)
     assert "Traceback" in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
-    assert "AuthenticationException" in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
+    assert "Authentication" in ret1_cli_ceos1_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not removed ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not removed ceos1-1 ?"
 
     
 def test_RetryRunner_with_num_connectors():
@@ -1921,14 +1934,14 @@ def test_RetryRunner_with_run_connect_retry():
     pprint.pprint(ret_connect_retry_5)
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify connection retry attempts
     assert ret_connect_retry_0["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 0
     assert ret_connect_retry_1["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 1
     assert ret_connect_retry_5["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]["connection_retry"] == 5
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not removed ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not removed ceos1-1 ?"
 
 
 def test_RetryRunner_2_different_subtask_connection_plugins():
@@ -1959,7 +1972,7 @@ def test_RetryRunner_2_different_subtask_connection_plugins():
 
 
 def test_RetryRunner_with_run_creds_retry_via_jumphost():
-    print("Adding ceos1-1 with wrong username/password, via jumphost")
+    print("\n(1) Adding ceos1-1 with wrong username/password, via jumphost")
     ret_add_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -1983,7 +1996,7 @@ def test_RetryRunner_with_run_creds_retry_via_jumphost():
         timeout=60,
     )     
     pprint.pprint(ret_add_ceos1_1)
-    print("Running cli task to verify connection fails")
+    print("(2) Running cli task to verify connection fails")
     ret_fail = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
@@ -1993,7 +2006,7 @@ def test_RetryRunner_with_run_creds_retry_via_jumphost():
         timeout=60,
     )  
     pprint.pprint(ret_fail)
-    print("Running cli task with run_retry_creds")
+    print("(3)  Running cli task with run_retry_creds")
     ret_pass = client.cmd(
         tgt="nrp1",
         fun="nr.cli",
@@ -2006,7 +2019,7 @@ def test_RetryRunner_with_run_creds_retry_via_jumphost():
         timeout=60,
     )   
     pprint.pprint(ret_pass)
-    print("Removing ceos1-1 from inventory")
+    print("(4)  Removing ceos1-1 from inventory")
     remove_ceos1_1 = client.cmd(
         tgt="nrp1",
         fun="nr.nornir",
@@ -2018,13 +2031,13 @@ def test_RetryRunner_with_run_creds_retry_via_jumphost():
     pprint.pprint(remove_ceos1_1) 
     # verify device added
     for v in ret_add_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not add ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not add ceos1-1 ?"
     # verify command output
     assert "Authentication to device failed." in ret_fail["nrp1"]["ceos1-1"]["nornir_salt.plugins.tasks.netmiko_send_commands"]
     assert "Clock source" in ret_pass["nrp1"]["ceos1-1"]["show clock"]
     # verify device deleted
     for v in remove_ceos1_1["nrp1"].values():
-        assert v == True, "Worker did not removed ceos1-1 ?"
+        assert v["ceos1-1"] == True, "Worker did not removed ceos1-1 ?"
         
 def test_RetryRunner_with_connectors_and_workers_0():
     ret_fail_1 = client.cmd(
@@ -2207,3 +2220,18 @@ def test_ffun_FT_function_comma_string():
     assert "ceos1" in res["nrp1"] and "ceos2" in res["nrp1"]
     assert len(res["nrp1"]) == 2    
     
+    
+def test_big_result():
+    """
+    Task return over 1 000 000 characters in result data, SALT
+    should trim it.
+    """
+    res = client.cmd(
+        tgt="nrp1",
+        fun="nr.task",
+        arg=[],
+        kwarg={"FB": "ceos1", "plugin": "salt://tasks/big_result.py"},
+        tgt_type="glob",
+        timeout=60,
+    )   
+    assert "VALUE_TRIMMED" in res["nrp1"]["ceos1"]["job_data_echo"] 

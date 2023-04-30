@@ -1,0 +1,9 @@
+FROM python:3.9-slim-bullseye
+
+COPY fakenos/ /tmp/fakenos/
+COPY salt_nornir/test/fakenos_inventory/fakenos_inventory.yaml /tmp/fakenos_inventory/fakenos_inventory.yaml
+
+# do python libs installation
+RUN python -m pip install --no-cache-dir pip /tmp/fakenos/ --upgrade
+
+ENTRYPOINT fakenos -i /tmp/fakenos_inventory/fakenos_inventory.yaml

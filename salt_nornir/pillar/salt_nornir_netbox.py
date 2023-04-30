@@ -1334,168 +1334,172 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
         salt nrp1 nr.nornir refresh
     """
-    ret = {}
-
-    # check proxy minion pillar type is "nornir", skip otherwise
-    if not pillar.get("proxy", {}).get("proxytype") == "nornir":
-        return ret
-
-    # check if need to merge kwargs with proxy minion pillar
-    if kwargs.get("use_pillar", False):
-        params = {**kwargs, **pillar.get("salt_nornir_netbox_pillar", {})}
-    else:
-        params = kwargs
-
-    use_minion_id_device = params.get("use_minion_id_device", False)
-    use_minion_id_tag = params.get("use_minion_id_tag", False)
-    use_hosts_filters = params.get("use_hosts_filters", False)
-    data_retrieval_num_workers = params.get("data_retrieval_num_workers", 10)
-    data_retrieval_timeout = params.get("data_retrieval_timeout", 50)
-
-    device_fields = [
-        "name",
-        "last_updated",
-        "custom_field_data",
-        "tags {name}",
-        "device_type {model}",
-        "device_role {name}",
-        "config_context",
-        "tenant {name}",
-        "platform {name napalm_driver}",
-        "serial",
-        "asset_tag",
-        "site {name tags{name}}",
-        "location {name}",
-        "rack {name}",
-        "status",
-        "primary_ip4 {address}",
-        "primary_ip6 {address}",
-        "airflow",
-        "position",
-    ]
-
     try:
-        # request dummy device to verify that Netbox GraphQL API is reachable
-        _ = nb_graphql(
-            field="device_list",
-            filters={"name": "__dummy__"},
-            fields=["id"],
-            params=params,
-            raise_for_status=True,
-        )
-    except Exception as e:
-        log.exception(
-            f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
-            f"'{params['url']}', token ends with '..{params['token'][-6:]}'"
-        )
-        return ret
+        ret = {}
 
-    # source proxy minion pillar from config context
-    if use_minion_id_device is True:
-        minion_nb = nb_graphql(
-            field="device_list",
-            filters={"name": minion_id},
-            fields=["config_context"],
-            params=params,
-        )
-        if not minion_nb:
-            log.warning(
-                f"salt_nornir_netbox no device with name "
-                f"'{minion_id}' found in netbox"
-            )
+        # check proxy minion pillar type is "nornir", skip otherwise
+        if not pillar.get("proxy", {}).get("proxytype") == "nornir":
+            return ret
+
+        # check if need to merge kwargs with proxy minion pillar
+        if kwargs.get("use_pillar", False):
+            params = {**kwargs, **pillar.get("salt_nornir_netbox_pillar", {})}
         else:
-            ret.update(dict(minion_nb[0]["config_context"]))
-            try:
-                _resolve_secrets(ret, minion_id, params)
-            except Exception as e:
-                log.exception(
-                    f"salt_nornir_netbox error while resolving secrets for "
-                    f"'{minion_id}' config context data: {e}"
-                )
-            # retrieve all hosts details
-            host_names = list(ret.get("hosts", {}))
-            devices_by_minion_id = nb_graphql(
+            params = kwargs
+
+        use_minion_id_device = params.get("use_minion_id_device", False)
+        use_minion_id_tag = params.get("use_minion_id_tag", False)
+        use_hosts_filters = params.get("use_hosts_filters", False)
+        data_retrieval_num_workers = params.get("data_retrieval_num_workers", 10)
+        data_retrieval_timeout = params.get("data_retrieval_timeout", 10)
+
+        device_fields = [
+            "name",
+            "last_updated",
+            "custom_field_data",
+            "tags {name}",
+            "device_type {model}",
+            "device_role {name}",
+            "config_context",
+            "tenant {name}",
+            "platform {name napalm_driver}",
+            "serial",
+            "asset_tag",
+            "site {name tags{name}}",
+            "location {name}",
+            "rack {name}",
+            "status",
+            "primary_ip4 {address}",
+            "primary_ip6 {address}",
+            "airflow",
+            "position",
+        ]
+
+        try:
+            # request dummy device to verify that Netbox GraphQL API is reachable
+            _ = nb_graphql(
                 field="device_list",
-                filters={"name": host_names},
+                filters={"name": "__dummy__"},
+                fields=["id"],
+                params=params,
+                raise_for_status=True,
+            )
+        except Exception as e:
+            log.exception(
+                f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
+                f"'{params['url']}', token ends with '..{params['token'][-6:]}'"
+            )
+            return ret
+
+        # source proxy minion pillar from config context
+        if use_minion_id_device is True:
+            minion_nb = nb_graphql(
+                field="device_list",
+                filters={"name": minion_id},
+                fields=["config_context"],
+                params=params,
+            )
+            if not minion_nb:
+                log.warning(
+                    f"salt_nornir_netbox no device with name "
+                    f"'{minion_id}' found in netbox"
+                )
+            else:
+                ret.update(dict(minion_nb[0]["config_context"]))
+                try:
+                    _resolve_secrets(ret, minion_id, params)
+                except Exception as e:
+                    log.exception(
+                        f"salt_nornir_netbox error while resolving secrets for "
+                        f"'{minion_id}' config context data: {e}"
+                    )
+                # retrieve all hosts details
+                host_names = list(ret.get("hosts", {}))
+                devices_by_minion_id = nb_graphql(
+                    field="device_list",
+                    filters={"name": host_names},
+                    fields=device_fields,
+                    params=params,
+                )
+                # process hosts
+                try:
+                    _process_devices_in_threads(
+                        num_workers=data_retrieval_num_workers,
+                        timeout=data_retrieval_timeout,
+                        devices=devices_by_minion_id,
+                        inventory=ret,
+                        params=params,
+                    )
+                except Exception as e:
+                    log.exception(
+                        f"salt_nornir_netbox error while processing device '{host_name}' "
+                        f"from '{minion_id}' config context data: {e}"
+                    )
+
+        # source devices list using tag value equal to minion id
+        if use_minion_id_tag is True:
+            ret.setdefault("hosts", {})
+            devices_by_tag = nb_graphql(
+                field="device_list",
+                filters={"tag": minion_id},
                 fields=device_fields,
                 params=params,
             )
-            # process hosts
             try:
                 _process_devices_in_threads(
                     num_workers=data_retrieval_num_workers,
                     timeout=data_retrieval_timeout,
-                    devices=devices_by_minion_id,
+                    devices=devices_by_tag,
                     inventory=ret,
                     params=params,
                 )
             except Exception as e:
                 log.exception(
-                    f"salt_nornir_netbox error while processing device '{host_name}' "
-                    f"from '{minion_id}' config context data: {e}"
+                    f"salt_nornir_netbox error while retrieving devices by "
+                    f"tag '{minion_id}': {e}"
                 )
 
-    # source devices list using tag value equal to minion id
-    if use_minion_id_tag is True:
-        ret.setdefault("hosts", {})
-        devices_by_tag = nb_graphql(
-            field="device_list",
-            filters={"tag": minion_id},
-            fields=device_fields,
-            params=params,
-        )
-        try:
-            _process_devices_in_threads(
-                num_workers=data_retrieval_num_workers,
-                timeout=data_retrieval_timeout,
-                devices=devices_by_tag,
-                inventory=ret,
-                params=params,
-            )
-        except Exception as e:
-            log.exception(
-                f"salt_nornir_netbox error while retrieving devices by "
-                f"tag '{minion_id}': {e}"
-            )
-
-    # retrieve devices using hosts filters
-    if use_hosts_filters and params.get("hosts_filters"):
-        ret.setdefault("hosts", {})
-        # form queries dictionary out of filters
-        queries = {
-            f"devices_by_filter_{index}": {
-                "field": "device_list",
-                "filters": filter_item,
-                "fields": device_fields,
+        # retrieve devices using hosts filters
+        if use_hosts_filters and params.get("hosts_filters"):
+            ret.setdefault("hosts", {})
+            # form queries dictionary out of filters
+            queries = {
+                f"devices_by_filter_{index}": {
+                    "field": "device_list",
+                    "filters": filter_item,
+                    "fields": device_fields,
+                }
+                for index, filter_item in enumerate(params["hosts_filters"])
             }
-            for index, filter_item in enumerate(params["hosts_filters"])
-        }
-        # send queries
-        devices_query_result = nb_graphql(queries=queries, params=params)
-        # unpack devices into a list
-        devices_by_filter, devices_added = [], set()
-        for devices in devices_query_result.values():
-            for device in devices:
-                if device["name"] not in devices_added:
-                    devices_by_filter.append(device)
-                    devices_added.add(device["name"])
-        log.debug(
-            f"salt_nornir_netbox retrieved devices by host filters for "
-            f"'{minion_id}': '{', '.join(devices_added)}', processing"
-        )
-        # process devices
-        try:
-            _process_devices_in_threads(
-                num_workers=data_retrieval_num_workers,
-                timeout=data_retrieval_timeout,
-                devices=devices_by_filter,
-                inventory=ret,
-                params=params,
+            # send queries
+            devices_query_result = nb_graphql(queries=queries, params=params)
+            # unpack devices into a list
+            devices_by_filter, devices_added = [], set()
+            for devices in devices_query_result.values():
+                for device in devices:
+                    if device["name"] not in devices_added:
+                        devices_by_filter.append(device)
+                        devices_added.add(device["name"])
+            log.debug(
+                f"salt_nornir_netbox retrieved devices by host filters for "
+                f"'{minion_id}': '{', '.join(devices_added)}', processing"
             )
-        except Exception as e:
-            log.exception(
-                f"salt_nornir_netbox '{minion_id}' error while retrieving devices "
-                f"by hosts filter: {e}"
-            )
+            # process devices
+            try:
+                _process_devices_in_threads(
+                    num_workers=data_retrieval_num_workers,
+                    timeout=data_retrieval_timeout,
+                    devices=devices_by_filter,
+                    inventory=ret,
+                    params=params,
+                )
+            except Exception as e:
+                log.exception(
+                    f"salt_nornir_netbox '{minion_id}' error while retrieving devices "
+                    f"by hosts filter: {e}"
+                )
 
-    return ret
+        return ret
+    except Exception as e:
+        log.exception(f"salt_nornir_netbox '{minion_id}' error: {e}")
+        return {}

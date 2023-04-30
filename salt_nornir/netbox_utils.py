@@ -867,10 +867,13 @@ def parse_config(__salt__=None, **kwargs):
             task_kwargs["enable"] = True
         else:
             log.info(
-                f"netbox_utils:get_parse_config_tasks unsupported "
+                f"netbox_utils:parse_config unsupported "
                 f"platform '{platform}', host name '{host_name}'"
             )
             continue
+        log.debug(
+            f"netbox_utils:parse_config parsing '{platform}' devices configurations using '{template}' template"
+        )
         ret.update(
             __salt__["nr.cli"](
                 **task_kwargs,
