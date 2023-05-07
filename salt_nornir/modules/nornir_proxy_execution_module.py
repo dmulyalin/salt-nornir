@@ -3088,6 +3088,12 @@ def netbox(*args, **kwargs):
 
     Pillar defined parameters take precendence over master's configuration.
 
+    Starting with version ``0.20.0`` support added to cache data retrieved from
+    Netbox on a per-device basis. For this functionality to work need to have
+    `diskcache <https://github.com/grantjenks/python-diskcache>`_ library installed
+    on salt-nornir proxy minion. Cache is persistant and stored on the minion's
+    local filesystem.
+
     Available ``task`` functions are listed below.
 
     **dir task**
@@ -3140,6 +3146,9 @@ def netbox(*args, **kwargs):
 
     :param add_ip: boolean, if True adds IP addresses information to interfaces
     :param add_inventory_items: boolean, if True adds inventory items information to interfaces
+    :param cache: True (default) - use cache for Netbox data, ``refresh`` - delete cached data,
+        False - ignore cache
+    :param cache_ttl: integer indicating cache time to live
 
     Sample usage::
 
@@ -3150,6 +3159,9 @@ def netbox(*args, **kwargs):
     Retrieves devices' interfaces connections from Netbox. Supported arguments:
 
     :param trace: if True traces full connection path between device interfaces
+    :param cache: True (default) - use cache for Netbox data, ``refresh`` - delete cached data,
+        False - ignore cache
+    :param cache_ttl: integer indicating cache time to live
 
     Sample usage::
 
@@ -3195,6 +3207,7 @@ def netbox(*args, **kwargs):
         *args[1:],
         **{k: v for k, v in kwargs.items() if not k.startswith("_")},
         __salt__=__salt__,
+        proxy_id=__opts__["id"],
     )
 
 

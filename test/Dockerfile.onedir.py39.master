@@ -1,0 +1,25 @@
+FROM python:3.9-slim-bullseye
+
+COPY salt_nornir/test/master_start.sh /tmp/master_start.sh
+
+RUN apt-get update && \
+    apt-get install -y curl --no-install-recommends   && \
+    mkdir /etc/apt/keyrings  && \
+    curl -fsSL -o /etc/apt/keyrings/salt-archive-keyring.gpg https://repo.saltproject.io/salt/py3/debian/11/amd64/SALT-PROJECT-GPG-PUBKEY-2023.gpg  && \
+    echo "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/salt/py3/debian/11/amd64/3006 bullseye main" | tee /etc/apt/sources.list.d/salt.list  && \
+    apt-get update  && \
+    apt-get install -y salt-master salt-api  && \
+    apt-get clean  && \
+    useradd -m saltuser  && \
+    usermod -g root saltuser  && \
+    chmod 775 /tmp/master_start.sh  && \
+    python -m pip install --no-cache-dir pip setuptools wheel poetry rich pynetbox salt --upgrade
+
+COPY salt_nornir/ /tmp/salt_nornir/
+COPY nornir_salt/ /tmp/nornir_salt/
+
+RUN salt-pip install --no-cache-dir /tmp/nornir_salt/.[prodmaxmaster] --upgrade && \
+    salt-pip install --no-cache-dir /tmp/salt_nornir/.[prodmaxmaster] --upgrade
+
+# CMD /tmp/master_start.sh
+ENTRYPOINT salt-master -l trace

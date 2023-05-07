@@ -1162,6 +1162,7 @@ def _host_add_interfaces(device, host, params):
         params=params,
         add_ip=params.get("host_add_interfaces_ip", False),
         add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
+        cache=False,
     )
 
     # save data into Nornir host's inventory
@@ -1181,10 +1182,7 @@ def _host_add_connections(device, host, params):
     """
     host_add_connections = params["host_add_connections"]
 
-    cables = get_connections(
-        hosts=[device["name"]],
-        params=params,
-    )
+    cables = get_connections(hosts=[device["name"]], params=params, cache=False)
 
     # save data into Nornir host's inventory
     dk = (

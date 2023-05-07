@@ -2079,6 +2079,7 @@ def nr_version():
         "genie": "",
         "pydantic": "",
         "python": sys.version.split(" ")[0],
+        "diskcache": "",
     }
 
     # get version of packages installed

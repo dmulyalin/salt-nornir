@@ -9,7 +9,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-
+NB_VERSION = None
 NB_URL = "http://192.168.75.129:8000/"
 NB_URL_SSL = "https://192.168.75.129:443/"
 NB_USERNAME = "admin"
@@ -888,6 +888,10 @@ circuit_providers = [
     {"name": "Provider1"}
 ]
 
+provider_accounts = [
+    {"provider": {"slug": slugify("Provider1")}, "account": "test_account"}
+]
+
 circuit_types = [
     {"name": "DarkFibre"}
 ]
@@ -899,7 +903,8 @@ circuits = [
         "status": "active",
         "cid": "CID1",
         "termination_a": {"device": "fceos4", "interface": "eth101", "cable": {"type": "smf"}},
-        "termination_b": {"device": "fceos5", "interface": "eth8", "cable": {"type": "smf"}}
+        "termination_b": {"device": "fceos5", "interface": "eth8", "cable": {"type": "smf"}},
+        "provider_account": {"account": "test_account"}
     }
 ]
 
@@ -1378,6 +1383,9 @@ def create_circuits():
             termination_b = item.pop("termination_b")
             cable_a = termination_a.pop("cable")
             cable_b = termination_b.pop("cable")
+            # provider account supported starting with netbox 3.5 only
+            if not NB_VERSION.startswith("3.5"):
+                   _ = circuit.pop("provider_account")
             circuit = nb.circuits.circuits.create(**item)
             # add termination A
             cterm_a = nb.circuits.circuit_terminations.create(circuit=circuit.id, term_side="A", site={"slug": slugify("SALTNORNIR-LAB")})
@@ -1398,7 +1406,7 @@ def create_circuits():
                 b_terminations=[{"object_type": "circuits.circuittermination","object_id": cterm_z.id}]
             )            
         except Exception as e:
-            log.error(f"creating circuit type '{item}' error '{e}'")      
+            log.exception(f"creating circuit '{item}' error '{e}'")      
             
  
 def create_power_outlet_ports():
@@ -1418,6 +1426,14 @@ def create_power_ports():
         except Exception as e:
             log.error(f"creating power port '{item}' error '{e}'")   
             
+
+def create_circuit_provider_accounts():
+    log.info("creating provider accounts")
+    for item in provider_accounts:
+        try:
+            nb.circuits.provider_accounts.create(**item)
+        except Exception as e:
+            log.error(f"creating provider account '{item}' error '{e}'") 
             
 # -----------------------------------------------------------------------------------
 # DELETE functions
@@ -1750,17 +1766,18 @@ def delete_circuit_types():
             i.delete()
     except Exception as e:
         log.error(f"deleting all providers error '{e}'")  
-        
+    
     
 def clean_up_netbox():
-    if NB_SECRETS_PLUGIN == "netbox_secretstore":
-        delete_netbox_secretstore_secrets()
-        delete_netbox_secretstore_roles()
-    elif NB_SECRETS_PLUGIN == "netbox_secrets":
-        delete_netbox_secrets_secrets()
-        delete_netbox_secrets_roles()
-    else:
-        raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
+    if NB_VERSION.startswith("3.4"):
+        if NB_SECRETS_PLUGIN == "netbox_secretstore":
+            delete_netbox_secretstore_secrets()
+            delete_netbox_secretstore_roles()
+        elif NB_SECRETS_PLUGIN == "netbox_secrets":
+            delete_netbox_secrets_secrets()
+            delete_netbox_secrets_roles()
+        else:
+            raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
     delete_connections()
     delete_circuits()
     delete_circuit_providers()
@@ -1804,15 +1821,18 @@ def populate_netbox():
     create_console_ports()
     associate_ip_adress_to_devices()
     create_connections()
-    if NB_SECRETS_PLUGIN == "netbox_secretstore":
-        create_netbox_secretstore_roles()
-        create_netbox_secretstore_secrets()
-    elif NB_SECRETS_PLUGIN == "netbox_secrets":
-        create_netbox_secrets_roles()
-        create_netbox_secrets_secrets()
-    else:
-        raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
+    if NB_VERSION.startswith("3.4"):
+        if NB_SECRETS_PLUGIN == "netbox_secretstore":
+            create_netbox_secretstore_roles()
+            create_netbox_secretstore_secrets()
+        elif NB_SECRETS_PLUGIN == "netbox_secrets":
+            create_netbox_secrets_roles()
+            create_netbox_secrets_secrets()
+        else:
+            raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
     create_circuit_providers()
+    if NB_VERSION.startswith("3.5"):
+        create_circuit_provider_accounts()
     create_circuit_types()
     create_circuits()
     
@@ -1824,6 +1844,7 @@ if __name__ == "__main__":
         # raises ConnectionError if Netbox is not reachable
         _ = nb.status()
         globals()["nb"] = nb
+        globals()["NB_VERSION"] = nb.version
     except Exception as e:
         log.exception(
             f"netbox_data failed to instantiate pynetbox.api object, "

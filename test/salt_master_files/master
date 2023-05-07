@@ -54,13 +54,13 @@ ext_pillar:
       use_hosts_filters: False
       use_pillar: True
       host_add_netbox_data: False
-      secrets:
-        resolve_secrets: True
-        fetch_username: False
-        fetch_password: False
-        secret_device: keymaster-1
-        plugins:
-          # netbox_secretstore:
-          #   private_key: /etc/salt/netbox_secretstore_private.key
-          netbox_secrets:
-            private_key: /etc/salt/netbox_secrets_private.key
+      # secrets:
+      #   resolve_secrets: True
+      #   fetch_username: False
+      #   fetch_password: False
+      #   secret_device: keymaster-1
+      #   plugins:
+      #     # netbox_secretstore:
+      #     #   private_key: /etc/salt/netbox_secretstore_private.key
+      #     netbox_secrets:
+      #       private_key: /etc/salt/netbox_secrets_private.key

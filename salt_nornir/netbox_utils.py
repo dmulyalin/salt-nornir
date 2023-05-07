@@ -49,6 +49,14 @@ try:
 except:
     log.warning("Failed importing SALT libraries")
 
+try:
+    from diskcache import FanoutCache
+
+    HAS_DISKCACHE = True
+except ImportError:
+    HAS_DISKCACHE = False
+    log.warning("Failed importing pynetbox module")
+
 
 def get_salt_nornir_netbox_params(__salt__) -> dict:
     """
@@ -86,6 +94,15 @@ def get_salt_nornir_netbox_params(__salt__) -> dict:
             "Failed to source Netbox configuration from minion pillar "
             f"or salt master configuration, 'url' and 'token' not defined"
         )
+    # retrieve proxy parameters
+    params["proxy"] = __salt__["config.get"](
+        key="proxy",
+        omit_pillar=False,
+        omit_opts=True,
+        omit_master=True,
+        omit_grains=True,
+        default={},
+    )
     return params
 
 
@@ -136,6 +153,7 @@ def nb_graphql(
     query_string: str = None,
     raise_for_status: bool = False,
     __salt__=None,
+    proxy_id=None,
 ):
     """
     Function to send query to Netbox GraphQL API and return results.
@@ -204,7 +222,9 @@ def nb_graphql(
         return None
 
 
-def nb_rest(method: str = "get", api: str = "", __salt__=None, **kwargs) -> dict:
+def nb_rest(
+    method: str = "get", api: str = "", __salt__=None, proxy_id=None, **kwargs
+) -> dict:
     """
     Function to query Netbox REST API.
 
@@ -242,7 +262,10 @@ def get_interfaces(
     sync=False,
     params=None,
     __salt__=None,
+    proxy_id=None,
     hosts=None,
+    cache=True,
+    cache_ttl=3600,
     **kwargs,
 ):
     """
@@ -256,12 +279,22 @@ def get_interfaces(
     :param __salt__: reference to ``__salt__`` execution modules dictionary
     :param kwargs: Fx filters to filter hosts to retrieve interfaces for
     :param hosts: list of hosts to retrieve interface for
+    :param cache: boolean indicating whether to cache Netbox response or string
+        ``refresh`` to delete cached data, if set to False cached data ignored
+        but not refreshed
+    :param cache_ttl: integer indicating cache time to live
     :return: dictionary keyed by device name with interface details
 
     .. note:: ``add_inventory_items`` only supported with Netbox 3.4 and above.
 
     .. note: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
     otherwise ``CommandExecutionError`` raised.
+
+    Starting with version ``0.20.0`` support added to cache data retrieved from
+    Netbox on a per-device basis. For this functionality to work need to have
+    `diskcache <https://github.com/grantjenks/python-diskcache>`_ library installed
+    on salt-nornir proxy minion. Cache is persistant and stored on the minion's
+    local filesystem.
     """
     # retrieve a list of hosts to get interfaces for
     hosts = hosts or __salt__["nr.nornir"](
@@ -270,99 +303,142 @@ def get_interfaces(
     )
     if not hosts:
         raise CommandExecutionError("No hosts matched")
-    # if no params provided extract them from minion pillar of master config
+
+    # form final result dictionary
+    intf_dict = {h: {} for h in hosts}
+
+    # if no params provided extract them from minion pillar or master config
     params = params or get_salt_nornir_netbox_params(__salt__)
-    intf_fields = [
-        "name",
-        "enabled",
-        "description",
-        "mtu",
-        "parent {name}",
-        "mac_address",
-        "mode",
-        "untagged_vlan {vid name}",
-        "vrf {name}",
-        "tagged_vlans {vid name}",
-        "tags {name}",
-        "custom_fields",
-        "last_updated",
-        "bridge {name}",
-        "child_interfaces {name}",
-        "bridge_interfaces {name}",
-        "member_interfaces {name}",
-        "wwn",
-        "duplex",
-        "speed",
-        "id",
-        "device {name}",
-    ]
-    # add IP addresses to interfaces fields
-    if add_ip:
-        intf_fields.append(
-            "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
+
+    # check if need to use cache
+    if HAS_DISKCACHE and cache:
+        cache_directory = (
+            params["proxy"]
+            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+            .format(proxy_id=proxy_id)
         )
-    # form interfaces query dictioney
-    queries = {
-        "interfaces": {
-            "field": "interface_list",
-            "filters": {"device": hosts},
-            "fields": intf_fields,
-        }
-    }
-    # add query to retrieve inventory items
-    if add_inventory_items:
-        inv_filters = {"device": hosts, "component_type": "dcim.interface"}
-        inv_fields = [
+        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # remove expired items from cache
+        _ = cache_obj.expire()
+        # iterate over a copy of hosts list
+        for host in list(hosts):
+            key = f"nr.netbox:get_interfaces, {host}, add_ip {add_ip}, add_inventory_items {add_inventory_items}"
+            if key in cache_obj and cache is True:
+                intf_dict[host] = cache_obj[key]
+                hosts.remove(host)
+                log.debug(
+                    f"netbox_utils:get_interfaces '{host}' retrieved get_interfaces from cache"
+                )
+            elif key in cache_obj and cache == "refresh":
+                cache_obj.delete(key)
+                log.debug(
+                    f"netbox_utils:get_interfaces '{host}' deleted get_interfaces data from cache"
+                )
+
+        cache_obj.close()
+
+    # check if still has hosts left to retrieve data for
+    if hosts:
+        intf_fields = [
             "name",
-            "component {... on InterfaceType {id}}",
-            "role {name}",
-            "manufacturer {name}",
-            "custom_fields",
-            "label",
+            "enabled",
             "description",
+            "mtu",
+            "parent {name}",
+            "mac_address",
+            "mode",
+            "untagged_vlan {vid name}",
+            "vrf {name}",
+            "tagged_vlans {vid name}",
             "tags {name}",
-            "asset_tag",
-            "serial",
-            "part_id",
+            "custom_fields",
+            "last_updated",
+            "bridge {name}",
+            "child_interfaces {name}",
+            "bridge_interfaces {name}",
+            "member_interfaces {name}",
+            "wwn",
+            "duplex",
+            "speed",
+            "id",
+            "device {name}",
         ]
-        queries["inventor_items"] = {
-            "field": "inventory_item_list",
-            "filters": inv_filters,
-            "fields": inv_fields,
+        # add IP addresses to interfaces fields
+        if add_ip:
+            intf_fields.append(
+                "ip_addresses {address status role dns_name description custom_fields last_updated tenant {name} tags {name}}"
+            )
+        # form interfaces query dictioney
+        queries = {
+            "interfaces": {
+                "field": "interface_list",
+                "filters": {"device": hosts},
+                "fields": intf_fields,
+            }
         }
+        # add query to retrieve inventory items
+        if add_inventory_items:
+            inv_filters = {"device": hosts, "component_type": "dcim.interface"}
+            inv_fields = [
+                "name",
+                "component {... on InterfaceType {id}}",
+                "role {name}",
+                "manufacturer {name}",
+                "custom_fields",
+                "label",
+                "description",
+                "tags {name}",
+                "asset_tag",
+                "serial",
+                "part_id",
+            ]
+            queries["inventor_items"] = {
+                "field": "inventory_item_list",
+                "filters": inv_filters,
+                "fields": inv_fields,
+            }
 
-    interfaces_data = nb_graphql(queries=queries, params=params)
+        interfaces_data = nb_graphql(queries=queries, params=params)
 
-    interfaces = interfaces_data.pop("interfaces")
+        interfaces = interfaces_data.pop("interfaces")
 
-    # process inventory items
-    if add_inventory_items:
-        inventory_items_list = interfaces_data.pop("inventor_items")
-        # transform inventory items list to a dictionary keyed by intf_id
-        inventory_items_dict = {}
-        while inventory_items_list:
-            inv_item = inventory_items_list.pop()
-            # skip inventory items that does not assigned to components
-            if inv_item.get("component") is None:
-                continue
-            intf_id = str(inv_item.pop("component").pop("id"))
-            inventory_items_dict.setdefault(intf_id, [])
-            inventory_items_dict[intf_id].append(inv_item)
-        # iterate over interfaces and add inventory items
-        for intf in interfaces:
-            intf["inventory_items"] = inventory_items_dict.pop(intf["id"], [])
+        # process inventory items
+        if add_inventory_items:
+            inventory_items_list = interfaces_data.pop("inventor_items")
+            # transform inventory items list to a dictionary keyed by intf_id
+            inventory_items_dict = {}
+            while inventory_items_list:
+                inv_item = inventory_items_list.pop()
+                # skip inventory items that does not assigned to components
+                if inv_item.get("component") is None:
+                    continue
+                intf_id = str(inv_item.pop("component").pop("id"))
+                inventory_items_dict.setdefault(intf_id, [])
+                inventory_items_dict[intf_id].append(inv_item)
+            # iterate over interfaces and add inventory items
+            for intf in interfaces:
+                intf["inventory_items"] = inventory_items_dict.pop(intf["id"], [])
 
-    # transform interfaces list to dictionary keyed by device and interfaces names
-    intf_dict = {}
-    while interfaces:
-        intf = interfaces.pop()
-        _ = intf.pop("id")
-        device_name = intf.pop("device").pop("name")
-        intf_name = intf.pop("name")
-        intf_dict.setdefault(device_name, {})
-        intf_dict[device_name][intf_name] = intf
+        # transform interfaces list to dictionary keyed by device and interfaces names
+        while interfaces:
+            intf = interfaces.pop()
+            _ = intf.pop("id")
+            device_name = intf.pop("device").pop("name")
+            intf_name = intf.pop("name")
+            intf_dict[device_name][intf_name] = intf
 
-    # save results to hosts inventory if requested to do so
+        # cache interfaces data for each host
+        if HAS_DISKCACHE and cache:
+            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            for host in hosts:
+                key = f"nr.netbox:get_interfaces, {host}, add_ip {add_ip}, add_inventory_items {add_inventory_items}"
+                cache_obj.set(key, intf_dict[host], expire=cache_ttl)
+                log.debug(
+                    f"netbox_utils:get_interfaces '{host}' cached get_interfaces data"
+                )
+            cache_obj.close()
+
+    # save results into hosts inventory if requested to do so
     if sync:
         key = sync if isinstance(sync, str) else "interfaces"
         return __salt__["nr.nornir"](
@@ -373,19 +449,19 @@ def get_interfaces(
                 for host, intf_data in intf_dict.items()
             ],
         )
-    else:
-        # make sure all hosts included in return data
-        for host in hosts:
-            intf_dict.setdefault(host, {})
-        return intf_dict
+
+    return intf_dict
 
 
 def get_connections(
-    params: list = None,
+    params: dict = None,
     trace: bool = False,
     sync=False,
     __salt__=None,
+    proxy_id=None,
     hosts=None,
+    cache=True,
+    cache_ttl=3600,
     **kwargs,
 ) -> dict:
     """
@@ -397,6 +473,10 @@ def get_connections(
         inventory data under ``connections`` key, if sync is a string, provided
         value used as a key.
     :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param cache: boolean indicating whether to cache Netbox response or string
+        ``refresh`` to delete cached data, if set to False cached data ignored
+        but not refreshed
+    :param cache_ttl: integer indicating cache time to live
     :param kwargs: Fx filters to filter hosts to retrieve interfaces for
     :return: dictionary keyed by device name with connections details
 
@@ -624,197 +704,243 @@ def get_connections(
     )
     if not hosts:
         raise CommandExecutionError("No hosts matched")
+
+    # form final result dictionary
+    connections_dict = {h: {} for h in hosts}
+
     # if no params provided, extract Netbox params from mater config or minion pillar
     params = params or get_salt_nornir_netbox_params(__salt__)
-    connections_dict = {}
 
-    # retrieve full list of device cables with all terminations
-    cable_fields = [
-        "type",
-        "status",
-        "tenant {name}",
-        "label",
-        "tags {name}",
-        "length",
-        "length_unit",
-        "last_updated",
-        "custom_fields",
-        """terminations {
-               termination {
-                 __typename
-                 ... on InterfaceType {
-                   name device{name} id
-                   link_peers {
+    # check if need to use cache
+    if HAS_DISKCACHE and cache:
+        cache_directory = (
+            params["proxy"]
+            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+            .format(proxy_id=proxy_id)
+        )
+        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # remove expired items from cache
+        _ = cache_obj.expire()
+        # iterate over a copy of hosts list
+        for host in list(hosts):
+            key = f"nr.netbox:get_connections, {host}, trace {trace}"
+            if key in cache_obj and cache is True:
+                connections_dict[host] = cache_obj[key]
+                hosts.remove(host)
+                log.debug(
+                    f"netbox_utils:get_connections '{host}' retrieved get_connections from cache"
+                )
+            elif key in cache_obj and cache == "refresh":
+                cache_obj.delete(key)
+                log.debug(
+                    f"netbox_utils:get_connections '{host}' deleted get_connections data from cache"
+                )
+        cache_obj.close()
+
+    # check if still has hosts left to retrieve data for
+    if hosts:
+        # retrieve full list of device cables with all terminations
+        cable_fields = [
+            "type",
+            "status",
+            "tenant {name}",
+            "label",
+            "tags {name}",
+            "length",
+            "length_unit",
+            "last_updated",
+            "custom_fields",
+            """terminations {
+                   termination {
                      __typename
-                     ... on InterfaceType {name device{name}}
-                     ... on FrontPortType {name device{name}}
-                     ... on RearPortType {name device{name}}
-                     ... on CircuitTerminationType {
-                       circuit{
-                         cid 
-                         description 
-                         tags{name} 
-                         provider{name} 
-                         status
-                         custom_fields
-                         commit_rate
+                     ... on InterfaceType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on InterfaceType {name device{name}}
+                         ... on FrontPortType {name device{name}}
+                         ... on RearPortType {name device{name}}
+                         ... on CircuitTerminationType {
+                           circuit{
+                             cid 
+                             description 
+                             tags{name} 
+                             provider{name} 
+                             status
+                             custom_fields
+                             commit_rate
+                           }
+                         }
+                       }
+                     }  
+                     ... on ConsolePortType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on ConsoleServerPortType {name device{name}}
+                       }
+                     }
+                     ... on ConsoleServerPortType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on ConsolePortType {name device{name}}
+                       }
+                     }
+                     ... on PowerPortType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on PowerOutletType {name device{name}}
+                       }
+                     }
+                     ... on PowerOutletType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on PowerPortType {name device{name}}
+                       }
+                     }
+                     ... on FrontPortType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on InterfaceType {name device{name}}
+                         ... on FrontPortType {name device{name}}
+                         ... on RearPortType {name device{name}}
+                         ... on CircuitTerminationType {
+                           circuit{
+                             cid 
+                             description 
+                             tags{name} 
+                             provider{name} 
+                             status
+                             custom_fields
+                             commit_rate
+                           }
+                         }
+                       }
+                     }
+                     ... on RearPortType {
+                       name device{name} id
+                       link_peers {
+                         __typename
+                         ... on InterfaceType {name device{name}}
+                         ... on FrontPortType {name device{name}}
+                         ... on RearPortType {name device{name}}
+                         ... on CircuitTerminationType {
+                           circuit{
+                             cid 
+                             description 
+                             tags{name} 
+                             provider{name} 
+                             status
+                             custom_fields
+                             commit_rate
+                           }
+                         }
                        }
                      }
                    }
-                 }  
-                 ... on ConsolePortType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on ConsoleServerPortType {name device{name}}
-                   }
-                 }
-                 ... on ConsoleServerPortType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on ConsolePortType {name device{name}}
-                   }
-                 }
-                 ... on PowerPortType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on PowerOutletType {name device{name}}
-                   }
-                 }
-                 ... on PowerOutletType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on PowerPortType {name device{name}}
-                   }
-                 }
-                 ... on FrontPortType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on InterfaceType {name device{name}}
-                     ... on FrontPortType {name device{name}}
-                     ... on RearPortType {name device{name}}
-                     ... on CircuitTerminationType {
-                       circuit{
-                         cid 
-                         description 
-                         tags{name} 
-                         provider{name} 
-                         status
-                         custom_fields
-                         commit_rate
-                       }
-                     }
-                   }
-                 }
-                 ... on RearPortType {
-                   name device{name} id
-                   link_peers {
-                     __typename
-                     ... on InterfaceType {name device{name}}
-                     ... on FrontPortType {name device{name}}
-                     ... on RearPortType {name device{name}}
-                     ... on CircuitTerminationType {
-                       circuit{
-                         cid 
-                         description 
-                         tags{name} 
-                         provider{name} 
-                         status
-                         custom_fields
-                         commit_rate
-                       }
-                     }
-                   }
-                 }
-               }
-             }""",
-    ]
+                 }""",
+        ]
 
-    all_cables = nb_graphql("cable_list", {"device": hosts}, cable_fields, params)
+        all_cables = nb_graphql("cable_list", {"device": hosts}, cable_fields, params)
 
-    # form connections_dict keyed by device name and device's local interface name
-    for cable in all_cables:
-        terminations = cable.pop("terminations")
-        for termination in terminations:
-            termination = termination.pop("termination")
-            termination_type = termination["__typename"].replace("Type", "").lower()
-            # skip circuit termination point
-            if termination_type == "circuittermination":
-                continue
-            # skip if cable has no peers
-            if not termination["link_peers"]:
-                continue
-            device_name = termination["device"]["name"]
-            # skip connections for non requested devices
-            if device_name not in hosts:
-                continue
-            connections_dict.setdefault(device_name, {})
-            link_peers = termination.pop("link_peers")
-            remote_termination_type = (
-                link_peers[0]["__typename"].replace("Type", "").lower()
-            )
-            # check if need to trace full path
-            if trace and remote_termination_type in [
-                "frontport",
-                "rearport",
-                "circuittermination",
-            ]:
-                if termination_type == "interface":
-                    far_end_termination_type = "interface"
-                    api = f"dcim/interfaces/{termination['id']}/trace"
-                elif termination_type == "consoleport":
-                    far_end_termination_type = "consoleserverport"
-                    api = f"dcim/console-ports/{termination['id']}/trace"
-                elif termination_type == "consoleserverport":
-                    far_end_termination_type = "consoleport"
-                    api = f"dcim/console-server-ports/{termination['id']}/trace"
-                path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
-                # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
-                remote_device_terminations = path_trace[-1][-1]
-                connections_dict[device_name][termination["name"]] = {
-                    # path is reachable if all segments' cables are connected
-                    "reachable": all(
-                        c[1]["status"].lower() == "connected" for c in path_trace
-                    ),
-                    "cables": [c[1] for c in path_trace],
-                    "remote_device": remote_device_terminations[0]["device"]["name"],
-                    "remote_interface": (
-                        remote_device_terminations[0]["name"]
+        # form connections_dict keyed by device name and device's local interface name
+        for cable in all_cables:
+            terminations = cable.pop("terminations")
+            for termination in terminations:
+                termination = termination.pop("termination")
+                termination_type = termination["__typename"].replace("Type", "").lower()
+                # skip circuit termination point
+                if termination_type == "circuittermination":
+                    continue
+                # skip if cable has no peers
+                if not termination["link_peers"]:
+                    continue
+                device_name = termination["device"]["name"]
+                # skip connections for non requested devices
+                if device_name not in hosts:
+                    continue
+                connections_dict.setdefault(device_name, {})
+                link_peers = termination.pop("link_peers")
+                remote_termination_type = (
+                    link_peers[0]["__typename"].replace("Type", "").lower()
+                )
+                # check if need to trace full path
+                if trace and remote_termination_type in [
+                    "frontport",
+                    "rearport",
+                    "circuittermination",
+                ]:
+                    if termination_type == "interface":
+                        far_end_termination_type = "interface"
+                        api = f"dcim/interfaces/{termination['id']}/trace"
+                    elif termination_type == "consoleport":
+                        far_end_termination_type = "consoleserverport"
+                        api = f"dcim/console-ports/{termination['id']}/trace"
+                    elif termination_type == "consoleserverport":
+                        far_end_termination_type = "consoleport"
+                        api = f"dcim/console-server-ports/{termination['id']}/trace"
+                    path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
+                    # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
+                    remote_device_terminations = path_trace[-1][-1]
+                    connections_dict[device_name][termination["name"]] = {
+                        # path is reachable if all segments' cables are connected
+                        "reachable": all(
+                            c[1]["status"].lower() == "connected" for c in path_trace
+                        ),
+                        "cables": [c[1] for c in path_trace],
+                        "remote_device": remote_device_terminations[0]["device"][
+                            "name"
+                        ],
+                        "remote_interface": (
+                            remote_device_terminations[0]["name"]
+                            if len(remote_device_terminations) == 1
+                            else [i["name"] for i in remote_device_terminations]
+                        ),
+                        "termination_type": termination_type,
+                        "remote_termination_type": far_end_termination_type,
+                        "breakout": False
                         if len(remote_device_terminations) == 1
-                        else [i["name"] for i in remote_device_terminations]
-                    ),
-                    "termination_type": termination_type,
-                    "remote_termination_type": far_end_termination_type,
-                    "breakout": False if len(remote_device_terminations) == 1 else True,
-                }
-            # retrieve local cable connection to the circuit
-            elif remote_termination_type == "circuittermination":
-                connections_dict[device_name][termination["name"]] = {
-                    "reachable": cable["status"].lower() == "connected",
-                    "cable": cable,
-                    "circuit": link_peers[0]["circuit"],
-                    "termination_type": termination_type,
-                    "remote_termination_type": remote_termination_type,
-                }
-            # retrieve local cable connections only, no full path trace
-            else:
-                connections_dict[device_name][termination["name"]] = {
-                    "reachable": cable["status"].lower() == "connected",
-                    "cable": cable,
-                    "remote_device": link_peers[0]["device"]["name"],
-                    "remote_interface": (
-                        link_peers[0]["name"]
-                        if len(link_peers) == 1
-                        else [i["name"] for i in link_peers]
-                    ),
-                    "termination_type": termination_type,
-                    "remote_termination_type": remote_termination_type,
-                    "breakout": False if len(link_peers) == 1 else True,
-                }
+                        else True,
+                    }
+                # retrieve local cable connection to the circuit
+                elif remote_termination_type == "circuittermination":
+                    connections_dict[device_name][termination["name"]] = {
+                        "reachable": cable["status"].lower() == "connected",
+                        "cable": cable,
+                        "circuit": link_peers[0]["circuit"],
+                        "termination_type": termination_type,
+                        "remote_termination_type": remote_termination_type,
+                    }
+                # retrieve local cable connections only, no full path trace
+                else:
+                    connections_dict[device_name][termination["name"]] = {
+                        "reachable": cable["status"].lower() == "connected",
+                        "cable": cable,
+                        "remote_device": link_peers[0]["device"]["name"],
+                        "remote_interface": (
+                            link_peers[0]["name"]
+                            if len(link_peers) == 1
+                            else [i["name"] for i in link_peers]
+                        ),
+                        "termination_type": termination_type,
+                        "remote_termination_type": remote_termination_type,
+                        "breakout": False if len(link_peers) == 1 else True,
+                    }
+
+        # cache connections data for each host
+        if HAS_DISKCACHE and cache:
+            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            for host in hosts:
+                key = f"nr.netbox:get_connections, {host}, trace {trace}"
+                cache_obj.set(key, connections_dict[host], expire=cache_ttl)
+                log.debug(
+                    f"netbox_utils:get_connections '{host}' cached get_connections data"
+                )
+            cache_obj.close()
 
     # save results to hosts inventory if requested to do so
     if sync:
@@ -827,14 +953,11 @@ def get_connections(
                 for host, connections in connections_dict.items()
             ],
         )
-    else:
-        # make sure all hosts included in return data
-        for host in hosts:
-            connections_dict.setdefault(host, {})
-        return connections_dict
+
+    return connections_dict
 
 
-def parse_config(__salt__=None, **kwargs):
+def parse_config(__salt__=None, proxy_id=None, **kwargs):
     """
     Function to return results of devices configuration parsing
     produced by TTP Templates for Netbox.
@@ -887,7 +1010,7 @@ def parse_config(__salt__=None, **kwargs):
     return ret
 
 
-def update_config_context(__salt__=None, **kwargs):
+def update_config_context(__salt__=None, proxy_id=None, **kwargs):
     """
     Function to populate device configuration context with parsed results.
 
@@ -919,7 +1042,7 @@ def update_config_context(__salt__=None, **kwargs):
     return ret
 
 
-def update_vrf(__salt__=None, **kwargs):
+def update_vrf(__salt__=None, proxy_id=None, **kwargs):
     """
     Function to create or update VRFs and Route-Targets in Netbox.
 
