@@ -1,0 +1,9 @@
+master: localhost
+multiprocessing: true
+log_fmt_logfile: '%(asctime)s,%(msecs)03d - %(processName)s - [%(levelname)-8s] %(message)s'
+log_fmt_console: '%(asctime)s,%(msecs)03d - %(processName)s - [%(levelname)-8s] %(message)s'
+log_datefmt: '%Y-%m-%d %H:%M:%S'
+log_level: trace
+log_level_logfile: trace
+log_file: /var/log/salt/proxy
+pki_dir: /etc/salt/pki/proxy

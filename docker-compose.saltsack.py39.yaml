@@ -1,0 +1,95 @@
+services:
+  salt-master:
+    container_name: saltstack
+    hostname: 'saltstack'
+    privileged: True
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.py39.saltstack
+    networks:
+      net1:
+        ipv4_address: 10.0.1.100
+    volumes:
+      # bind folder with tests to salt-master container
+      - type: bind
+        source: ./test/pytest/
+        target: /tmp/pytest/
+      # bind folder with salt-master configuration to salt-master container
+      - type: bind
+        source: ./test/salt_master_files/
+        target: /etc/salt/
+      # bind Salt Nornir packages for the ease of development/debugging
+      - type: bind
+        source: ./salt_nornir/
+        target: /usr/local/lib/python3.9/site-packages/salt_nornir/
+      - type: bind
+        source: ../nornir_salt/nornir_salt/
+        target: /usr/local/lib/python3.9/site-packages/nornir_salt/
+      # bind local folder to salt-master in case need to pip install nornir-salt
+      - type: bind
+        source: ../nornir_salt/
+        target: /tmp/nornir_salt/
+      - type: bind
+        source: .
+        target: /tmp/salt_nornir/
+      # bind PICLE package for development
+      - type: bind
+        source: ../PICLE/picle
+        target: /usr/local/lib/python3.9/site-packages/picle/
+      # bind TTP Templates package for development
+      - type: bind
+        source: ../TTP_templates/ttp_templates
+        target: /usr/local/lib/python3.9/site-packages/ttp_templates/
+
+  ceos1:
+    container_name: ceos1
+    hostname: 'ceos1'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos1
+    networks:
+      # need ceos-dummy as its assigned to linux OS so that
+      # second network assigned to cEOS instance
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.4
+
+  ceos2:
+    container_name: ceos2
+    hostname: 'ceos2'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.ceos2
+    networks:
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.5
+
+  salt-nornir-fakenos:
+    container_name: salt-nornir-fakenos
+    hostname: 'salt-nornir-fakenos'
+    privileged: true
+    build:
+      context: ..
+      dockerfile: salt_nornir/test/Dockerfile.py39.fakenos
+    volumes:
+      # bind fakenos inventory
+      - type: bind
+        source: ./test/fakenos_inventory/
+        target: /tmp/fakenos_inventory/
+      # bind FakeNOS packages for the ease of development/debugging
+      - type: bind
+        source: ../fakenos/fakenos/
+        target: /usr/local/lib/python3.9/site-packages/fakenos/
+    networks:
+      ceos-dummy: {}
+      net1:
+        ipv4_address: 10.0.1.10
+networks:
+  net1:
+    ipam:
+      config:
+        - subnet: 10.0.1.0/24
+  ceos-dummy: {}

@@ -1,9 +1,11 @@
 auto_accept: True
 file_recv: True
-interface: 0.0.0.0
+interface: 0.0.0.0 
 pki_dir: /etc/salt/pki/master
 log_level_logfile: trace
 log_file: /var/log/salt/master
+log_fmt_logfile: '%(asctime)s,%(msecs)03d - %(processName)s - [%(levelname)-8s] %(message)s'
+log_fmt_console: '%(asctime)s,%(msecs)03d - %(processName)s - [%(levelname)-8s] %(message)s'
 sock_pool_size: 15
 
 file_roots:
@@ -47,7 +49,7 @@ jinja_env:
   
 ext_pillar:
   - salt_nornir_netbox:
-      url: 'http://192.168.75.129:8000'
+      url: 'http://192.168.1.130:8000'
       token: '0123456789abcdef0123456789abcdef01234567'
       use_minion_id_device: False
       use_minion_id_tag: False
