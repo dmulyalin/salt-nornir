@@ -229,14 +229,17 @@ def nr_test(*args, **kwargs):
             "exception",
         ],
     )
-    
+
     tests_results_csv_table = [
         f'''"{i['minion']}","{i['host']}","{i['name']}","{i['result']}","{i['failed']}","{i['task']}","{i['test']}","{i['criteria']}","{i['exception']}"'''
         for i in tests_results
     ]
-    tests_results_csv_table.insert(0, '"minion","host","name","result","failed","task","test","criteria","exception"')
-    tests_results_csv_table = '\n'.join(tests_results_csv_table)
-    
+    tests_results_csv_table.insert(
+        0,
+        '"minion","host","name","result","failed","task","test","criteria","exception"',
+    )
+    tests_results_csv_table = "\n".join(tests_results_csv_table)
+
     # form nested HTML of commands output
     devices_output_html = []
     for host, commands in commands_output.items():
@@ -248,28 +251,28 @@ def nr_test(*args, **kwargs):
         devices_output_html.append(
             f'<p><details><summary>{host}</summary><p>{"".join(commands_output_html)}</p></details></p>'
         )
-        
+
     logger.info(
         f"<details><summary>Test suite results details</summary><p>{tests_results_html_table}</p></details>",
-        html=True
+        html=True,
     )
     logger.info(
         f"<details><summary>Test suite results CSV table</summary><p>{tests_results_csv_table}</p></details>",
-        html=True
+        html=True,
     )
     logger.info(
         f"<details><summary>Collected devices output</summary>{''.join(devices_output_html)}</details>",
-        html=True
-    )            
+        html=True,
+    )
     logger.info(
         (
-            f'Tests completed - {tests_pass + tests_fail}, '
+            f"Tests completed - {tests_pass + tests_fail}, "
             f'<span style="background-color: #97BD61">success - {tests_pass}</span>, '
             f'<span style="background-color: #CE3E01">failed - {tests_fail}</span>'
         ),
-        html=True
+        html=True,
     )
-    
+
     # raise if has errors
     if has_errors:
         raise ContinuableFailure("Tests failed")
