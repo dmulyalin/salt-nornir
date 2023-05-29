@@ -10,72 +10,43 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 NB_VERSION = None
-NB_URL = "http://192.168.75.129:8000/"
-NB_URL_SSL = "https://192.168.75.129:443/"
+NB_URL = "http://192.168.1.130:8000/"
+NB_URL_SSL = "https://192.168.1.130:443/"
 NB_USERNAME = "admin"
 NB_PASSWORD = "admin"
 NB_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"
-NB_SECRETSTORE_PRIVATE_KEY = """
------BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEAszQDUKGNSqaZQMJ7aOwV064u9p53MoOMEZwB5jwXhpFDyvGt
-gLu1ZYjdvx0ji9okcp8+P2T3XS/RF2EIisgMHWDkCLKw20ynLFqgNILgBH4anZeL
-RJj9nfEBFgY5l6kPYskETCT/pd1ZKETigJ11MyIzHBjQex1anGTOTEtDprT5yyaT
-HA46SWk0OqJoVJnH+umh6sAxE8Ydnah3l1QzZPeTF7X5hXCdP3NPXvKanZoTiOlX
-47xqkd7aELbGgFGl6hlQ9aK/8h44kSiqmGVqQ61uTGG8ordmZFh72OesmqIgia6e
-XX5NQ25AjJNSOtFOF+EHufMVYIMTZ4SWTTLujQIDAQABAoIBABQr6aec17usbxnE
-CoIv+PD/7VdjVQWBmzWsOuaAoyFJnrjsZVxVRMDuHA/UJtkqL+obFLWsFtANftrD
-2GNOy1ZPPrvf6Vp2EWdDuD7Q8Ihw7WwJz+pj0kCCDV4+SyNQK2QyPmKX05MHDG8k
-+d4CW1vrIJesD2OcVUO/cR1TZ4UPL8WDAK1muL6AKnOkiB43AU2peU1l/NcUVmaE
-AM+owa/9m48LbhMrRec3hFs7uiuY6Vmc10bLsjhV7rPTZ9nzTMGeH0VeW+T69wF/
-wSZROjXsEwIqGM4AxumgHM/lm3nnzJ+xDmVqfYPwWs3mOKJe6jI3Fallo3P7KuSG
-6A6Y+D0CgYEA0AXoO5/Wzv6sGJOdx9RPH914agej86aIdHZAxiA4xMnLB1Dfvf/v
-Uus0ar4R3k+2uGODMC6R+jnJcEFCwaF1ActHGdCBei78mFTtPD01tS0PqgNtuzEb
-RSUyX8O0BITmglqrEwfORCK4iY8ilHxvxnwvE6XmuofDX6sML+qrBJcCgYEA3IiF
-phJ/u+XlgNn2O9aOwnc5qTHxuJ48DDwJ/DnfULxxg/IuO9kFktcYE2p/CL4UC5/k
-XyzAWld0JlKOKULVm08P0O3lgXkvcB8gB0Cx/yxCvp7ExtPvuyNZ8KKQpW4BoQwC
-mrEHR65wbERNSp12yFvDcp8XL+7VL/JnpzELVnsCgYEAo/Gj3ynPn38ynoPoO47l
-dRWUSuwOmH3M2QxBbGQEmYL30aI5U4KbWNwpiV6WsoBcXuF+iMCLJ4vXZ/Lm67eV
-gX51YLDk+iiBxoRYG7uZ0lnbGIBvQLIo7cus8bBI9a7QBDf0z6C9PRGoIjF+bUvM
-w78nUvLS7nsEzSb/CdyGP60CgYBkAGxKUF0nwSn+8ddcbwCxYgr9lC4+P1KPYbJN
-c5i2LZ1z7Z/Vd6W1XmAGfeY4+qhwVQLjvZFD5iA/OHRKdYoTMRjE7vuBaIiAWTzW
-zRlp0pI5ihlE59nvjCo+mhjpSybl9mI/70KT2KAWGCrMSPcSB7prAYUsMSru4Qbr
-o6u2fQKBgHUrPL+AMJ08TUdBidaHwBbBkOSKRT6M4DwfSYlEYrTW9I3WH87xNUPx
-wXH3xi/8optUMQIgMmY8RkmnHAywi419k3G4cl6drgumK56zmi1dbtVH6ZDMAq8N
-Ts2BL4gVPG0klFGcZQgDXZdsE2kfZPIM3JZSFGIQlGj6jnBXEU+5
------END RSA PRIVATE KEY-----
-"""
 NB_SECRETS_PRIVATE_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----
 """
 
 # which netbox secrets plugin to use 
-NB_SECRETS_PLUGIN = "netbox_secrets" # or "netbox_secretstore"
+NB_SECRETS_PLUGIN = "netbox_secrets"
 
 # Import this into Nebtox manually
 patch_panel_import_data = """
@@ -773,7 +744,7 @@ for i in range(10):
     })
     
     
-netbox_secretstore_roles = [
+netbox_secrets_roles = [
     {"name": "SaltNornirCreds"},
     {"name": "SaltSecrets"},
     {"name": "BGP"},
@@ -785,7 +756,7 @@ netbox_secretstore_roles = [
     {"name": "BGP_PEERS"},
 ]
 
-netbox_secretstore_secrets = [
+netbox_secrets_secrets = [
     {
         "name": "secret1",
         "role": {"name": "SaltSecrets"},
@@ -907,34 +878,6 @@ circuits = [
         "provider_account": {"account": "test_account"}
     }
 ]
-
-def _netbox_secretstore_get_session_key():
-    """
-    Function to retrieve netbox_secretstore session key
-    """
-    url = NB_URL + "/api/plugins/netbox_secretstore/get-session-key/"
-    token = "Token " + NB_API_TOKEN
-    # send request to netbox
-    req = requests.post(
-        url, 
-        headers={
-            "authorization": token
-        }, 
-        json={
-            "private_key": NB_SECRETSTORE_PRIVATE_KEY.strip(),
-            "preserve_key": True,
-        }
-    )
-    if req.status_code == 200:
-        log.info("netbox_data obtained netbox-secretstore session key")   
-        return req.json()["session_key"]
-    else:
-        raise RuntimeError(
-            f"netbox_data failed to get netbox_secretstore session-key, "
-            f"status-code '{req.status_code}', reason '{req.reason}', response "
-            f"content '{req.text}'" 
-        )
-         
             
 def _netbox_secrets_get_session_key():
     """
@@ -1227,60 +1170,12 @@ def create_connections():
         nb.dcim.cables.create(**connection)
         
         
-def create_netbox_secretstore_roles():
-    log.info("creating netbox_secretstore secret roles")
-    session_key = _netbox_secretstore_get_session_key()
-    url = NB_URL + "/api/plugins/netbox_secretstore/secret-roles/"
-    token = "Token " + NB_API_TOKEN
-    for role in netbox_secretstore_roles:
-        role.setdefault("slug", slugify(role["name"]))
-        # send request to netbox
-        req = requests.post(
-            url, 
-            headers={
-                "X-Session-Key": session_key,
-                "authorization": token
-            }, 
-            json=role
-        )
-        if req.status_code != 201:
-            log.error(
-                f"netbox_data failed to create netbox_secretstore secret role '{role}', "
-                f"status-code '{req.status_code}', reason '{req.reason}', response "
-                f"content '{req.text}'" 
-            )
-    
-def create_netbox_secretstore_secrets():
-    log.info("creating netbox_secretstore secrets")
-    session_key = _netbox_secretstore_get_session_key()
-    url = NB_URL + "/api/plugins/netbox_secretstore/secrets/"
-    token = "Token " + NB_API_TOKEN
-    for secret in netbox_secretstore_secrets:
-        device = nb.dcim.devices.get(name=secret.pop("device"))
-        secret["assigned_object_id"] = device.id
-        secret["assigned_object_type"] = "dcim.device"
-        # send request to netbox
-        req = requests.post(
-            url, 
-            headers={
-                "X-Session-Key": session_key,
-                "authorization": token
-            }, 
-            json=secret
-        )
-        if req.status_code != 201:
-            log.error(
-                f"netbox_data failed to create netbox_secretstore secret '{secret}', "
-                f"status-code '{req.status_code}', reason '{req.reason}', response "
-                f"content '{req.text}'" 
-            )        
-
 def create_netbox_secrets_roles():
     log.info("creating netbox_secrets secret roles")
     session_key = _netbox_secrets_get_session_key()
     url = NB_URL + "/api/plugins/secrets/secret-roles/"
     token = "Token " + NB_API_TOKEN
-    for role in netbox_secretstore_roles:
+    for role in netbox_secrets_roles:
         role.setdefault("slug", slugify(role["name"]))
         # send request to netbox
         req = requests.post(
@@ -1304,7 +1199,7 @@ def create_netbox_secrets_secrets():
     session_key = _netbox_secrets_get_session_key()
     url = NB_URL + "/api/plugins/secrets/secrets/"
     token = "Token " + NB_API_TOKEN
-    for secret in netbox_secretstore_secrets:
+    for secret in netbox_secrets_secrets:
         device = nb.dcim.devices.get(name=secret.pop("device"))
         secret["assigned_object_id"] = device.id
         secret["assigned_object_type"] = "dcim.device"
@@ -1438,42 +1333,7 @@ def create_circuit_provider_accounts():
 # -----------------------------------------------------------------------------------
 # DELETE functions
 # -----------------------------------------------------------------------------------
-
-def delete_netbox_secretstore_secrets():
-    log.info("deleting netbox_secretstore secrets")
-    session_key = _netbox_secretstore_get_session_key()
-    url = NB_URL + "/api/plugins/netbox_secretstore/secrets/"
-    token = "Token " + NB_API_TOKEN
-    req = requests.get(
-        url, 
-        headers={
-            "X-Session-Key": session_key,
-            "authorization": token
-        },
-        json={}
-    )
-    if req.status_code != 200:
-        raise SystemExit(
-            f"netbox_data failed to retrieve netbox_secretstore secrets, "
-            f"status-code '{req.status_code}', reason '{req.reason}', response "
-            f"content '{req.text}'" 
-        ) 
-    # delete secrets one by one
-    for secret in req.json()["results"]:
-        req = requests.delete(
-            url + f"/{secret['id']}", 
-            headers={
-                "X-Session-Key": session_key,
-                "authorization": token
-            },
-            json={}
-        )
-        if req.status_code != 204:
-            log.error(
-                f"netbox_data failed to delete netbox_secretstore secret '{secret}', "
-                f"status-code '{req.status_code}', reason '{req.reason}', response "
-                f"content '{req.text}'" 
-            )         
+    
 
 def delete_netbox_secrets_secrets():
     log.info("deleting netbox_secrets secrets")
@@ -1510,42 +1370,6 @@ def delete_netbox_secrets_secrets():
                 f"status-code '{req.status_code}', reason '{req.reason}', response "
                 f"content '{req.text}'" 
             ) 
-            
-def delete_netbox_secretstore_roles():
-    log.info("deleting netbox_secretstore secret roles")
-    session_key = _netbox_secretstore_get_session_key()
-    url = NB_URL + "/api/plugins/netbox_secretstore/secret-roles/"
-    token = "Token " + NB_API_TOKEN
-    # get existing roles
-    req = requests.get(
-        url, 
-        headers={
-            "X-Session-Key": session_key,
-            "authorization": token
-        },
-        json={}
-    )
-    if req.status_code != 200:
-        log.error(
-            f"netbox_data failed to get netbox_secretstore secret roles, "
-            f"status-code '{req.status_code}', reason '{req.reason}', response "
-            f"content '{req.text}'" 
-        )
-    # delete roles
-    req = requests.delete(
-        url, 
-        headers={
-            "X-Session-Key": session_key,
-            "authorization": token
-        },
-        json=[{"id": i["id"]} for i in req.json()["results"]]
-    )
-    if req.status_code != 204:
-        log.error(
-            f"netbox_data failed to delete netbox_secretstore secret roles, "
-            f"status-code '{req.status_code}', reason '{req.reason}', response "
-            f"content '{req.text}'" 
-        )
 
 def delete_netbox_secrets_roles():
     log.info("deleting netbox_secrets secret roles")
@@ -1769,15 +1593,8 @@ def delete_circuit_types():
     
     
 def clean_up_netbox():
-    if NB_VERSION.startswith("3.4"):
-        if NB_SECRETS_PLUGIN == "netbox_secretstore":
-            delete_netbox_secretstore_secrets()
-            delete_netbox_secretstore_roles()
-        elif NB_SECRETS_PLUGIN == "netbox_secrets":
-            delete_netbox_secrets_secrets()
-            delete_netbox_secrets_roles()
-        else:
-            raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
+    delete_netbox_secrets_secrets()
+    delete_netbox_secrets_roles()
     delete_connections()
     delete_circuits()
     delete_circuit_providers()
@@ -1821,15 +1638,8 @@ def populate_netbox():
     create_console_ports()
     associate_ip_adress_to_devices()
     create_connections()
-    if NB_VERSION.startswith("3.4"):
-        if NB_SECRETS_PLUGIN == "netbox_secretstore":
-            create_netbox_secretstore_roles()
-            create_netbox_secretstore_secrets()
-        elif NB_SECRETS_PLUGIN == "netbox_secrets":
-            create_netbox_secrets_roles()
-            create_netbox_secrets_secrets()
-        else:
-            raise ValueError(f"Unsupported NB_SECRETS_PLUGIN: {NB_SECRETS_PLUGIN}")
+    create_netbox_secrets_roles()
+    create_netbox_secrets_secrets()
     create_circuit_providers()
     if NB_VERSION.startswith("3.5"):
         create_circuit_provider_accounts()
@@ -1848,8 +1658,9 @@ if __name__ == "__main__":
     except Exception as e:
         log.exception(
             f"netbox_data failed to instantiate pynetbox.api object, "
-            f"Netbox url '{url}', token ends with '..{token[-6:]}', error '{e}'"
+            f"Netbox url '{NB_URL}', token ends with '..{NB_API_TOKEN[-6:]}', error '{e}'"
         )
+        raise SystemExit()
     todo = input("""Select what to do with Netbox:
 1 - cleanup
 2 - populate

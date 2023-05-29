@@ -87,9 +87,6 @@ Sample external pillar Salt Master configuration::
             secret_name_map: 
               password: username
             plugins:
-              netbox_secretstore:
-                url_override: netbox_secretstore
-                private_key: /etc/salt/netbox_secretstore_private.key
               netbox_secrets:
                 private_key: /etc/salt/netbox_secrets_private.key
 
@@ -113,9 +110,8 @@ defined in proxy minion pillar under ``salt_nornir_netbox_pillar`` key::
         secret_name_map: 
           password: username
         plugins:
-          netbox_secretstore:
-            url_override: netbox_secretstore
-            private_key: /etc/salt/netbox_secretstore_private.key
+          netbox_secrets:
+            private_key: /etc/salt/netbox_secrets_private.key
 
 Pillar configuration updates Master's configuration and takes precedence.
 Configuration **not** merged recursively, instead, pillar top key values
@@ -180,16 +176,8 @@ Secrets Configuration Parameters
   keyed by secret key names with values of the of the inventory data key name to assign 
   secret name to
 * ``plugins`` - Netbox Secrets Plugins Configuration Parameters, supported values: 
-  ``netbox_secretstore``
-
-netbox_secretstore Secrets Plugin Configuration Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-* ``private_key`` - default: N/A, example: ``/etc/salt/nb_secretstore.key``
-  OS Path to file with netbox_secretstore RSA Private Key content
-* ``url_override`` - default: ``netbox_secretstore``, example: ``netbox_secretstore_fork``;
-  Used to customize plugin URL ``{netbox_url}/api/plugins/{url_override}/secrets/``
-    
+  ``netbox_secrets``
+   
 netbox_secrets Secrets Plugin Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -221,14 +209,14 @@ proxy minion pillar data::
       fceos6:
         data:
           secrets:
-          - bgp: nb://netbox_secretstore/keymaster-1/BGP/peers_pass
-          - snmp: nb://netbox_secretstore/keymaster-1/SNMP/community
-          - nb://netbox_secretstore/keymaster-1/OSPF/hello_secret
+          - bgp: nb://netbox_secrets/keymaster-1/BGP/peers_pass
+          - snmp: nb://netbox_secrets/keymaster-1/SNMP/community
+          - nb://netbox_secrets/keymaster-1/OSPF/hello_secret
         hostname: 1.2.3.4
-        password: nb://netbox_secretstore/keymaster-1/SaltNornirCreds/password
+        password: nb://netbox_secrets/keymaster-1/SaltNornirCreds/password
         platform: arista_eos
         port: '22'
-        username: nb://netbox_secretstore/keymaster-1/SaltNornirCreds/username
+        username: nb://netbox_secrets/keymaster-1/SaltNornirCreds/username
     nornir:
       actions:
         foobar:
@@ -250,6 +238,10 @@ minion pillar Salt-Nornir hosts. If ``use_pillar`` set to True, Proxy Minion
 pillar can be used to define filters list under ``salt_nornir_netbox_pillar.hosts_filters``
 key
 
+.. warning:: To be able to merge hosts filters in a pillar from multiple sls files make sure to 
+    set ``pillar_source_merging_strategy: recurse`` and ``pillar_merge_lists: True`` in master
+    configuration file
+
 Netbox Device Processing
 ++++++++++++++++++++++++
 
@@ -264,7 +256,7 @@ in YAML format::
       port: 22
       groups: ["lab", "def_creds"]
       username: admin1234
-      password: "nb://netbox_secretstore/password"
+      password: "nb://netbox_secrets/password"
       connection_options:
         napalm:
           platform: iosxr
@@ -274,10 +266,10 @@ in YAML format::
           port: 161
           extras:
             version: v2c
-            community: "nb://netbox_secretstore/keymaster/snmp/community"
+            community: "nb://netbox_secrets/keymaster/snmp/community"
         ncclient:
-          username: "nb://netbox_secretstore/netconf-creds/username"
-          password: "nb://netbox_secretstore/netconf-creds/password"
+          username: "nb://netbox_secrets/netconf-creds/username"
+          password: "nb://netbox_secrets/netconf-creds/password"
           port: 830
           extras:
             hostkey_verify: False
@@ -363,31 +355,8 @@ Sample device data sourced from Netbox, ``host_add_netbox_data`` key name equal 
 Sourcing Secrets from Netbox
 ++++++++++++++++++++++++++++
 
-salt_nornir_netbox supports a number of secrets plugins.
-
-`netbox_secretstore <https://github.com/DanSheps/netbox-secretstore>`_
-plugin to source secrets. netbox_secretstore should be installed and
-configured as a Netbox plugin. RSA private key need to be generated for
-the user which token is used to work with Netbox, private key need
-to be uploaded to Master and configured in Master's ext_pillar::
-
-    ext_pillar:
-      - salt_nornir_netbox:
-          token: '837494d786ff420c97af9cd76d3e7f1115a913b4'
-          use_pillar: False
-          secrets:
-            resolve_secrets: True
-            fetch_username: True
-            fetch_password: True
-            secret_device: keymaster
-            secret_name_map: 
-              password: username
-            plugins:
-              netbox_secretstore:
-                private_key: /etc/salt/netbox_secretstore_private.key
-
-`netbox_secrets <https://github.com/Onemind-Services-LLC/netbox-secrets/>`_
-plugin to source secrets. netbox_secrets should be installed and
+salt_nornir_netbox supports `netbox_secrets <https://github.com/Onemind-Services-LLC/netbox-secrets/>`_
+secrets plugin. ``netbox_secrets`` should be installed and
 configured as a Netbox plugin. RSA private key need to be generated for
 the user which token is used to work with Netbox, private key need
 to be uploaded to Master and configured in Master's ext_pillar::
@@ -441,10 +410,10 @@ For example, if this is how secrets defined in Netbox:
 And sample configuration context data of Netbox device with name``fceos4`` is::
 
     secrets:
-      bgp: nb://netbox_secretstore/keymaster-1/BGP/peers_pass
-      secret1: nb://netbox_secretstore/fceos4/SaltSecrets/secret1
-      secret2: nb://netbox_secretstore/SaltSecrets/secret2
-      secret3: nb://netbox_secretstore/secret3
+      bgp: nb://netbox_secrets/keymaster-1/BGP/peers_pass
+      secret1: nb://netbox_secrets/fceos4/SaltSecrets/secret1
+      secret2: nb://netbox_secrets/SaltSecrets/secret2
+      secret3: nb://netbox_secrets/secret3
       secret4: nb://secret4
 
 Above secrets would be resolved to this::
@@ -477,21 +446,21 @@ With this master's pillar secrets configuration::
               password: username
               bgp_peer_secret: peer_ip
             plugins:
-              netbox_secretstore:
-                private_key: /etc/salt/netbox_secretstore_private.key
+              netbox_secrets:
+                private_key: /etc/salt/netbox_secrets_private.key
 
 This Nornir inventory data for ``fceos`` devices::
 
     hosts:
       fceos6:
-        password: "nb://netbox_secretstore/Credentials/admin_user"
+        password: "nb://netbox_secrets/Credentials/admin_user"
       fceos7:
         data:
           bgp:
             peers:
-              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.1"
-              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.2"
-              - bgp_peer_secret: "nb://netbox_secretstore/BGP_PEERS/10.0.1.3"
+              - bgp_peer_secret: "nb://netbox_secrets/BGP_PEERS/10.0.1.1"
+              - bgp_peer_secret: "nb://netbox_secrets/BGP_PEERS/10.0.1.2"
+              - bgp_peer_secret: "nb://netbox_secrets/BGP_PEERS/10.0.1.3"
 
 Would be resolved to this final Nornir Inventory data::
 
@@ -794,7 +763,6 @@ Reference
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._fetch_device_secrets
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._host_add_interfaces
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._host_add_connections
-.. autofunction:: salt_nornir.pillar.salt_nornir_netbox._netbox_secretstore_get_session_key
 .. autofunction:: salt_nornir.pillar.salt_nornir_netbox._netbox_secrets_get_session_key
 """
 import logging
@@ -819,58 +787,9 @@ def __virtual__():
     return __virtualname__
 
 
-def _netbox_secretstore_get_session_key(params, device_name):
-    """
-    Function to retrieve netbox_secretstore session key
-    """
-    # if salt_jobs_results provided, extract Netbox params from it
-    if params.get("ssl_verify") == False:
-        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    with RUNTIME_VARS_LOCK:
-        if "nb_secretstore_session_key" not in RUNTIME_VARS:
-            url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
-                "url_override", "netbox_secretstore"
-            )
-            url = f"{params['url']}/api/plugins/{url_override}/get-session-key/"
-            token = "Token " + params["token"]
-            # read private key content from file
-            key_file = params["secrets"]["plugins"]["netbox_secretstore"]["private_key"]
-            with open(key_file, encoding="utf-8") as kf:
-                private_key = kf.read().strip()
-            # send request to netbox
-            req = requests.post(
-                url,
-                headers={"authorization": token},
-                json={
-                    "private_key": private_key,
-                    "preserve_key": True,
-                },
-                verify=params.get("ssl_verify", True),
-            )
-            if req.status_code == 200:
-                RUNTIME_VARS["nb_secretstore_session_key"] = req.json()["session_key"]
-                log.debug(
-                    f"salt_nornir_netbox fetched and saved netbox-secretstore session "
-                    f"key in RUNTIME_VARS while processing '{device_name}'"
-                )
-            else:
-                raise RuntimeError(
-                    f"salt_nornir_netbox failed to get netbox_secretstore session-key, "
-                    f"status-code '{req.status_code}', reason '{req.reason}', response "
-                    f"content '{req.text}'"
-                )
-
-    log.debug(
-        f"salt_nornir_netbox retrieved netbox-secretstore session key "
-        f"for '{device_name}' processing"
-    )
-
-    return RUNTIME_VARS["nb_secretstore_session_key"]
-
-
 def _netbox_secrets_get_session_key(params, device_name):
     """
-    Function to retrieve netbox_secretstore session key
+    Function to retrieve netbox_secrets session key
     """
     # if salt_jobs_results provided, extract Netbox params from it
     if params.get("ssl_verify") == False:
@@ -936,41 +855,6 @@ def _fetch_device_secrets(device_name, params):
     for plugin_name in params["secrets"]["plugins"].keys():
         if RUNTIME_VARS["secrets"].get(device_name, {}).get(plugin_name):
             return RUNTIME_VARS["secrets"][device_name]
-        elif plugin_name == "netbox_secretstore":
-            url_override = params["secrets"]["plugins"]["netbox_secretstore"].get(
-                "url_override", "netbox_secretstore"
-            )
-            url = f"{params['url']}/api/plugins/{url_override}/secrets/"
-            token = "Token " + params["token"]
-            session_key = _netbox_secretstore_get_session_key(params, device_name)
-            # retrieve all device secrets
-            req = requests.get(
-                url,
-                headers={
-                    "X-Session-Key": session_key,
-                    "authorization": token,
-                },
-                params={"device": device_name},
-                verify=params.get("ssl_verify", True),
-            )
-            if req.status_code == 200:
-                with RUNTIME_VARS_LOCK:
-                    RUNTIME_VARS["secrets"].setdefault(device_name, {})
-                    RUNTIME_VARS["secrets"][device_name][plugin_name] = [
-                        {
-                            "role": i["role"]["name"],
-                            "role_slug": i["role"]["slug"],
-                            "name": i["name"],
-                            "value": i["plaintext"],
-                        }
-                        for i in req.json()["results"]
-                    ]
-            else:
-                raise RuntimeError(
-                    f"salt_nornir_netbox failed to retrieve '{device_name}' device secrets "
-                    f"from '{req.url}', status-code '{req.status_code}', reason '{req.reason}', "
-                    f"response content '{req.text}'"
-                )
         elif plugin_name == "netbox_secrets":
             url = f"{params['url']}/api/plugins/secrets/secrets/"
             token = "Token " + params["token"]
@@ -1021,7 +905,7 @@ def _fetch_device_secrets(device_name, params):
 
 def _resolve_secret(device_name, secret_path, params, strict=False):
     """
-    Function to retrieve netbox_secretstore secret value at secret_path.
+    Function to retrieve netbox_secrets secret value at secret_path.
 
     :param device_name: string, name of device to retrieve secret for
     :param secret_path: string, path to the secret in one of the supported formats
@@ -1162,7 +1046,7 @@ def _host_add_interfaces(device, host, params):
         params=params,
         add_ip=params.get("host_add_interfaces_ip", False),
         add_inventory_items=params.get("host_add_interfaces_inventory_items", False),
-        cache=False,
+        cache=False
     )
 
     # save data into Nornir host's inventory
@@ -1182,7 +1066,11 @@ def _host_add_connections(device, host, params):
     """
     host_add_connections = params["host_add_connections"]
 
-    cables = get_connections(hosts=[device["name"]], params=params, cache=False)
+    cables = get_connections(
+        hosts=[device["name"]],
+        params=params,
+        cache=False
+    )
 
     # save data into Nornir host's inventory
     dk = (

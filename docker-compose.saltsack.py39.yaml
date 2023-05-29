@@ -1,5 +1,5 @@
 services:
-  salt-master:
+  saltstack:
     container_name: saltstack
     hostname: 'saltstack'
     privileged: True

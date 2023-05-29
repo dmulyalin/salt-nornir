@@ -8,6 +8,7 @@ import signal
 async def main():
     futures = []
     futures.append(await asyncio.create_subprocess_exec("salt-master", '-l', 'debug'))
+    futures.append(await asyncio.create_subprocess_exec("salt-api", '-l', 'debug'))
     futures.append(await asyncio.create_subprocess_exec("salt-proxy", '--proxyid=nrp1', '--log-level=debug', '--log-file=/var/log/salt/proxy-nrp1'))
     futures.append(await asyncio.create_subprocess_exec("salt-proxy", '--proxyid=nrp2', '--log-level=debug', '--log-file=/var/log/salt/proxy-nrp2'))
     futures.append(await asyncio.create_subprocess_exec("salt-proxy", '--proxyid=nrp3', '--log-level=debug', '--log-file=/var/log/salt/proxy-nrp3'))

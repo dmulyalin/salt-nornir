@@ -155,6 +155,10 @@ def minions(*args, **kwargs):
 @keyword("nr.test")
 def nr_test(*args, **kwargs):
     """Run Salt-Nornir nr.test execution function"""
+    tests_pass = 0
+    tests_fail = 0
+    tests_results = []
+    commands_output = {}
     logger.info(
         f"Running nr.test with args '{args}', kwargs '{kwargs}', global DATA '{DATA}'"
     )
@@ -183,15 +187,17 @@ def nr_test(*args, **kwargs):
                     or not result["success"]
                     or "traceback" in str(result["result"]).lower()
                 ):
+                    tests_fail += 1
                     has_errors = True
                     logger.error(
                         (
                             f'{minion} minion, {host} test "{result["name"]}" - '
-                            f'<span style="background-color: #CE3E01">failure: "{result["exception"]}"</span>'
+                            f'<span style="background-color: #CE3E01">"{result["exception"]}"</span>'
                         ),
                         html=True,
                     )
                 else:
+                    tests_pass += 1
                     logger.info(
                         (
                             f'{minion} minion, {host} test "{result["name"]}" - '
@@ -199,22 +205,15 @@ def nr_test(*args, **kwargs):
                         ),
                         html=True,
                     )
+                # save test results to log them later
+                tests_results.append({"minion": minion, **result})
+            # save device output to log it later
+            if "success" not in result:
+                commands_output.setdefault(host, {})
+                commands_output[host][result["name"]] = result["result"]
     # clea global state to prep for next test
     clean_global_data()
 
-    # transform results into HTML tables
-    tests_results = [
-        {"minion": minion, **result}
-        for minion, results in ret.items()
-        for result in results
-        if "success" in result
-    ]
-    commands_output = [
-        {"minion": minion, **result}
-        for minion, results in ret.items()
-        for result in results
-        if "success" not in result
-    ]
     tests_results_html_table = TabulateFormatter(
         tests_results,
         tabulate={"tablefmt": "html"},
@@ -230,25 +229,47 @@ def nr_test(*args, **kwargs):
             "exception",
         ],
     )
-    commands_output_html_table = TabulateFormatter(
-        commands_output,
-        tabulate={"tablefmt": "html"},
-        headers=[
-            "minion",
-            "host",
-            "name",
-            "result",
-            "exception",
-        ],
+    
+    tests_results_csv_table = [
+        f'''"{i['minion']}","{i['host']}","{i['name']}","{i['result']}","{i['failed']}","{i['task']}","{i['test']}","{i['criteria']}","{i['exception']}"'''
+        for i in tests_results
+    ]
+    tests_results_csv_table.insert(0, '"minion","host","name","result","failed","task","test","criteria","exception"')
+    tests_results_csv_table = '\n'.join(tests_results_csv_table)
+    
+    # form nested HTML of commands output
+    devices_output_html = []
+    for host, commands in commands_output.items():
+        commands_output_html = []
+        for command, result in commands.items():
+            commands_output_html.append(
+                f'<p><details style="margin-left:20px;"><summary>{command}</summary><p><font face="courier new">{result}</font></p></details></p>'
+            )
+        devices_output_html.append(
+            f'<p><details><summary>{host}</summary><p>{"".join(commands_output_html)}</p></details></p>'
+        )
+        
+    logger.info(
+        f"<details><summary>Test suite results details</summary><p>{tests_results_html_table}</p></details>",
+        html=True
     )
-    ret = (
-        f"<h3>Test Suite Results</h3>"
-        f"<details><summary>...</summary><p>{tests_results_html_table}</p></details>"
-        f"<h3>Collected Devices Output</h3>"
-        f"<details><summary>...</summary><p>{commands_output_html_table}</p></details>"
+    logger.info(
+        f"<details><summary>Test suite results CSV table</summary><p>{tests_results_csv_table}</p></details>",
+        html=True
     )
-    logger.info(ret, html=True)
-
+    logger.info(
+        f"<details><summary>Collected devices output</summary>{''.join(devices_output_html)}</details>",
+        html=True
+    )            
+    logger.info(
+        (
+            f'Tests completed - {tests_pass + tests_fail}, '
+            f'<span style="background-color: #97BD61">success - {tests_pass}</span>, '
+            f'<span style="background-color: #CE3E01">failed - {tests_fail}</span>'
+        ),
+        html=True
+    )
+    
     # raise if has errors
     if has_errors:
         raise ContinuableFailure("Tests failed")

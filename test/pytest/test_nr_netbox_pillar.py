@@ -134,10 +134,10 @@ class TestProxyNRP3:
         fceos4 matched by nrp3 tag and has these secrets define in inventory:
             data:
               secrets:
-                bgp: nb://netbox_secretstore/keymaster-1/BGP/peers_pass
-                secret1: nb://netbox_secretstore/fceos1/SaltSecrets/secret1
-                secret2: nb://netbox_secretstore/SaltSecrets/secret2
-                secret3: nb://netbox_secretstore/secret3
+                bgp: nb://netbox_secrets/keymaster-1/BGP/peers_pass
+                secret1: nb://netbox_secrets/fceos1/SaltSecrets/secret1
+                secret2: nb://netbox_secrets/SaltSecrets/secret2
+                secret3: nb://netbox_secrets/secret3
                 secret4: nb://secret4
                 
         this test is to verify above secrets resolved
@@ -187,8 +187,8 @@ class TestProxyNRP3:
         context data:
         
             nornir:
-              password: nb://netbox_secretstore/keymaster-1/SaltNornirCreds/password
-              username: nb://netbox_secretstore/keymaster-1/SaltNornirCreds/username
+              password: nb://netbox_secrets/keymaster-1/SaltNornirCreds/password
+              username: nb://netbox_secrets/keymaster-1/SaltNornirCreds/username
               
         this test is to verify above data is resolved to actual secrets
         """
@@ -220,7 +220,7 @@ class TestProxyNRP3:
         nrp3 device config context in Netbox has fceos7 defined, fceos7 has keys defined
         for BGP peers:
         
-            "bgp_peer_secret": "nb://netbox_secretstore/keymaster-1/BGP_PEERS/10.0.1.1"
+            "bgp_peer_secret": "nb://netbox_secrets/keymaster-1/BGP_PEERS/10.0.1.1"
         
         and nrp3 pillar has this secret_name_map:
         
@@ -391,7 +391,7 @@ class TestProxyNRP1:
         ceos1 in netbox has thos config context data:
         
             secrets_test:
-              OSPF_KEY: nb://netbox_secretstore/OSPF/hello_secret
+              OSPF_KEY: nb://netbox_secrets/OSPF/hello_secret
               
         and nrp1 has this configuration:
         
@@ -410,10 +410,10 @@ class TestProxyNRP1:
                     resolve_secrets: True
                     secret_device: keymaster-1
                     plugins:
-                      netbox_secretstore:
-                        private_key: /etc/salt/netbox_secretstore_private.key
+                      netbox_secrets:
+                        private_key: /etc/salt/netbox_secrets_private.key
                         
-        Should result in "nb://netbox_secretstore/OSPF/hello_secret" being 
+        Should result in "nb://netbox_secrets/OSPF/hello_secret" being 
         resolved to secret value of "keymastr-1/OSPF/hello_secret" secret
         """
         cfg_ctxt = nrp1_inventory["nrp1"]["hosts"]["ceos1"]["data"]["salt_nornir_netbox_pillar_test"]["config_context"]
