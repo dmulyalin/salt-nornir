@@ -653,7 +653,11 @@ devices = [
             },
             "nornir": {
                 "hostname": "10.0.1.4",
-            }
+            },
+            "dns_servers": [
+                "1.2.3.4",
+                "8.8.8.8"
+            ]
         }
     },
     {
@@ -879,6 +883,18 @@ circuits = [
     }
 ]
             
+config_templates = [
+    {
+        "name": "Arista cEOS Configuration",
+        "template_code": """
+{% for server in dns_servers -%}
+ip name-server {{ server }}
+{% endfor %}        
+        """,
+        "associated_devices": ["ceos1"]
+    }
+]
+
 def _netbox_secrets_get_session_key():
     """
     Function to retrieve netbox_secrets session key
@@ -1329,7 +1345,24 @@ def create_circuit_provider_accounts():
             nb.circuits.provider_accounts.create(**item)
         except Exception as e:
             log.error(f"creating provider account '{item}' error '{e}'") 
+
+
+def create_config_templates():
+    log.info("creating config templates")
+    for item in config_templates:
+        associated_devices = item.pop("associated_devices")
+        try:
+            nb.extras.config_templates.create(**item)
+        except Exception as e:
+            log.error(f"creating config template '{item['name']}' error '{e}'")     
+        for device in associated_devices:
+            try:
+                nb_device = nb.dcim.devices.get(name=device)
+                print(nb_device.config_template)
+            except Exception as e:
+                log.error(f"creating config template '{item['name']}' error associating with device {'device'} '{e}'")                     
             
+    
 # -----------------------------------------------------------------------------------
 # DELETE functions
 # -----------------------------------------------------------------------------------
@@ -1591,60 +1624,72 @@ def delete_circuit_types():
     except Exception as e:
         log.error(f"deleting all providers error '{e}'")  
     
-    
+  
+def delete_config_templates():
+    log.info("deleting all config templates")
+    try:
+        templates = nb.extras.config_templates.all()
+        for i in templates:
+            i.delete()
+    except Exception as e:
+        log.error(f"deleting all config templates error '{e}'")  
+        
+        
 def clean_up_netbox():
-    delete_netbox_secrets_secrets()
-    delete_netbox_secrets_roles()
-    delete_connections()
-    delete_circuits()
-    delete_circuit_providers()
-    delete_circuit_types()
-    delete_devices()
-    delete_ip_addresses()
-    delete_vrfs()
-    delete_vlans()
-    delete_device_roles()
-    delete_device_types()
-    delete_platforms()
-    delete_manufacturers()
-    delete_tags()
-    delete_racks()
-    delete_sites()
-    delete_regions()
-    delete_tenants()
-    delete_inventory_items_roles()
+    # delete_netbox_secrets_secrets()
+    # delete_netbox_secrets_roles()
+    # delete_connections()
+    # delete_circuits()
+    # delete_circuit_providers()
+    # delete_circuit_types()
+    # delete_devices()
+    # delete_ip_addresses()
+    # delete_vrfs()
+    # delete_vlans()
+    # delete_device_roles()
+    # delete_device_types()
+    # delete_platforms()
+    # delete_manufacturers()
+    # delete_tags()
+    # delete_racks()
+    # delete_sites()
+    # delete_regions()
+    # delete_tenants()
+    # delete_inventory_items_roles()
+    delete_config_templates()
     
 
 def populate_netbox():
-    create_regions()
-    ceate_tenants()
-    create_sites()
-    create_racks()
-    create_manufacturers()
-    create_device_types()
-    create_device_roles()
-    create_platforms()
-    create_vrfs()
-    create_ip_addresses()
-    create_tags()
-    create_devices()
-    create_vlans()
-    create_interfaces()
-    create_power_outlet_ports()
-    create_power_ports()
-    create_inventory_items_roles()
-    create_inventory_items()
-    create_console_server_ports()
-    create_console_ports()
-    associate_ip_adress_to_devices()
-    create_connections()
-    create_netbox_secrets_roles()
-    create_netbox_secrets_secrets()
-    create_circuit_providers()
-    if NB_VERSION.startswith("3.5"):
-        create_circuit_provider_accounts()
-    create_circuit_types()
-    create_circuits()
+    # create_regions()
+    # ceate_tenants()
+    # create_sites()
+    # create_racks()
+    # create_manufacturers()
+    # create_device_types()
+    # create_device_roles()
+    # create_platforms()
+    # create_vrfs()
+    # create_ip_addresses()
+    # create_tags()
+    # create_devices()
+    # create_vlans()
+    # create_interfaces()
+    # create_power_outlet_ports()
+    # create_power_ports()
+    # create_inventory_items_roles()
+    # create_inventory_items()
+    # create_console_server_ports()
+    # create_console_ports()
+    # associate_ip_adress_to_devices()
+    # create_connections()
+    # create_netbox_secrets_roles()
+    # create_netbox_secrets_secrets()
+    # create_circuit_providers()
+    # if NB_VERSION.startswith("3.5"):
+    #     create_circuit_provider_accounts()
+    # create_circuit_types()
+    # create_circuits()
+    create_config_templates()
     
     
 if __name__ == "__main__":

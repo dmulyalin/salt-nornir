@@ -1127,7 +1127,8 @@ def _load_job_data(job_data, saltenv="base"):
         if _is_url(job_data):
             return __salt__["slsutil.renderer"](path=job_data, saltenv=saltenv)
         else:
-            return __salt__["slsutil.renderer"](string=job_data, saltenv=saltenv)
+            # return __salt__["slsutil.renderer"](string=job_data, saltenv=saltenv)
+            return job_data
     # handle job_data='["salt://path/to/file.xyz"]'
     elif isinstance(job_data, list):
         ret = [
@@ -1902,6 +1903,7 @@ def execute_job(task_fun, kwargs, identity):
         )
     # submit job to shared queue for one of the workers to execute
     else:
+        _ = kwargs.pop("worker", None)
         nornir_data["jobs_queue"].put(
             {
                 "task_fun": task_fun,

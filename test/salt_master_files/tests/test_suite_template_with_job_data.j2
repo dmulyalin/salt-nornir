@@ -1,0 +1,4 @@
+- name: test ntp
+  task: show clock
+  test: contains
+  pattern: "{{ job_data["expected_value"] }}"

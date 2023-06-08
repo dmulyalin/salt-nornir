@@ -1578,7 +1578,11 @@ def test(*args, **kwargs):
     :param strict: boolean used with ``tests`` argument, if ``strict`` is True raises
         error when ``tests`` path item not found in any of the hosts' invenotry data,
         default is False
-    :param kwargs: (dict) any additional arguments to use with test function
+    :param worker: (int) Nornir worker ID to render and execute tests, ``all`` not
+        supported, only interger to indicate particular worker, default is None - can run on
+        any worker
+    :param job_data: (dict, list) job_data argument used for tests rendering
+    :param kwargs: (dict) any additional filter ``Fx`` arguments to use with test function
 
     ``nr.cli`` function related arguments
 
@@ -1811,6 +1815,8 @@ def test(*args, **kwargs):
     test_results = []
     tests = kwargs.pop("tests", None)
     strict = kwargs.pop("strict", False)
+    worker = kwargs.pop("worker", None)
+    job_data = kwargs.pop("job_data", {})
 
     # if tests given extract them from hosts' inventory data
     if tests:
@@ -1821,6 +1827,7 @@ def test(*args, **kwargs):
             fun="inventory",
             call="read_host_data",
             keys=tests,
+            worker=worker,
             **{k: v for k, v in kwargs.items() if k in FFun_functions},
         )
         # extract tests
@@ -1852,6 +1859,8 @@ def test(*args, **kwargs):
         per_host_suite = cfg_gen(
             config=suite_content,
             saltenv=saltenv,
+            worker=worker,
+            job_data=job_data,
             **{k: v for k, v in kwargs.items() if k in FFun_functions},
         )
         # process cfg_gen results
@@ -1899,6 +1908,8 @@ def test(*args, **kwargs):
         per_host_suite = cfg_gen(
             config=yaml_safe_dump([test_dict]),
             saltenv=saltenv,
+            worker=worker,
+            job_data=job_data,
             **{k: v for k, v in kwargs.items() if k in FFun_functions},
         )
         # process cfg_gen results
@@ -1907,8 +1918,7 @@ def test(*args, **kwargs):
             v = v["salt_cfg_gen"]
             if "Traceback" in v:
                 raise CommandExecutionError(
-                    f"Tests suite '{suite}' rendering failed for '{host_name}', "
-                    f"error:\n{v}"
+                    f"Tests suite '{suite}' rendering failed for '{host_name}', error:\n{v}"
                 )
             else:
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
@@ -1964,6 +1974,7 @@ def test(*args, **kwargs):
         "identity": job_identity,
         "render": [],
         "subset": subset,
+        "worker": worker,
     }
     test_results = cli(**cli_kwargs)
 

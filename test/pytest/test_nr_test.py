@@ -840,3 +840,189 @@ def test_nr_test_using_tests_host_data_strict():
     ) 
     pprint.pprint(ret)  
     assert ret == {'nrp1': "ERROR: 'ceos2' no tests found for 'tests.suite1'"}
+
+    
+def test_nr_test_jinja2_template_suite_with_worker():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template.j2",
+            "FB": "ceos1",
+            "worker": 3
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert len(ret["nrp1"]) == 3, "Expected 3 test items to return"
+    assert all([i["result"] == "PASS" for i in ret["nrp1"]])
+    assert len([i for i in ret["nrp1"] if i["name"] == "check ceos version"]) == 1, "expected one show version check tests"
+    assert len(
+        [i for i in ret["nrp1"] if "check interface" in i["name"] and i["host"] == "ceos1"]
+    ) == 2, "expected two ceos1 interface check tests"
+    
+
+def test_nr_test_inline_test_with_worker():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["show clock", "contains", "local"],
+        kwarg={
+            "FB": "ceos1",
+            "worker": 3
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert ret == {'nrp1': [{'FB': 'ceos1',
+           'changed': False,
+           'connection_retry': 0,
+           'criteria': 'local',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'show clock contains local..',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
+    
+    
+def test_nr_test_jinja2_template_suite_with_worker_unsupported_value():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template.j2",
+            "FB": "ceos1",
+            "worker": "all"
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret)
+    assert "Traceback" in ret["nrp1"]
+    
+    
+def test_nr_test_jinja2_template_suite_with_job_data():
+    ret_fail = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template_with_job_data.j2",
+            "FB": "ceos1",
+            "job_data": {
+                "expected_value": "foobar"
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    ret_pass = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={
+            "suite": "salt://tests/test_suite_template_with_job_data.j2",
+            "FB": "ceos1",
+            "job_data": {
+                "expected_value": "Clock source: local"
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret_fail)
+    pprint.pprint(ret_pass)
+    assert ret_fail == {'nrp1': [{'changed': False,
+           'connection_retry': 0,
+           'criteria': 'foobar',
+           'diff': '',
+           'exception': 'Pattern not in output',
+           'failed': True,
+           'host': 'ceos1',
+           'name': 'test ntp',
+           'result': 'FAIL',
+           'success': False,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
+    assert ret_pass == {'nrp1': [{'changed': False,
+           'connection_retry': 0,
+           'criteria': 'Clock source: local',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'test ntp',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
+
+    
+def test_nr_test_inline_testwith_job_data():
+    ret_fail = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["show clock", "contains", "Clock source: {{ job_data.expected_value }}"],
+        kwarg={
+            "FB": "ceos1",
+            "job_data": {
+                "expected_value": "foobar"
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    ret_pass = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=["show clock", "contains", "Clock source: {{ job_data.expected_value }}"],
+        kwarg={
+            "FB": "ceos1",
+            "job_data": {
+                "expected_value": "local"
+            }
+        },
+        tgt_type="glob",
+        timeout=60,
+    ) 
+    pprint.pprint(ret_fail)
+    pprint.pprint(ret_pass)
+    assert ret_fail == {'nrp1': [{'FB': 'ceos1',
+           'changed': False,
+           'connection_retry': 0,
+           'criteria': 'Clock source: foobar',
+           'diff': '',
+           'exception': 'Pattern not in output',
+           'failed': True,
+           'host': 'ceos1',
+           'name': 'show clock contains Clock sou..',
+           'result': 'FAIL',
+           'success': False,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
+    assert ret_pass == {'nrp1': [{'FB': 'ceos1',
+           'changed': False,
+           'connection_retry': 0,
+           'criteria': 'Clock source: local',
+           'diff': '',
+           'exception': None,
+           'failed': False,
+           'host': 'ceos1',
+           'name': 'show clock contains Clock sou..',
+           'result': 'PASS',
+           'success': True,
+           'task': 'show clock',
+           'task_retry': 0,
+           'test': 'contains'}]}
