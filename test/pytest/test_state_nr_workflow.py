@@ -888,6 +888,26 @@ def test_nr_workflow_with_other_modules():
     for v in ret["nrp1"].values():
         assert v["result"] == True            
     
+    
+def test_workflow_with_nr_test_job_data():
+    """
+    Test to verify jobn_data usage with nr.test function calling it from nr.workflow state.
+    
+    Uses salt://tests/test_suite_template_with_job_data_from_workflow.j2 test suite,
+    which is rendered using job_data argument content.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_workflow_with_nr_test_job_data"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    assert res["changes"]["summary"]["ceos1"][0]["ACL Validation (No additional incorrect ACL's are present)"] == "PASS"
+    assert res["changes"]["summary"]["ceos2"][0]["ACL Validation (No additional incorrect ACL's are present)"] == "FAIL"
+    
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
 #     pass
@@ -909,3 +929,4 @@ def test_nr_workflow_with_other_modules():
 # def test_state_nr_workflow_change_failed_rollback_step_triggered():
 #     pass
 # 
+

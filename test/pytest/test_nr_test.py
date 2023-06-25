@@ -1026,3 +1026,20 @@ def test_nr_test_inline_testwith_job_data():
            'task': 'show clock',
            'task_retry': 0,
            'test': 'contains'}]}
+    
+def test_nr_test_suite_with_nr_exec_functions():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        kwarg={
+            "FB": "ceos1",
+            "suite": "salt://tests/test_suite_with_nr_exec_functions.txt"
+        },
+        tgt_type="glob",
+        timeout=60,
+    )     
+    pprint.pprint(ret)
+    assert all(i["result"] == "PASS" for i in ret["nrp1"])
+    assert ret["nrp1"][0]["task"] == "nornir_napalm.plugins.tasks.napalm_get"
+    assert ret["nrp1"][1]["task"] == "nornir_salt.plugins.tasks.tcp_ping"
+    

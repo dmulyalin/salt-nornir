@@ -1088,6 +1088,8 @@ import traceback
 import fnmatch
 import uuid
 import time
+import json
+import hashlib
 
 from salt_nornir.utils import _is_url
 from salt_nornir.pydantic_models import (
@@ -1554,7 +1556,7 @@ def tping(ports=None, timeout=1, host=None, **kwargs):
 def test(*args, **kwargs):
     """
     Function to perform tests for certain criteria against show commands output
-    from devices obtained using ``nr.cli`` function.
+    from devices obtained using ``nr.cli`` function by default.
 
     ``nr.test`` function related arguments
 
@@ -1579,19 +1581,23 @@ def test(*args, **kwargs):
         error when ``tests`` path item not found in any of the hosts' invenotry data,
         default is False
     :param worker: (int) Nornir worker ID to render and execute tests, ``all`` not
-        supported, only interger to indicate particular worker, default is None - can run on
-        any worker
+        supported, only interger to indicate particular worker, default is None - can 
+        run on any worker
     :param job_data: (dict, list) job_data argument used for tests rendering
-    :param kwargs: (dict) any additional filter ``Fx`` arguments to use with test function
 
     ``nr.cli`` function related arguments
+    
+    ``nr.test`` calls ``nr.cli`` function with ``tests`` argument containing provided
+    tests suite content, it is possible to pass any ``nr.cli`` arguments while calling
+    ``nr.test`` execution module function. Notable arguments are:
 
     :param commands: (str or list) single command or list of commands to get from device
     :param plugin: (str) plugin name to use with ``nr.cli`` function to gather output
         from devices - ``netmiko`` (default) or ``scrapli``
-    :param use_ps: (bool) default is False, if True use netmiko plugin experimental
+    :param use_ps: (bool) default is False, if True uses netmiko plugin experimental
         ``PromptlesS`` method to collect output from devices
-    :param cli: (dict) any additional arguments to pass on to ``nr.cli`` function
+    :param kwargs: (dict) any additional arguments to use with ``nr.cli`` function
+        to run tests
 
     Nornir-Salt ``TestsProcessor`` plugin related arguments
 
@@ -1613,7 +1619,7 @@ def test(*args, **kwargs):
         salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" FB="*host-1"
         salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" --output=table
         salt nrp1 nr.test "show run | inc ntp" contains "1.1.1.1" table=brief
-        salt nrp1 nr.test commands='["show run | inc ntp"]' test=contains pattern="1.1.1.1" cli='{"enable": True}'
+        salt nrp1 nr.test commands='["show run | inc ntp"]' test=contains pattern="1.1.1.1" enable=True
 
     Sample usage with a test cases suite::
 
@@ -1629,9 +1635,8 @@ def test(*args, **kwargs):
           test: contains
           pattern: 1.1.1.1
           name: check NTP cfg
-          cli:
-            FB: core-*
-            plugin: netmiko
+          FB: core-*
+          plugin: netmiko
         - test: contains_lines
           pattern: ["1.1.1.1", "2.2.2.2"]
           task: "show run | inc ntp"
@@ -1705,19 +1710,16 @@ def test(*args, **kwargs):
 
     In test suite, ``task`` argument can reference a list of tasks/commands.
 
-    Commands output for each item in a suite collected using ``nr.cli`` function, arguments under
-    ``cli`` keyword passed on to ``nr.cli`` function.
-
-    List of arguments in a test suite that can refer to a text file to source from one of
-    supported URL schemes: ``salt://``, ``http://``, ``https://``, ``ftp://``, ``s3://``,
-    ``swift://`` and ``file://`` (local filesystem), for example ``salt://path/to/file.txt``:
-
+    Below is a list of arguments in a test suite that can refer to a text file to source 
+    from one of supported URL schemes: ``salt://``, ``http://``, ``https://``, ``ftp://``, 
+    ``s3://``, ``swift://`` and ``file://`` (local filesystem), for example 
+    ``salt://path/to/file.txt``:\]=-098y76r
     * ``pattern`` - content of the file rendered and used to run the tests together with
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
     * ``schema`` - used with ``CerberusTest`` test function
     * ``function_file`` - content of the file used with ``CustomFunctionTest`` as ``function_text`` argument
 
-    **Using Tests Suite Jinja2 Templates**
+    **Rendering Tests Suite using Jinja2 Templates**
 
     Starting with Salt-Nornir version 0.16.0 support added to dynamically
     render hosts' tests suites from hosts' data using Jinja2 templates of
@@ -1777,7 +1779,7 @@ def test(*args, **kwargs):
 
     Collected show commands output tested using rendered test
     suite on a per-host basis, producing these sample results::
-
+    
         [root@salt-master /]# salt nrp1 nr.test suite="salt://tests/test_suite_template.j2" table=brief
         nrp1:
             +----+--------+----------------------------------+----------+-------------+
@@ -1791,8 +1793,45 @@ def test(*args, **kwargs):
             +----+--------+----------------------------------+----------+-------------+
             |  3 | ceos1  | check interface Loopback1 status | PASS     |             |
             +----+--------+----------------------------------+----------+-------------+
+            
+    Starting with Salt-Nornir 0.20.0 support added to run test suites not only using
+    ``nr.cli`` function but also with these Salt-Nornir execution module functions:
+    ``nr.tping``, ``nr.task``, ``nr.http``, ``nr.nc``, ``nr.gnmi``, ``nr.network``, 
+    ``nr.file``, ``nr.snmp``. Other functions are prohibited and suite execution will 
+    fail with validation error.
+    
+    Sample suite that uses ``salt`` argument to customize execution module function
+    to collect output from devices::
+    
+        - name: Check version using NAPALM get_facts
+          test: custom
+          function: salt://test/test_software_version.py
+          salt:
+            function: nr.task
+            plugin: nornir_napalm.plugins.tasks.napalm_get 
+            getters: ["get_facts"]              
+        - name: Check NTP configuration
+          test: contains_lines
+          pattern: ["1.1.1.1", "2.2.2.2"]
+          task: "show run | inc ntp"
+          salt:
+            function: nr.cli
+            plugin: scrapli
+            use_timing: True
+            read_timeout: 300
+         - name: Check ceos tping
+           test: eval
+           task: nornir_salt.plugins.tasks.tcp_ping
+           expr: assert result[22] is True
+           err_msg: SSH Port 22 not reachable
+           salt:
+             function: nr.tping          
+             
+    As an optimisation technique, all tests that use ``nr.cli`` with same set of arguments
+    are grouped together and commands retrieved from devices in a single ``nr.cli`` call.
     """
     # extract attributes
+    test_results = []
     job_identity = _form_identity(
         kwargs, "test"
     )  # form identity before cleaning kwargs
@@ -1806,7 +1845,6 @@ def test(*args, **kwargs):
     suite = kwargs.pop("suite", [])
     subset = kwargs.pop("subset", [])
     dry_run = kwargs.pop("dry_run", False)
-    cli_kwargs = kwargs.pop("cli", {})
     table = kwargs.pop("table", {})  # table
     headers = kwargs.pop("headers", "keys")  # table
     sortby = kwargs.pop("sortby", None)  # table
@@ -1817,10 +1855,11 @@ def test(*args, **kwargs):
     strict = kwargs.pop("strict", False)
     worker = kwargs.pop("worker", None)
     job_data = kwargs.pop("job_data", {})
-
+    suites = {} # dictionary to hold combined test suites
+    
     # if tests given extract them from hosts' inventory data
     if tests:
-        # transform tests to alist if required
+        # transform tests to a list if required
         tests = tests if isinstance(tests, list) else [tests]
         # retrieve dictionary keyed by tests path
         inventory_data = nornir_fun(
@@ -1929,7 +1968,7 @@ def test(*args, **kwargs):
         raise CommandExecutionError("No test suite or inline test&commands provided.")
 
     # validate tests suite
-    _ = modelTestsProcessorSuite(tests=suite)
+    _ = modelTestsProcessorSuite(tests=suite) 
 
     # do dry run - return produced tests suite only
     if dry_run:
@@ -1965,18 +2004,51 @@ def test(*args, **kwargs):
                             item["function_text"] = item.pop(k)
                 suite[host_name][index] = item
 
-    # run tests in one go
-    cli_kwargs = {
-        "add_details": kwargs.get("add_details", True),
-        **kwargs,
-        "to_dict": False,
-        "tests": suite,
-        "identity": job_identity,
-        "render": [],
-        "subset": subset,
-        "worker": worker,
-    }
-    test_results = cli(**cli_kwargs)
+    # combine and sort per-host tests in suites based on exec function and its arguments
+    if isinstance(suite, dict):
+        for host_name, tests in suite.items():
+            for test in tests:
+                dhash = hashlib.md5()
+                # combine nr.cli tests with same kwargs into the same suites
+                if test.get("salt", {}).get("function", "nr.cli") == "nr.cli":
+                    salt_args = test.pop("salt", {})
+                    salt_args_json = json.dumps(salt_args, sort_keys=True).encode()
+                    dhash.update(salt_args_json)
+                    salt_args_hash = dhash.hexdigest() 
+                    suites.setdefault(salt_args_hash, {"params": salt_args, "tests": {}})
+                    suites[salt_args_hash]["tests"].setdefault(host_name, [])
+                    suites[salt_args_hash]["tests"][host_name].append(test)
+                # other exec function tests run individually as is
+                else:
+                    test_json = json.dumps(test, sort_keys=True).encode()
+                    salt_args = test.pop("salt", {})
+                    dhash.update(test_json)
+                    test_hash = dhash.hexdigest()    
+                    suites.setdefault(test_hash, {"params": salt_args, "tests": {}})
+                    suites[test_hash]["tests"].setdefault(host_name, [])
+                    suites[test_hash]["tests"][host_name].append(test)
+    else:
+        suites = {"all": {"params": {}, "tests": suite}}
+        
+    log.debug(f"nr.test per-exec function combined test suites to run {suites}")
+    
+    # run test suites collecting output from devices
+    for tests_suite_item in suites.values():
+        fun = tests_suite_item["params"].pop("function", "nr.cli").split(".")[-1]
+        fun_kwargs = {
+            **tests_suite_item["params"],
+            "add_details": kwargs.get("add_details", True),
+            **kwargs,
+            "to_dict": False,
+            "tests": tests_suite_item["tests"],
+            "identity": job_identity,
+            "render": [],
+            "subset": subset,
+            "worker": worker,
+        }
+        test_results.extend(
+            globals()[fun](**fun_kwargs)
+        )
 
     # format results to table if requested to do so
     if table:

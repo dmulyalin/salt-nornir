@@ -1,0 +1,5 @@
+- task: "show ip access-list {{ job_data.access_groups }}"
+  test: contains_lines
+  pattern:
+    - "10 permit ip any any"
+  name: ACL Validation (No additional incorrect ACL's are present)

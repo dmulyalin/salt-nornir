@@ -1,0 +1,30 @@
+- name: Check version using NAPALM get_facts
+  test: custom
+  function_file: salt://tests/test_software_version.py 
+  task: nornir_napalm.plugins.tasks.napalm_get
+  salt:
+    function: nr.task
+    plugin: nornir_napalm.plugins.tasks.napalm_get 
+    getters: ["get_facts"]         
+- name: Check ceos tping
+  test: eval
+  task: nornir_salt.plugins.tasks.tcp_ping
+  expr: assert result[22] is True
+  err_msg: SSH Port 22 not reachable
+  salt:
+    function: nr.tping   
+- name: Check NTP configuration
+  test: contains_lines
+  pattern: ["1.1.1.1", "2.2.2.2"]
+  task: "show run | inc ntp"
+  salt:
+    function: nr.cli
+    plugin: scrapli
+- task: "show version"
+  test: contains
+  pattern: "cEOS"
+  name: check ceos version
+- test: contains_lines
+  pattern: ["1.1.1.10", "1.1.1.11"]
+  task: "show ntp associations"
+  name: check NTP config
