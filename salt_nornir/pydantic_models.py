@@ -608,7 +608,7 @@ class model_exec_nr_netbox(model_ffun_fx_filters):
     query_string: Optional[StrictStr] = None
     sync: Optional[StrictBool] = None
     hosts: Optional[List[StrictStr]] = None
-    cache: Optional[StrictBool] = None
+    cache: Optional[Union[StrictBool, StrictStr]] = None
     cache_ttl: Optional[StrictInt] = None
         
     class Config:
