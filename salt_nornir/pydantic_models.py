@@ -19,7 +19,7 @@ from pydantic import (
 from typing import Union, Optional, List, Any, Dict, Callable
 from nornir_salt.utils.pydantic_models import FilesCallsEnum, model_ffun_fx_filters
 from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
-
+    
 try:
     from picle import Cache as PicleCache
 
@@ -50,6 +50,7 @@ GLOBAL_CACHE = (
     PicleCache("/var/salt-nornir/master/cache/picle.cache") if HAS_PICLE else {}
 )
 
+        
 # ---------------------------------------------------------------
 # Execution Module Function Models
 # ---------------------------------------------------------------
@@ -68,49 +69,49 @@ class EnumExecTTPStructTypes(str, Enum):
 
 
 class ModelExecCommonArgs(model_ffun_fx_filters):
-    render: Optional[Union[List[StrictStr], StrictStr]]
-    context: Optional[Dict]
-    dcache: Optional[Union[StrictStr, StrictBool]]
-    defaults: Optional[Dict]
-    diff: Optional[StrictStr]
-    dp: Optional[Union[StrictStr, List[Union[StrictStr, Dict]]]]
-    download: Optional[List[StrictStr]]
-    dump: Optional[StrictStr]
-    event_failed: Optional[StrictBool]
-    event_progress: Optional[StrictBool]
-    hcache: Optional[Union[StrictStr, StrictBool]]
-    iplkp: Optional[StrictStr]
-    jmespath: Optional[StrictStr]
-    match: Optional[StrictStr]
-    before: Optional[StrictInt]
-    ntfsm: Optional[StrictBool]
-    run_connect_retry: Optional[StrictInt]
-    run_task_retry: Optional[StrictInt]
-    run_creds_retry: Optional[List[Union[StrictStr, Dict]]]
-    run_num_workers: Optional[StrictInt]
-    run_num_connectors: Optional[StrictInt]
-    run_reconnect_on_fail: Optional[StrictBool]
-    render: Optional[Union[List[StrictStr], StrictStr]]
-    run_ttp: Optional[StrictStr]
+    render: Optional[Union[List[StrictStr], StrictStr]] = None
+    context: Optional[Dict] = None
+    dcache: Optional[Union[StrictStr, StrictBool]] = None
+    defaults: Optional[Dict] = None
+    diff: Optional[StrictStr] = None
+    dp: Optional[Union[StrictStr, List[Union[StrictStr, Dict]]]] = None
+    download: Optional[List[StrictStr]] = None
+    dump: Optional[StrictStr] = None
+    event_failed: Optional[StrictBool] = None
+    event_progress: Optional[StrictBool] = None
+    hcache: Optional[Union[StrictStr, StrictBool]] = None
+    iplkp: Optional[StrictStr] = None
+    jmespath: Optional[StrictStr] = None
+    match: Optional[StrictStr] = None
+    before: Optional[StrictInt] = None
+    ntfsm: Optional[StrictBool] = None
+    run_connect_retry: Optional[StrictInt] = None
+    run_task_retry: Optional[StrictInt] = None
+    run_creds_retry: Optional[List[Union[StrictStr, Dict]]] = None
+    run_num_workers: Optional[StrictInt] = None
+    run_num_connectors: Optional[StrictInt] = None
+    run_reconnect_on_fail: Optional[StrictBool] = None
+    render: Optional[Union[List[StrictStr], StrictStr]] = None
+    run_ttp: Optional[StrictStr] = None
     ttp_structure: Optional[EnumExecTTPStructTypes] = "flat_list"
     table: Optional[Union[EnumExecTableTypes, Dict, StrictBool]] = "brief"
-    headers: Optional[Union[StrictStr, List[StrictStr]]]
-    headers_exclude: Optional[Union[StrictStr, List[StrictStr]]]
-    sortby: Optional[StrictStr]
-    reverse: Optional[StrictBool]
+    headers: Optional[Union[StrictStr, List[StrictStr]]] = None
+    headers_exclude: Optional[Union[StrictStr, List[StrictStr]]] = None
+    sortby: Optional[StrictStr] = None
+    reverse: Optional[StrictBool] = None
     tests: Optional[
         Union[List[List[StrictStr]], List[Dict], Dict[StrictStr, List[Dict]]]
-    ]
-    failed_only: Optional[StrictBool]
-    remove_tasks: Optional[StrictBool]
-    tf: Optional[StrictStr]
-    tf_skip_failed: Optional[StrictBool]
-    to_dict: Optional[StrictBool]
-    add_details: Optional[StrictBool]
-    xml_flake: Optional[StrictStr]
-    xpath: Optional[StrictStr]
-    worker: Optional[Union[StrictInt, StrictStr]]
-    job_data: Optional[Union[StrictStr, List, Dict]]
+    ] = None
+    failed_only: Optional[StrictBool] = None
+    remove_tasks: Optional[StrictBool] = None
+    tf: Optional[StrictStr] = None
+    tf_skip_failed: Optional[StrictBool] = None
+    to_dict: Optional[StrictBool] = None
+    add_details: Optional[StrictBool] = None
+    xml_flake: Optional[StrictStr] = None
+    xpath: Optional[StrictStr] = None
+    worker: Optional[Union[StrictInt, StrictStr]] = None
+    job_data: Optional[Union[StrictStr, List, Dict]] = None
 
 
 class EnumExecNrCliPlugins(str, Enum):
@@ -186,11 +187,11 @@ class EnumExecNrCfgPlugins(str, Enum):
 class model_exec_nr_cfg(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.cfg function arguments"""
 
-    args: Optional[List[Union[StrictStr]]]
-    commands: Optional[Union[List[StrictStr], StrictStr]]
+    args: Optional[List[Union[StrictStr]]] = None
+    commands: Optional[Union[List[StrictStr], StrictStr]] = None
     plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
-    filename: Optional[StrictStr]
-    config: Optional[Union[Dict, StrictStr]]
+    filename: Optional[StrictStr] = None
+    config: Optional[Union[Dict, StrictStr]] = None
 
     class Config:
         extra = "allow"
@@ -209,38 +210,38 @@ class model_exec_nr_cfg(ModelExecCommonArgs):
 class model_exec_nr_tping(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.tping function arguments"""
 
-    ports: Optional[Union[List[StrictInt], StrictInt]]
-    timeout: Optional[StrictInt]
-    host: Optional[StrictStr]
+    ports: Optional[Union[List[StrictInt], StrictInt]] = None
+    timeout: Optional[StrictInt] = None
+    host: Optional[StrictStr] = None
 
     class Config:
         extra = "allow"
 
 
 class model_exec_nr_test(BaseModel):
-    name: Optional[StrictStr]
-    test: Optional[StrictStr]
-    pattern: Optional[StrictStr]
-    function_file: Optional[StrictStr]
-    saltenv: Optional[StrictStr]
-    suite: Optional[Union[StrictStr, List[Dict[StrictStr, Any]]]]
-    subset: Optional[Union[StrictStr, List[StrictStr]]]
-    dump: Optional[StrictStr]
-    commands: Optional[Union[StrictStr, List[StrictStr]]]
-    plugin: Optional[EnumExecNrCliPlugins]
-    use_ps: Optional[StrictBool]
+    name: Optional[StrictStr] = None
+    test: Optional[StrictStr] = None
+    pattern: Optional[StrictStr] = None
+    function_file: Optional[StrictStr] = None
+    saltenv: Optional[StrictStr] = None
+    suite: Optional[Union[StrictStr, List[Dict[StrictStr, Any]]]] = None
+    subset: Optional[Union[StrictStr, List[StrictStr]]] = None
+    dump: Optional[StrictStr] = None
+    commands: Optional[Union[StrictStr, List[StrictStr]]] = None
+    plugin: Optional[EnumExecNrCliPlugins] = None
+    use_ps: Optional[StrictBool] = None
     cli: Optional[
         Dict
-    ]  # if reference model_exec_nr_cli here it fails as test's cli might not contain commands and its normal
-    failed_only: Optional[StrictBool]
-    remove_tasks: Optional[StrictBool]
+    ]  = None # if reference model_exec_nr_cli here it fails as test's cli might not contain commands and its normal
+    failed_only: Optional[StrictBool] = None
+    remove_tasks: Optional[StrictBool] = None
     table: Optional[Union[EnumExecTableTypes, Dict, StrictBool]] = "brief"
-    headers: Optional[Union[StrictStr, List[StrictStr]]]
-    sortby: Optional[StrictStr]
-    reverse: Optional[StrictBool]
-    tests: Optional[Union[StrictStr, List[StrictStr]]]
-    worker: Optional[StrictInt]
-
+    headers: Optional[Union[StrictStr, List[StrictStr]]] = None
+    sortby: Optional[StrictStr] = None
+    reverse: Optional[StrictBool] = None
+    tests: Optional[Union[StrictStr, List[StrictStr]]] = None
+    worker: Optional[StrictInt] = None
+    
     class Config:
         extra = "allow"
 
@@ -253,16 +254,16 @@ class EnumExecNrNcPlugins(str, Enum):
 class model_exec_nr_nc(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.nc function arguments"""
 
-    args: Optional[List[Union[StrictStr]]]
+    args: Optional[List[Union[StrictStr]]] = None
     plugin: Optional[EnumExecNrNcPlugins] = "ncclient"
-    call: Optional[StrictStr]
-    data: Optional[StrictStr]
-    method_name: Optional[StrictStr]
-    source: Optional[StrictStr]
-    target: Optional[StrictStr]
-    config: Optional[StrictStr]
-    ncclient_filter: Optional[Union[List[StrictStr], StrictStr]] = Field(alias="filter")
-    scrapli_filter: Optional[StrictStr] = Field(alias="filter_")
+    call: Optional[StrictStr] = None
+    data: Optional[StrictStr] = None
+    method_name: Optional[StrictStr] = None
+    source: Optional[StrictStr] = None
+    target: Optional[StrictStr] = None
+    config: Optional[StrictStr] = None
+    ncclient_filter: Optional[Union[List[StrictStr], StrictStr]] = Field(None, alias="filter")
+    scrapli_filter: Optional[StrictStr] = Field(None, alias="filter_")
 
     class Config:
         arbitrary_types_allowed = True
@@ -288,9 +289,9 @@ class EnumExecNrHTTPMethods(str, Enum):
 class model_exec_nr_http(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.http function arguments"""
 
-    args: Optional[List[StrictStr]]
-    method: Optional[EnumExecNrHTTPMethods]
-    url: Optional[StrictStr]
+    args: Optional[List[StrictStr]] = None
+    method: Optional[EnumExecNrHTTPMethods] = None
+    url: Optional[StrictStr] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -312,9 +313,9 @@ class model_exec_nr_do_action_step(BaseModel):
     """Model to validate single nr.do action item"""
 
     function: StrictStr
-    args: Optional[List]
-    kwargs: Optional[Dict]
-    description: Optional[StrictStr]
+    args: Optional[List] = None
+    kwargs: Optional[Dict] = None
+    description: Optional[StrictStr] = None
 
     class Config:
         extra = "allow"
@@ -332,13 +333,13 @@ class model_exec_nr_do_action(BaseModel):
 class model_exec_nr_do(BaseModel):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.do function arguments"""
 
-    args: conlist(StrictStr, min_items=1)
-    stop_on_error: Optional[StrictBool]
-    filepath: Optional[StrictStr]
-    default_renderer: Optional[StrictStr]
-    describe: Optional[StrictBool]
-    tf: Optional[StrictBool]
-    diff: Optional[StrictBool]
+    args: List[StrictStr]
+    stop_on_error: Optional[StrictBool] = None
+    filepath: Optional[StrictStr] = None
+    default_renderer: Optional[StrictStr] = None
+    describe: Optional[StrictBool] = None
+    tf: Optional[StrictBool] = None
+    diff: Optional[StrictBool] = None
 
     class Config:
         extra = "allow"
@@ -347,10 +348,10 @@ class model_exec_nr_do(BaseModel):
 class model_exec_nr_file(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.file function arguments"""
 
-    args: Optional[List[StrictStr]]
-    call: Optional[FilesCallsEnum]
-    filegroup: Optional[Union[StrictStr, List[StrictStr], StrictBool]]
-    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]]
+    args: Optional[List[StrictStr]] = None
+    call: Optional[FilesCallsEnum] = None
+    filegroup: Optional[Union[StrictStr, List[StrictStr], StrictBool]] = None
+    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]] = None
 
     class Config:
         extra = "allow"
@@ -380,10 +381,10 @@ class EnumLearnSupportedFun(str, Enum):
 class model_exec_nr_learn(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.learn function arguments"""
 
-    args: conlist(StrictStr, min_items=1)
-    fun: Optional[EnumLearnSupportedFun]
-    tf: Optional[Union[StrictStr, StrictBool]]
-    tf_skip_failed: Optional[StrictBool]
+    args: List[StrictStr]
+    fun: Optional[EnumLearnSupportedFun] = None
+    tf: Optional[Union[StrictStr, StrictBool]] = None
+    tf_skip_failed: Optional[StrictBool] = None
 
     class Config:
         extra = "allow"
@@ -401,13 +402,13 @@ class model_exec_nr_learn(ModelExecCommonArgs):
 class model_exec_nr_find(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.find function arguments"""
 
-    args: conlist(StrictStr, min_items=1)
+    args: List[StrictStr]
     table: Optional[Union[EnumExecTableTypes, Dict, StrictBool]] = "brief"
-    headers: Optional[Union[StrictStr, List[StrictStr]]]
-    headers_exclude: Optional[Union[StrictStr, List[StrictStr]]]
-    sortby: Optional[StrictStr]
-    reverse: Optional[StrictBool]
-    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]]
+    headers: Optional[Union[StrictStr, List[StrictStr]]] = None
+    headers_exclude: Optional[Union[StrictStr, List[StrictStr]]] = None
+    sortby: Optional[StrictStr] = None
+    reverse: Optional[StrictBool] = None
+    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]] = None
 
     class Config:
         extra = "allow"
@@ -422,9 +423,9 @@ class model_exec_nr_find(model_ffun_fx_filters):
 class model_exec_nr_diff(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.find function arguments"""
 
-    args: Optional[List[StrictStr]]
-    diff: Optional[List[StrictStr]]
-    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]]
+    args: Optional[List[StrictStr]] = None
+    diff: Optional[List[StrictStr]] = None
+    last: Optional[Union[StrictInt, List[StrictInt], StrictStr]] = None
 
     class Config:
         extra = "allow"
@@ -462,11 +463,11 @@ class EnumNrFun(str, Enum):
 class model_exec_nr_nornir_fun(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.nornir_fun function arguments"""
 
-    args: Optional[List[StrictStr]]
-    fun: Optional[EnumNrFun]
-    worker: Optional[Union[StrictInt, StrictStr]]
-    workers_only: Optional[StrictBool]
-    stat: Optional[StrictStr]
+    args: Optional[List[StrictStr]] = None
+    fun: Optional[EnumNrFun] = None
+    worker: Optional[Union[StrictInt, StrictStr]] = None
+    workers_only: Optional[StrictBool] = None
+    stat: Optional[StrictStr] = None
 
     class Config:
         extra = "allow"
@@ -492,12 +493,12 @@ class EnumGnmiPlugins(str, Enum):
 class model_exec_nr_gnmi(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.gnmi function arguments"""
 
-    args: Optional[List[StrictStr]]
-    call: Optional[StrictStr]
-    plugin: Optional[EnumGnmiPlugins]
-    method_name: Optional[StrictStr]
-    path: Optional[Union[StrictStr, List[StrictStr]]]
-    filename: Optional[StrictStr]
+    args: Optional[List[StrictStr]] = None
+    call: Optional[StrictStr] = None
+    plugin: Optional[EnumGnmiPlugins] = None
+    method_name: Optional[StrictStr] = None
+    path: Optional[Union[StrictStr, List[StrictStr]]] = None
+    filename: Optional[StrictStr] = None
 
     class Config:
         extra = "allow"
@@ -520,15 +521,15 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.snmp function arguments"""
 
     call: StrictStr
-    oid: Optional[StrictStr]
-    oids: Optional[List[StrictStr]]
-    mappings: Optional[Dict[StrictStr, Any]]
-    value: Optional[Union[StrictStr]]
-    plugin: Optional[NrSNMPPlugins]
-    bulk_size: Optional[StrictInt]
-    scalar_oids: Optional[List[StrictStr]]
-    repeating_oids: Optional[List[StrictStr]]
-    method_name: Optional[StrictStr]
+    oid: Optional[StrictStr] = None
+    oids: Optional[List[StrictStr]] = None
+    mappings: Optional[Dict[StrictStr, Any]] = None
+    value: Optional[Union[StrictStr]] = None
+    plugin: Optional[NrSNMPPlugins] = None
+    bulk_size: Optional[StrictInt] = None
+    scalar_oids: Optional[List[StrictStr]] = None
+    repeating_oids: Optional[List[StrictStr]] = None
+    method_name: Optional[StrictStr] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -562,7 +563,7 @@ class model_exec_nr_network(ModelExecCommonArgs):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.network function arguments"""
 
     fun: EnumNrNetwork
-    args: Optional[List[StrictStr]]
+    args: Optional[List[StrictStr]] = None
 
     class Config:
         extra = "allow"
@@ -586,6 +587,7 @@ class EnumNrNetboxTasks(str, Enum):
     query = "query"
     get_interfaces = "get_interfaces"
     get_connections = "get_connections"
+    get_circuits = "get_circuits"
     update_config_context = "update_config_context"
     update_vrf = "update_vrf"
     parse_config = "parse_config"
@@ -595,17 +597,20 @@ class EnumNrNetboxTasks(str, Enum):
 class model_exec_nr_netbox(model_ffun_fx_filters):
     """Model for salt_nornir.modules.nornir_proxy_execution_module.netbox function arguments"""
 
-    args: Optional[List[StrictStr]]
-    task: Optional[EnumNrNetboxTasks]
-    field: Optional[StrictStr]
-    filters: Optional[Dict[StrictStr, StrictStr]]
-    fields: Optional[List[StrictStr]]
-    add_ip: Optional[StrictBool]
-    add_inventory_items: Optional[StrictBool]
-    queries: Optional[Dict]
-    query_string: Optional[StrictStr]
-    sync: Optional[StrictBool]
-
+    args: Optional[List[StrictStr]] = None
+    task: Optional[EnumNrNetboxTasks] = None
+    field: Optional[StrictStr] = None
+    filters: Optional[Dict[StrictStr, StrictStr]] = None
+    fields: Optional[List[StrictStr]] = None
+    add_ip: Optional[StrictBool] = None
+    add_inventory_items: Optional[StrictBool] = None
+    queries: Optional[Dict] = None
+    query_string: Optional[StrictStr] = None
+    sync: Optional[StrictBool] = None
+    hosts: Optional[List[StrictStr]] = None
+    cache: Optional[StrictBool] = None
+    cache_ttl: Optional[StrictInt] = None
+        
     class Config:
         extra = "allow"
 
@@ -626,16 +631,16 @@ class model_exec_nr_netbox(model_ffun_fx_filters):
 
 
 class StateWorkflowOptions(BaseModel):
-    fail_if_any_host_fail_any_step: Optional[List[StrictStr]]
-    fail_if_any_host_fail_all_step: Optional[List[StrictStr]]
-    fail_if_all_host_fail_any_step: Optional[List[StrictStr]]
-    fail_if_all_host_fail_all_step: Optional[List[StrictStr]]
-    report_all: Optional[StrictBool]
-    filters: Optional[model_ffun_fx_filters]
-    hcache: Optional[StrictBool]
-    dcache: Optional[StrictBool]
-    sumtable: Optional[Union[StrictBool, StrictStr]]
-    kwargs: Optional[Dict]
+    fail_if_any_host_fail_any_step: Optional[List[StrictStr]] = None
+    fail_if_any_host_fail_all_step: Optional[List[StrictStr]] = None
+    fail_if_all_host_fail_any_step: Optional[List[StrictStr]] = None
+    fail_if_all_host_fail_all_step: Optional[List[StrictStr]] = None
+    report_all: Optional[StrictBool] = None
+    filters: Optional[model_ffun_fx_filters] = None
+    hcache: Optional[StrictBool] = None
+    dcache: Optional[StrictBool] = None
+    sumtable: Optional[Union[StrictBool, StrictStr]] = None
+    kwargs: Optional[Dict] = None
 
     class Config:
         extra = "forbid"
@@ -644,14 +649,15 @@ class StateWorkflowOptions(BaseModel):
 class StateWorkflowStep(BaseModel):
     name: StrictStr
     function: StrictStr
-    kwargs: Optional[Dict]
-    args: Optional[List]
-    report: Optional[StrictBool]
-    run_if_fail_any: Optional[List[StrictStr]]
-    run_if_pass_any: Optional[List[StrictStr]]
-    run_if_fail_all: Optional[List[StrictStr]]
-    run_if_pass_all: Optional[List[StrictStr]]
-
+    kwargs: Optional[Dict] = None
+    args: Optional[List] = None
+    report: Optional[StrictBool] = None
+    run_if_fail_any: Optional[List[StrictStr]] = None
+    run_if_pass_any: Optional[List[StrictStr]] = None
+    run_if_fail_all: Optional[List[StrictStr]] = None
+    run_if_pass_all: Optional[List[StrictStr]] = None
+    stop_if_fail: Optional[StrictBool] = None
+    
     class Config:
         extra = "forbid"
 
@@ -670,18 +676,18 @@ class model_state_nr_workflow(BaseModel):
 class model_runner_nr_inventory(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.inventory function arguments"""
 
-    args: Optional[List[StrictStr]]
-    tgt: Optional[StrictStr]
-    tgt_type: Optional[StrictStr]
-    verbose: Optional[StrictBool]
-    job_retry: Optional[StrictInt]
-    job_timeout: Optional[StrictInt]
-    table: Optional[Union[StrictStr, StrictBool, Dict]]
-    headers: Optional[List[StrictStr]]
-    reverse: Optional[StrictBool]
-    sortby: Optional[StrictStr]
-    tree: Optional[StrictBool]
-    list_proxy: Optional[StrictBool]
+    args: Optional[List[StrictStr]] = None
+    tgt: Optional[StrictStr] = None
+    tgt_type: Optional[StrictStr] = None
+    verbose: Optional[StrictBool] = None
+    job_retry: Optional[StrictInt] = None
+    job_timeout: Optional[StrictInt] = None
+    table: Optional[Union[StrictStr, StrictBool, Dict]] = None
+    headers: Optional[List[StrictStr]] = None
+    reverse: Optional[StrictBool] = None
+    sortby: Optional[StrictStr] = None
+    tree: Optional[StrictBool] = None
+    list_proxy: Optional[StrictBool] = None
 
     class Config:
         extra = "forbid"
@@ -712,14 +718,14 @@ class RunnerRetStructTypes(str, Enum):
 class model_runner_nr_call(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
 
-    args: Optional[List[StrictStr]]
-    fun: Optional[StrictStr]
-    tgt: Optional[Union[StrictStr, List[StrictStr]]]
-    tgt_type: Optional[StrictStr]
-    job_retry: Optional[StrictInt]
-    job_timeout: Optional[StrictInt]
-    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
-    ret_struct: Optional[RunnerRetStructTypes]
+    args: Optional[List[StrictStr]] = None
+    fun: Optional[StrictStr] = None
+    tgt: Optional[Union[StrictStr, List[StrictStr]]] = None
+    tgt_type: Optional[StrictStr] = None
+    job_retry: Optional[StrictInt] = None
+    job_timeout: Optional[StrictInt] = None
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]] = None
+    ret_struct: Optional[RunnerRetStructTypes] = None
 
     class Config:
         extra = "allow"
@@ -734,10 +740,10 @@ class model_runner_nr_call(model_ffun_fx_filters):
 class model_runner_nr_event(BaseModel):
     """Model for salt_nornir.states.nornir_proxy_runner_module.event function arguments"""
 
-    tag: Optional[StrictStr]
-    jid: Optional[Union[StrictStr, StrictInt]]
-    stop_signal: Optional[Any]
-    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
+    tag: Optional[StrictStr] = None
+    jid: Optional[Union[StrictStr, StrictInt]] = None
+    stop_signal: Optional[Any] = None
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]] = None
 
     class Config:
         extra = "forbid"
@@ -746,19 +752,19 @@ class model_runner_nr_event(BaseModel):
 class model_runner_nr_cfg(ModelExecCommonArgs):
     """Model for salt_nornir.states.nornir_proxy_runner_module.call function arguments"""
 
-    host_batch: Optional[StrictInt]
-    first_batch: Optional[StrictInt]
-    fromdir: Optional[StrictStr]
-    fromdict: Optional[Dict[StrictStr, StrictStr]]
-    tgt: Optional[StrictStr]
-    tgt_type: Optional[StrictStr]
-    job_retry: Optional[StrictInt]
-    job_timeout: Optional[StrictInt]
-    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
-    saltenv: Optional[StrictStr]
-    ret_struct: Optional[RunnerRetStructTypes]
-    interactive: Optional[StrictBool]
-    dry_run: Optional[StrictBool]
+    host_batch: Optional[StrictInt] = None
+    first_batch: Optional[StrictInt] = None
+    fromdir: Optional[StrictStr] = None
+    fromdict: Optional[Dict[StrictStr, StrictStr]] = None
+    tgt: Optional[StrictStr] = None
+    tgt_type: Optional[StrictStr] = None
+    job_retry: Optional[StrictInt] = None
+    job_timeout: Optional[StrictInt] = None
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]] = None
+    saltenv: Optional[StrictStr] = None
+    ret_struct: Optional[RunnerRetStructTypes] = None
+    interactive: Optional[StrictBool] = None
+    dry_run: Optional[StrictBool] = None
     plugin: Optional[EnumExecNrCfgPlugins] = "netmiko"
 
     class Config:
@@ -825,19 +831,19 @@ class EnumN2GDiagramPlugins(str, Enum):
 class model_runner_nr_diagram(model_ffun_fx_filters):
     """Model for salt_nornir.states.nornir_proxy_runner_module.diagramm function arguments"""
 
-    args: Optional[List[StrictStr]]
-    data_plugin: Optional[EnumN2GDataPlugins]
-    diagram_plugin: Optional[EnumN2GDiagramPlugins]
-    tgt: Optional[StrictStr]
-    tgt_type: Optional[StrictStr]
-    job_retry: Optional[StrictInt]
-    job_timeout: Optional[StrictInt]
-    progress: Optional[Union[RunnerProgressTypes, StrictBool]]
-    save_data: Optional[Union[StrictBool, StrictStr]]
-    outfile: Optional[StrictStr]
-    cli: Optional[Dict[StrictStr, Any]]
-    filegroup: Optional[StrictStr]
-    last: Optional[StrictInt]
+    args: Optional[List[StrictStr]] = None
+    data_plugin: Optional[EnumN2GDataPlugins] = None
+    diagram_plugin: Optional[EnumN2GDiagramPlugins] = None
+    tgt: Optional[StrictStr] = None
+    tgt_type: Optional[StrictStr] = None
+    job_retry: Optional[StrictInt] = None
+    job_timeout: Optional[StrictInt] = None
+    progress: Optional[Union[RunnerProgressTypes, StrictBool]] = None
+    save_data: Optional[Union[StrictBool, StrictStr]] = None
+    outfile: Optional[StrictStr] = None
+    cli: Optional[Dict[StrictStr, Any]] = None
+    filegroup: Optional[StrictStr] = None
+    last: Optional[StrictInt] = None
 
     class Config:
         extra = "allow"
@@ -875,10 +881,10 @@ class model_nornir_config(BaseModel):
     """Model for Salt-Nornir Proxy Minion configuration attributes"""
 
     proxy: model_nornir_config_proxy
-    hosts: Optional[Dict]
-    groups: Optional[Dict]
-    defaults: Optional[Dict]
-    user_defined: Optional[Dict]
+    hosts: Optional[Dict] = None
+    groups: Optional[Dict] = None
+    defaults: Optional[Dict] = None
+    user_defined: Optional[Dict] = None
 
 
 class SaltNornirExecutionFunctions(BaseModel):
@@ -1008,3 +1014,4 @@ class SaltNornirShell(BaseModel):
     @classmethod
     def source_hosts(self):
         return list(GLOBAL_CACHE["hosts"])
+

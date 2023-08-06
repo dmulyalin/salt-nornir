@@ -25,6 +25,7 @@ Reference
 """
 import logging
 import json
+import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -376,6 +377,7 @@ def get_interfaces(
                 "fields": intf_fields,
             }
         }
+        
         # add query to retrieve inventory items
         if add_inventory_items:
             inv_filters = {"device": hosts, "component_type": "dcim.interface"}
@@ -473,11 +475,12 @@ def get_connections(
         inventory data under ``connections`` key, if sync is a string, provided
         value used as a key.
     :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param hosts: list of hosts to get connections for
     :param cache: boolean indicating whether to cache Netbox response or string
         ``refresh`` to delete cached data, if set to False cached data ignored
         but not refreshed
     :param cache_ttl: integer indicating cache time to live
-    :param kwargs: Fx filters to filter hosts to retrieve interfaces for
+    :param kwargs: Fx filters to filter hosts to retrieve connections for
     :return: dictionary keyed by device name with connections details
 
     .. warning:: Get connections only supported for Netbox of 3.4 and above.
@@ -1193,6 +1196,333 @@ def run_dir(**kwargs):
     return list(netbox_tasks.keys())
 
 
+def _calculate_peer_ip(address):
+    """
+    Helper function to claculate peer IP for ptp subnets
+    
+    :param address: Netbox IP adddress string of '10.0.0.1/30' format
+    """
+    if not any(
+        address.endswith(k) 
+        for k in ["/30", "/31", "/120", "126", "/127"]
+    ):
+        return None
+    ip_interface = ipaddress.ip_interface(address)
+    net_hosts = list(ip_interface.network.hosts())
+    peer_ip = net_hosts[0] if net_hosts[0] != ip_interface.ip else net_hosts[1]
+    return f"{str(peer_ip)}/{ip_interface.network.prefixlen}"    
+    
+    
+def get_circuits(
+    params=None,
+    sync=False,
+    __salt__=None,
+    proxy_id=None,
+    hosts=None,
+    cache=True,
+    cache_ttl=3600,
+    get_interface_details=True,
+    **kwargs,
+) -> dict:
+    """
+    Function to retrieve circuits details from Netbox
+    
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param sync: if True, saves get circuits results to host's in-memory
+        inventory data under ``circuits`` key, if sync is a string, provided
+        value used as a key.
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param hosts: list of hosts to get circuits for
+    :param cache: boolean indicating whether to cache Netbox response or string
+        ``refresh`` to delete cached data, if set to False cached data ignored
+        but not refreshed
+    :param cache_ttl: integer indicating cache time to live
+    :param kwargs: Fx filters to filter hosts to retrieve circuits for
+    :param get_interface_details: boolen, indicating if need to retrieve interface
+        details, inventory items and IP addresses
+    :return: dictionary keyed by device name with circuits details    
+    
+    Circuits data retrived for a set of hosts first by queriyng netbox for a 
+    list of sites where hosts belongs to, next all circuits for given sites
+    retrived from Netbox using GraphQL API, after that for each circuit one 
+    of the terminations path traced using REST API endpoint -
+    `/api/circuits/circuit-terminations/{id}/paths/`. Once full path for the
+    circuit retrived interface and device details extracted from path data 
+    for each end and stored in circuits data.
+    
+    When `get_interface_details` set to True interface details retrieved from 
+    Netbox using `get_interfaces` function together with inventory items, 
+    child interfaces and IP addresses. For each IP address `peer_ip` calculated 
+    and added to IP data if subnet is one of prefix length - `/30`, `/31`, 
+    `/127`, `/126`, `/120` by calculating second IP value.
+    
+    When circuit connects to provider network, no interface, instead of 
+    `remote_device` and `remote_interface` keys, circuit contains 
+    `provider_network` key with value referring to provider network name.
+    
+    Sample circuits data::        
+        
+        {'CID2': {'comments': 'some comments',
+                  'commit_rate': 10000,
+                  'custom_fields': {},
+                  'description': 'some description',
+                  'interface': {'bridge': None,
+                                'bridge_interfaces': [],
+                                'custom_fields': {},
+                                'description': '',
+                                'duplex': None,
+                                'enabled': True,
+                                'inventory_items': [],
+                                'ip_addresses': [{'address': '10.0.1.1/30',
+                                                  'custom_fields': {},
+                                                  'description': '',
+                                                  'dns_name': '',
+                                                  'last_updated': '2023-08-06T01:15:09.847777+00:00',
+                                                  'peer_ip': '10.0.1.2/30',
+                                                  'role': None,
+                                                  'status': 'ACTIVE',
+                                                  'tags': [],
+                                                  'tenant': None}],
+                                'last_updated': '2023-08-06T01:15:09.790266+00:00',
+                                'mac_address': None,
+                                'member_interfaces': [],
+                                'mode': None,
+                                'mtu': None,
+                                'name': 'eth11',
+                                'parent': None,
+                                'speed': None,
+                                'tagged_vlans': [],
+                                'tags': [],
+                                'untagged_vlan': None,
+                                'vrf': 'OOB_CTRL',
+                                'wwn': None},
+                  'is_active': True,
+                  'provider': 'Provider1',
+                  'provider_account': '',
+                  'remote_device': 'fceos5',
+                  'remote_interface': 'eth11',
+                  'status': 'ACTIVE',
+                  'subinterfaces': {'eth11.123': {'bridge': None,
+                                                  'bridge_interfaces': [],
+                                                  'child_interfaces': [{'name': 'eth123.123'}],
+                                                  'custom_fields': {},
+                                                  'description': '',
+                                                  'duplex': None,
+                                                  'enabled': True,
+                                                  'inventory_items': [],
+                                                  'ip_addresses': [{'address': '10.0.0.1/30',
+                                                                    'custom_fields': {},
+                                                                    'description': '',
+                                                                    'dns_name': '',
+                                                                    'last_updated': '2023-08-06T01:15:09.227279+00:00',
+                                                                    'peer_ip': '10.0.0.2/30',
+                                                                    'role': None,
+                                                                    'status': 'ACTIVE',
+                                                                    'tags': [],
+                                                                    'tenant': None}],
+                                                  'last_updated': '2023-08-06T01:15:09.175047+00:00',
+                                                  'mac_address': None,
+                                                  'member_interfaces': [],
+                                                  'mode': None,
+                                                  'mtu': None,
+                                                  'parent': {'name': 'eth11'},
+                                                  'speed': None,
+                                                  'tagged_vlans': [],
+                                                  'tags': [],
+                                                  'untagged_vlan': None,
+                                                  'vrf': 'MGMT',
+                                                  'wwn': None}},
+                  'tags': ['ACCESS'],
+                  'tenant': None,
+                  'type': 'DarkFibre'},
+        }
+    
+    """
+    device_sites_fields = ["site {slug}"]
+    circuit_fields = [
+        "cid",
+        "tags {name}",
+        "provider {name}",
+        "commit_rate",
+        "description",
+        "status",
+        "type {name}",
+        "provider_account {name}",
+        "tenant {name}",
+        "termination_a {id}",
+        "termination_z {id}",
+        "custom_fields",
+        "comments",
+    ]
+    
+    # retrieve a list of hosts to get circuits for
+    hosts = hosts or __salt__["nr.nornir"](
+        "hosts",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
+    )
+    if not hosts:
+        raise CommandExecutionError("No hosts matched")
+
+    # form final result dictionary
+    circuits_dict = {h: {} for h in hosts}
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    # check if need to use cache
+    if HAS_DISKCACHE and cache:
+        cache_directory = (
+            params["proxy"]
+            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+            .format(proxy_id=proxy_id)
+        )
+        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # remove expired items from cache
+        _ = cache_obj.expire()
+        # iterate over a copy of hosts list
+        for host in list(hosts):
+            key = f"nr.netbox:get_circuits, {host}"
+            if key in cache_obj and cache is True:
+                circuits_dict[host] = cache_obj[key]
+                hosts.remove(host)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' retrieved get_circuits data from cache"
+                )
+            elif key in cache_obj and cache == "refresh":
+                cache_obj.delete(key)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' deleted get_circuits data from cache"
+                )
+        cache_obj.close()
+        
+    # check if still has hosts left to retrieve data for
+    if hosts:
+        # retrieve list of hosts' sites
+        hosts_sites = nb_graphql("device_list", {"name": hosts}, device_sites_fields, params)
+        hosts_sites = [i["site"]["slug"] for i in hosts_sites]  
+
+        # retrieve all circuits for hists' sites
+        all_circuits = nb_graphql("circuit_list", {"site": hosts_sites}, circuit_fields, params)
+        
+        # iterate over circuits and map them to hosts
+        for circuit in all_circuits:
+            cid = circuit.pop("cid")
+            circuit["tags"] = [i["name"] for i in circuit["tags"]]
+            circuit["type"] = circuit["type"]["name"]
+            circuit["provider"] = circuit["provider"]["name"]
+            circuit["tenant"] = circuit["tenant"]["name"] if circuit["tenant"] else None
+            circuit["provider_account"] = circuit["provider_account"]["name"] if circuit["provider_account"] else None
+            termination_a = circuit.pop("termination_a")
+            termination_z = circuit.pop("termination_z")
+            termination_a = termination_a["id"] if termination_a else None
+            termination_z = termination_z["id"] if termination_z else None   
+            
+            # retrieve A or Z termination path using Netbox REST API
+            if termination_a is not None:
+                circuit_path = nb_rest(
+                    method="get", 
+                    api=f"/circuits/circuit-terminations/{termination_a}/paths/", 
+                    __salt__=__salt__
+                )
+            elif termination_z is not None:
+                circuit_path = nb_rest(
+                    method="get", 
+                    api=f"/circuits/circuit-terminations/{termination_z}/paths/", 
+                    __salt__=__salt__
+                )
+            else:
+                continue
+                
+            # forma A and Z connection endpoints
+            end_a = {
+                "device": circuit_path[0]["path"][0][0].get("device", {}).get("name", False),
+                "provider_network": "provider-network" in circuit_path[0]["path"][0][0]["url"],
+                "name": circuit_path[0]["path"][0][0]["name"],
+            }
+            end_z = {
+                "device": circuit_path[0]["path"][-1][-1].get("device", {}).get("name", False),
+                "provider_network": "provider-network" in circuit_path[0]["path"][-1][-1]["url"],
+                "name": circuit_path[0]["path"][-1][-1]["name"],
+            }
+            circuit["is_active"] = circuit_path[0]["is_active"]
+            
+            # map path ends to devices
+            if end_a["device"] and end_a["device"] in hosts:
+                circuits_dict[end_a["device"]][cid] = circuit
+                circuits_dict[end_a["device"]][cid]["interface"] = end_a["name"]
+                if end_z["device"]:
+                    circuits_dict[end_a["device"]][cid]["remote_device"] = end_z["device"]
+                    circuits_dict[end_a["device"]][cid]["remote_interface"] = end_z["name"]
+                elif end_z["provider_network"]:
+                    circuits_dict[end_a["device"]][cid]["provider_network"] = end_z["name"]
+            if end_z["device"] and end_z["device"] in hosts:
+                circuits_dict[end_z["device"]][cid] = circuit
+                circuits_dict[end_z["device"]][cid]["interface"] = end_z["name"]
+                if end_a["device"]:
+                    circuits_dict[end_z["device"]][cid]["remote_device"] = end_a["device"]
+                    circuits_dict[end_z["device"]][cid]["remote_interface"] = end_a["name"]
+                elif end_a["provider_network"]:
+                    circuits_dict[end_z["device"]][cid]["provider_network"] = end_a["name"]
+            
+        # retrieve itnerfaces details
+        if get_interface_details:
+            interfaces_data = get_interfaces(
+                add_ip=True,
+                add_inventory_items=True,
+                sync=False,
+                params=params,
+                __salt__=__salt__,
+                proxy_id=proxy_id,
+                hosts=hosts,
+                cache=cache,
+                **kwargs,                
+            )
+            # iterate over hosts and add interface details for each circuit
+            for hostname, host_interfaces in interfaces_data.items():
+                for cid, circuit_data in circuits_dict[hostname].items():
+                    interface_name = circuit_data["interface"]
+                    circuit_data["interface"] = host_interfaces[interface_name]
+                    circuit_data["interface"]["name"] = interface_name
+                    circuit_data["interface"]["vrf"] = circuit_data["interface"]["vrf"]["name"] if circuit_data["interface"]["vrf"] else None
+                    circuit_data["subinterfaces"] = {}
+                    # add peer IP details for ptp subnets
+                    for ip_address in circuit_data["interface"]["ip_addresses"]:
+                        ip_address["peer_ip"] = _calculate_peer_ip(ip_address["address"])
+                    # add child interfaces details
+                    for child_interface in circuit_data["interface"].pop("child_interfaces"):
+                        child_interface_data = host_interfaces[child_interface["name"]]
+                        child_interface_data["vrf"] = child_interface_data["vrf"]["name"] if child_interface_data["vrf"] else None
+                        circuit_data["subinterfaces"][child_interface["name"]] = child_interface_data 
+                        # add peer IP details for ptp subnets
+                        for ip_address in child_interface_data["ip_addresses"]:
+                            ip_address["peer_ip"] = _calculate_peer_ip(ip_address["address"])
+            
+        # cache connections data for each host
+        if HAS_DISKCACHE and cache:
+            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            for host in hosts:
+                key = f"nr.netbox:get_circuits, {host}"
+                cache_obj.set(key, circuits_dict[host], expire=cache_ttl)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' cached get_circuits data"
+                )
+            cache_obj.close()
+            
+    # save results to hosts inventory if requested to do so
+    if sync:
+        key = sync if isinstance(sync, str) else "circuits"
+        return __salt__["nr.nornir"](
+            fun="inventory",
+            call="load",
+            data=[
+                {"call": "update_host", "name": host, "data": {key: circuits}}
+                for host, circuits in circuits_dict.items()
+            ],
+        )
+    
+    return circuits_dict
+
+
 # dispatch dictionary of Netbox tasks exposed for calling
 netbox_tasks = {
     "parse_config": parse_config,
@@ -1202,5 +1532,8 @@ netbox_tasks = {
     "rest": nb_rest,
     "get_interfaces": get_interfaces,
     "get_connections": get_connections,
+    "get_circuits": get_circuits,
+    # get_config_context
+    # get_configuration
     "dir": run_dir,
 }

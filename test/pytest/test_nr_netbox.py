@@ -512,3 +512,79 @@ def test_netbox_get_connections_sync():
     assert sync_ret["nrp3"]["nornir-worker-3"] == [{"fceos4": True}]    
     assert "ConsolePort1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"]
     assert "eth1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"] 
+    
+
+def test_netbox_get_circuits():
+    circuits_fields = [
+        "comments",
+        "commit_rate",
+        "custom_fields",
+        "description",
+        "interface",
+        "is_active",
+        "provider",
+        "provider_account",
+        "remote_device",
+        "remote_interface",
+        "status",
+        "subinterfaces",
+        "tags",
+        "tenant",
+        "type",
+    ]
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_circuits"], 
+        kwarg={
+            "hosts": ["fceos4"]
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    # check circuits data
+    assert all(k in ret["nrp3"]["fceos4"] for k in ["CID1", "CID2", "CID3"])
+    # CID1 is direct between devices 
+    assert all(k in ret["nrp3"]["fceos4"]["CID1"] for k in circuits_fields)
+    assert "name" in ret["nrp3"]["fceos4"]["CID1"]["interface"]
+    # CID2 is via patchpanels with child interfaces
+    assert "eth11.123" in ret["nrp3"]["fceos4"]["CID2"]["subinterfaces"]
+    assert "peer_ip" in ret["nrp3"]["fceos4"]["CID2"]["subinterfaces"]["eth11.123"]["ip_addresses"][0], "subinterface peer_ip is missing"
+    assert "peer_ip" in ret["nrp3"]["fceos4"]["CID2"]["interface"]["ip_addresses"][0], "interface peer_ip is missing"
+    # CID3 goes to provider network
+    assert "provider_network" in ret["nrp3"]["fceos4"]["CID3"]
+    assert "remote_device" not in ret["nrp3"]["fceos4"]["CID3"]
+    
+    
+def test_netbox_get_circuits_sync_true():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_circuits"], 
+        kwarg={
+            "hosts": ["fceos4"],
+            "sync": True
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    inventory_data = client.cmd(
+        tgt="nrp3", 
+        fun="nr.nornir", 
+        arg=["inventory"], 
+        kwarg={
+            "FB": "fceos4",
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("get circuits with sync true")
+    pprint.pprint(ret)
+    print("fceos4 inventory")
+    pprint.pprint(inventory_data)
+    
+    assert ret == {'nrp3': {'nornir-worker-1': [{'fceos4': True}],
+                            'nornir-worker-2': [{'fceos4': True}],
+                            'nornir-worker-3': [{'fceos4': True}]}}
+    assert all(k in inventory_data["nrp3"]["hosts"]["fceos4"]["data"]["circuits"] for k in ["CID1", "CID2", "CID3"])

@@ -135,6 +135,11 @@ sites = [
         "name": "SALTNORNIR-LAB", 
         "tenant": {"name": "SALTNORNIR"},
         "region": {"name": "APAC"}
+    },
+    {
+        "name": "SALTNORNIR-LAB2", 
+        "tenant": {"name": "SALTNORNIR"},
+        "region": {"name": "APAC"}
     }
 ]
 
@@ -142,6 +147,7 @@ racks = [
     {"name": "R101", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
     {"name": "R201", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
     {"name": "R301", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
+    {"name": "R401", "site": {"name": "SALTNORNIR-LAB2"}, "tenant": {"name": "SALTNORNIR"}},
 ]
 
 manufacturers = [
@@ -154,7 +160,8 @@ manufacturers = [
 ]
 
 tags = [
-    {"name": "nrp3"}
+    {"name": "nrp3"},
+    {"name": "ACCESS"},    
 ]
 
 device_types = [
@@ -285,6 +292,10 @@ ip_addresses = [
     {"address": "1.0.1.4/32"},
     {"address": "1.0.1.5/32"},
     {"address": "1.0.100.1/32"},
+    {"address": "10.0.0.1/30"},
+    {"address": "10.0.0.2/30"},
+    {"address": "10.0.1.1/30"},
+    {"address": "10.0.1.2/30"},
 ]
 # add more ip addresses
 ip_addresses.extend(
@@ -307,6 +318,10 @@ interfaces = [
     {"name": "eth102", "device": {"name": "fceos4"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "lag": {"name": "Port-Channel1"}},
     {"name": "eth201", "device": {"name": "fceos4"}, "type": "1000base-t", "mode": "tagged", "tagged_vlans": [102,103,104,105], "untagged_vlan": 101},
     {"name": "loopback0", "device": {"name": "ceos1"}, "type": "virtual"},
+    {"name": "eth11", "device": {"name": "fceos4"}, "type": "10gbase-x-sfpp"},
+    {"name": "eth11.123", "device": {"name": "fceos4"}, "type": "virtual", "parent": {"name": "eth11"}},
+    {"name": "eth11", "device": {"name": "fceos5"}, "type": "10gbase-x-sfpp"},
+    {"name": "eth11.123", "device": {"name": "fceos5"}, "type": "virtual", "parent": {"name": "eth11"}},
 ]
 
 power_outlet_ports = [
@@ -383,7 +398,11 @@ ip_adress_to_devices = [
         "role": "loopback",
         "primary_device_ip": True,
     },
-    {"address": f"1.0.100.1/32", "interface": f"eth1.11", "device": "fceos4", "vrf": {"name": vrfs[1]["name"]}},
+    {"address": "1.0.100.1/32", "interface": "eth1.11", "device": "fceos4", "vrf": {"name": vrfs[1]["name"]}},
+    {"address": "10.0.0.1/30", "interface": "eth11.123", "device": "fceos4", "vrf": {"name": "MGMT"}},
+    {"address": "10.0.0.2/30", "interface": "eth11.123", "device": "fceos5", "vrf": {"name": "MGMT"}},
+    {"address": "10.0.1.1/30", "interface": "eth11", "device": "fceos4", "vrf": {"name": "OOB_CTRL"}},
+    {"address": "10.0.1.2/30", "interface": "eth11", "device": "fceos5", "vrf": {"name": "OOB_CTRL"}},
 ]
 # associate IP addresses to subinterfaces
 ip_adress_to_devices.extend(
@@ -522,6 +541,27 @@ connections = [
         "status": "connected",
         "tenant": {"slug": "saltnornir"},
     }, 
+    # circuit cables
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "PatchPanel-1", "interface": "FrontPort6", "termination_type": "dcim.frontport"},
+        ],
+        "b_terminations": [
+            {"device": "fceos4", "interface": "eth11", "termination_type": "dcim.interface"}
+        ],
+        "status": "connected",
+    },   
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "PatchPanel-3", "interface": "FrontPort6", "termination_type": "dcim.frontport"},
+        ],
+        "b_terminations": [
+            {"device": "fceos5", "interface": "eth11", "termination_type": "dcim.interface"}
+        ],
+        "status": "connected",
+    },   
 ]
 
 devices = [
@@ -717,6 +757,16 @@ devices = [
         "position": 42,
         "face": "front",
     },
+    {
+        "name": "PatchPanel-3",
+        "device_type": {"slug": slugify("24-port-lc-patch-panel")},
+        "device_role": {"name": "PatchPanel"},
+        "tenant": {"name": "SALTNORNIR"},
+        "site": {"name": "SALTNORNIR-LAB2"},
+        "rack": {"name": "R401"},
+        "position": 41,
+        "face": "front",
+    },
 ]
 # add fceos3_390-fceos3_399 devices to test multi-threading retrieval
 for i in range(10):
@@ -863,6 +913,10 @@ circuit_providers = [
     {"name": "Provider1"}
 ]
 
+circuit_provider_networks = [
+    {"name": "Provider1-Net1", "provider": {"name": "Provider1"}}
+]
+
 provider_accounts = [
     {"provider": {"slug": slugify("Provider1")}, "account": "test_account"}
 ]
@@ -877,10 +931,33 @@ circuits = [
         "type": {"slug": slugify("DarkFibre")},
         "status": "active",
         "cid": "CID1",
-        "termination_a": {"device": "fceos4", "interface": "eth101", "cable": {"type": "smf"}},
-        "termination_b": {"device": "fceos5", "interface": "eth8", "cable": {"type": "smf"}},
-        "provider_account": {"account": "test_account"}
-    }
+        "termination_a": {"device": "fceos4", "interface": "eth101", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"device": "fceos5", "interface": "eth8", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "provider_account": {"account": "test_account"},
+    },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "active",
+        "cid": "CID2",
+        "termination_a": {"device": "PatchPanel-1", "interface": "RearPort6", "termination_type": "dcim.rearport", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"device": "PatchPanel-3", "interface": "RearPort6", "termination_type": "dcim.rearport", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB2"},
+        "provider_account": {"account": "test_account"},
+        "tags": [{"name": "ACCESS"}],
+        "description": "some description",
+        "comments": "some comments", 
+        "commit_rate": 10000
+    },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "active",
+        "cid": "CID3",
+        "termination_a": {"device": "fceos4", "interface": "eth201", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"provider_network": "Provider1-Net1"},
+        "provider_account": {"account": "test_account"},
+        "tags": [{"name": "ACCESS"}],
+    },
 ]
             
 config_templates = [
@@ -1292,30 +1369,60 @@ def create_circuits():
         try:
             termination_a = item.pop("termination_a")
             termination_b = item.pop("termination_b")
-            cable_a = termination_a.pop("cable")
-            cable_b = termination_b.pop("cable")
+            cable_a = termination_a.pop("cable", None)
+            cable_b = termination_b.pop("cable", None)
             # provider account supported starting with netbox 3.5 only
             if not NB_VERSION.startswith("3.5"):
                    _ = circuit.pop("provider_account")
             circuit = nb.circuits.circuits.create(**item)
             # add termination A
-            cterm_a = nb.circuits.circuit_terminations.create(circuit=circuit.id, term_side="A", site={"slug": slugify("SALTNORNIR-LAB")})
+            if "provider_network" in termination_a:
+                cterm_a = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="A", 
+                    provider_network={"name": termination_a["provider_network"]} 
+                )
+            else:
+                cterm_a = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="A", 
+                    site={"slug": slugify(termination_a["site"])}
+                )
             # add termination B
-            cterm_z = nb.circuits.circuit_terminations.create(circuit=circuit.id, term_side="Z", site={"slug": slugify("SALTNORNIR-LAB")})            
+            if "provider_network" in termination_b:
+                cterm_z = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="Z", 
+                    provider_network={"name": termination_b["provider_network"]} 
+                )
+            else:
+                cterm_z = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="Z", 
+                    site={"slug": slugify(termination_b["site"])}
+                )            
             # add cable A
-            intf_a = nb.dcim.interfaces.get(device=termination_a["device"], name=termination_a["interface"])
-            nb.dcim.cables.create(
-                **cable_a,
-                a_terminations=[{"object_type": "dcim.interface","object_id": intf_a.id}],
-                b_terminations=[{"object_type": "circuits.circuittermination","object_id": cterm_a.id}]
-            )
+            if "provider_network" not in termination_a:
+                if termination_a["termination_type"] == "dcim.interface":
+                    intf_a = nb.dcim.interfaces.get(device=termination_a["device"], name=termination_a["interface"])
+                elif termination_a["termination_type"] == "dcim.rearport":
+                    intf_a = nb.dcim.rear_ports.get(device=termination_a["device"], name=termination_a["interface"])
+                nb.dcim.cables.create(
+                    **cable_a,
+                    a_terminations=[{"object_type": termination_a["termination_type"], "object_id": intf_a.id}],
+                    b_terminations=[{"object_type": "circuits.circuittermination", "object_id": cterm_a.id}]
+                )
             # add cable Z
-            intf_b = nb.dcim.interfaces.get(device=termination_b["device"], name=termination_b["interface"])
-            nb.dcim.cables.create(
-                **cable_b,
-                a_terminations=[{"object_type": "dcim.interface","object_id": intf_b.id}],
-                b_terminations=[{"object_type": "circuits.circuittermination","object_id": cterm_z.id}]
-            )            
+            if "provider_network" not in termination_b:
+                if termination_b["termination_type"] == "dcim.interface":
+                    intf_b = nb.dcim.interfaces.get(device=termination_b["device"], name=termination_b["interface"])
+                elif termination_b["termination_type"] == "dcim.rearport":
+                    intf_b = nb.dcim.rear_ports.get(device=termination_b["device"], name=termination_b["interface"])
+                nb.dcim.cables.create(
+                    **cable_b,
+                    a_terminations=[{"object_type": termination_b["termination_type"], "object_id": intf_b.id}],
+                    b_terminations=[{"object_type": "circuits.circuittermination", "object_id": cterm_z.id}]
+                )            
         except Exception as e:
             log.exception(f"creating circuit '{item}' error '{e}'")      
             
@@ -1362,7 +1469,16 @@ def create_config_templates():
             except Exception as e:
                 log.error(f"creating config template '{item['name']}' error associating with device {'device'} '{e}'")                     
             
-    
+ 
+def creat_circuit_provider_networks():
+    log.info("creating circuit provider networks")    
+    for item in circuit_provider_networks:
+        try:
+            nb.circuits.provider_networks.create(**item)
+        except Exception as e:
+            log.error(f"creating provider network '{item}' error '{e}'")
+            
+        
 # -----------------------------------------------------------------------------------
 # DELETE functions
 # -----------------------------------------------------------------------------------
@@ -1635,60 +1751,83 @@ def delete_config_templates():
         log.error(f"deleting all config templates error '{e}'")  
         
         
+def delete_circuit_provider_accounts():
+    log.info("deleting all circuit provider accounts")
+    try:
+        accounts = nb.circuits.provider_accounts.all()
+        for i in accounts:
+            i.delete()
+    except Exception as e:
+        log.error(f"deleting all circuit provider accounts error '{e}'")      
+        
+
+def delete_circuit_provider_networks():
+    log.info("deleting all circuit provider networks")
+    try:
+        networks = nb.circuits.provider_networks.all()
+        for i in networks:
+            i.delete()
+    except Exception as e:
+        log.error(f"deleting all circuit provider networks error '{e}'") 
+        
+
 def clean_up_netbox():
-    # delete_netbox_secrets_secrets()
-    # delete_netbox_secrets_roles()
-    # delete_connections()
-    # delete_circuits()
-    # delete_circuit_providers()
-    # delete_circuit_types()
-    # delete_devices()
-    # delete_ip_addresses()
-    # delete_vrfs()
-    # delete_vlans()
-    # delete_device_roles()
-    # delete_device_types()
-    # delete_platforms()
-    # delete_manufacturers()
-    # delete_tags()
-    # delete_racks()
-    # delete_sites()
-    # delete_regions()
-    # delete_tenants()
-    # delete_inventory_items_roles()
+    delete_netbox_secrets_secrets()
+    delete_netbox_secrets_roles()
+    delete_connections()
+    delete_circuits()
+    delete_circuit_provider_accounts()
+    delete_circuit_provider_networks()
+    delete_circuit_providers()
+    delete_circuit_types()
+    delete_devices()
+    delete_ip_addresses()
+    delete_vrfs()
+    delete_vlans()
+    delete_device_roles()
+    delete_device_types()
+    delete_platforms()
+    delete_manufacturers()
+    delete_tags()
+    delete_racks()
+    delete_sites()
+    delete_regions()
+    delete_tenants()
+    delete_inventory_items_roles()
     delete_config_templates()
     
 
 def populate_netbox():
-    # create_regions()
-    # ceate_tenants()
-    # create_sites()
-    # create_racks()
-    # create_manufacturers()
-    # create_device_types()
-    # create_device_roles()
-    # create_platforms()
-    # create_vrfs()
-    # create_ip_addresses()
-    # create_tags()
-    # create_devices()
-    # create_vlans()
-    # create_interfaces()
-    # create_power_outlet_ports()
-    # create_power_ports()
-    # create_inventory_items_roles()
-    # create_inventory_items()
-    # create_console_server_ports()
-    # create_console_ports()
-    # associate_ip_adress_to_devices()
-    # create_connections()
-    # create_netbox_secrets_roles()
-    # create_netbox_secrets_secrets()
-    # create_circuit_providers()
-    # if NB_VERSION.startswith("3.5"):
-    #     create_circuit_provider_accounts()
-    # create_circuit_types()
-    # create_circuits()
+    create_regions()
+    ceate_tenants()
+    create_sites()
+    create_racks()
+    create_manufacturers()
+    create_device_types()
+    create_device_roles()
+    create_platforms()
+    create_vrfs()
+    create_ip_addresses()
+    create_tags()
+    create_devices()
+    create_vlans()
+    create_interfaces()
+    create_power_outlet_ports()
+    create_power_ports()
+    create_inventory_items_roles()
+    create_inventory_items()
+    create_console_server_ports()
+    create_console_ports()
+    associate_ip_adress_to_devices()
+    create_connections()
+    create_netbox_secrets_roles()
+    create_netbox_secrets_secrets()
+    create_circuit_providers()
+    creat_circuit_provider_networks()
+    if NB_VERSION.startswith("3.5"):
+        create_circuit_provider_accounts()
+    create_circuit_types()
+    create_circuits()
     create_config_templates()
     
     

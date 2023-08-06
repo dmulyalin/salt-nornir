@@ -2211,7 +2211,7 @@ def do(*args, **kwargs):
     Any other keywords defined inside the step are ignored.
 
     :param stop_on_error: (bool) if True (default) stops execution on error in step,
-        continue execution in error if False
+        continue execution on error if False
     :param filepath: (str) URL to file with actions steps supporting any of ``cp.get_url``
         URIs: salt://, http://, https://, ftp://, s3://, swift:// and file:// (local filesystem)
     :param default_renderer: (str) shebang string to render file using ``slsutil.renderer`,

@@ -55,6 +55,8 @@ def test_state_nr_workflow():
         tgt_type="glob",
         timeout=60,
     )
+    print("Pre-workflow run conmfig change:")
+    pprint.pprint(ret_0)
     print("First run results:")
     pprint.pprint(ret_1st)
     print("Second run results:")
@@ -907,6 +909,123 @@ def test_workflow_with_nr_test_job_data():
     res = list(ret["nrp1"].values())[0]
     assert res["changes"]["summary"]["ceos1"][0]["ACL Validation (No additional incorrect ACL's are present)"] == "PASS"
     assert res["changes"]["summary"]["ceos2"][0]["ACL Validation (No additional incorrect ACL's are present)"] == "FAIL"
+
+    
+def test_workflow_with_stop_if_fail():
+    """
+    Test to verify stop_if_fail works and all steps for host skipped.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_stop_if_fail"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    pprint.pprint(res["changes"]["summary"])
+    assert res["changes"]["summary"] == {'ceos1': [{'run_test': 'PASS'},
+                                                   {'collect_config': 'PASS'},
+                                                   {'collect_version': 'PASS'}],
+                                         'ceos2': [{'run_test': 'FAIL'}, # this step fails and has stop_if_fail: True, causing ceos2 to stop
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}]}
+    
+
+def test_state_nr_workflow_stop_if_fail_with_traceback_task():
+    """
+    Test to verify stop_if_fail works and all steps for host skipped.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_stop_if_fail_with_traceback_task"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    pprint.pprint(res["changes"]["summary"])
+    assert res["changes"]["summary"] == {'ceos1': [{'run_nr_test_task_with_excption': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}],
+                                         'ceos2': [{'run_nr_test_task_with_excption': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}]}
+    
+{'ceos1': [{'run_nr_test_task_with_excption': 'ERROR'},
+           {'collect_config': 'SKIP'},
+           {'collect_version': 'SKIP'}],
+ 'ceos2': [{'run_nr_test_task_with_excption': 'ERROR'},
+           {'collect_config': 'SKIP'},
+           {'collect_version': 'SKIP'}]}
+
+
+def test_state_nr_workflow_stop_if_fail_with_traceback_result():
+    """
+    Test to verify stop_if_fail works and all steps for host skipped.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_stop_if_fail_with_traceback_result"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    pprint.pprint(res["changes"]["summary"])
+    assert res["changes"]["summary"] == {'ceos1': [{'run_nr_test_task_with_excption': 'ERROR'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}],
+                                         'ceos2': [{'run_nr_test_task_with_excption': 'ERROR'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}]}
+    
+    
+def test_state_nr_workflow_stop_if_fail_with_traceback_task_list_result():
+    """
+    Test to verify stop_if_fail works and all steps for host skipped.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_stop_if_fail_with_traceback_task_list_result"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    pprint.pprint(res["changes"]["summary"])
+    assert res["changes"]["summary"] == {'ceos1': [{'nornir_salt.plugins.tasks.nr_test': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}],
+                                         'ceos2': [{'nornir_salt.plugins.tasks.nr_test': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}]}
+    
+
+def test_state_nr_workflow_stop_if_fail_nr_do_action():
+    """
+    Test to verify stop_if_fail works and all steps for host skipped.
+    """
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="state.sls",
+        arg=["test_state_nr_workflow_stop_if_fail_nr_do_action"],
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(list(ret["nrp1"].values())[0])      
+    res = list(ret["nrp1"].values())[0]
+    pprint.pprint(res["changes"]["summary"])
+    assert res["changes"]["summary"] == {'ceos1': [{'run_test': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}],
+                                         'ceos2': [{'run_test': 'FAIL'},
+                                                   {'collect_config': 'SKIP'},
+                                                   {'collect_version': 'SKIP'}]}
     
 # def test_state_nr_workflow_some_steps_has_report_false():
 #     """Some of the steps have report=False"""
