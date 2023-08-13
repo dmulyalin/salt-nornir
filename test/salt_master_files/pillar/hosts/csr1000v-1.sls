@@ -1,9 +1,9 @@
 hosts:
   csr1000v-1:
-    hostname: sandbox-iosxe-latest-1.cisco.com
+    hostname: sandbox-iosxe-recomm-1.cisco.com
     platform: cisco_ios
     username: developer
-    password: C1sco12345
+    password: lastorangerestoreball8876
     port: 22
     connection_options:
       pyats:
@@ -13,7 +13,7 @@ hosts:
               os: iosxe
               connections:
                 default:
-                  ip: sandbox-iosxe-latest-1.cisco.com
+                  ip: sandbox-iosxe-recomm-1.cisco.com
                   protocol: ssh
                   port: 22
       http:

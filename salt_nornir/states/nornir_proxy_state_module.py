@@ -368,15 +368,12 @@ def _run_workflow_step(
         matched_hosts = __salt__["nr.nornir"](
             "hosts", **step["kwargs"], identity=_form_identity("workflow")
         )
-        
+
         # exclude hosts that need to stop workflow for
         if stop_if_fail_hosts:
-            matched_hosts = [
-                h for h in matched_hosts 
-                if h not in stop_if_fail_hosts
-            ]
+            matched_hosts = [h for h in matched_hosts if h not in stop_if_fail_hosts]
             step["kwargs"]["FL"] = list(matched_hosts)
-        
+
         # return when have no hosts to run step against
         if not matched_hosts:
             if report_all:
@@ -492,7 +489,7 @@ def _run_workflow_step(
             if step.get("stop_if_fail"):
                 stop_if_fail_hosts.add(host_name)
 
-                
+
 def _decide_state_execution_status(options, ret, steps_failed, steps_passed):
     """
     Helper function to decide state execution status based on options
@@ -625,7 +622,7 @@ def workflow(*args, **kwargs):
     :param run_if_fail_all: (list) this step will run if ``all`` of the previous steps in a list failed
     :param run_if_pass_all: (list) this step will run if ``all`` of the previous steps in a list passed
     :param stop_if_fail: (bool) Stop workflow execution for host if this step failed
-    
+
     While workflow steps can call any execution module function, ``run_if_x``
     properly supported only for Nornir Execution Module functions: ``nr.task``,
     ``nr.cli``, ``nr.cfg_gen``, ``nr.cfg``, ``nr.test``, ``nr.nc``, ``nr.http``,

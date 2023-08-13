@@ -377,7 +377,7 @@ def get_interfaces(
                 "fields": intf_fields,
             }
         }
-        
+
         # add query to retrieve inventory items
         if add_inventory_items:
             inv_filters = {"device": hosts, "component_type": "dcim.interface"}
@@ -892,12 +892,15 @@ def get_connections(
                     connections_dict[device_name][termination["name"]] = {
                         # path is reachable if all segments' cables are connected
                         "reachable": all(
-                            c[1]["status"].lower() == "connected" for c in path_trace
+                            c[1]["status"].lower() == "connected"
+                            if isinstance(c[1], dict)
+                            else True
+                            for c in path_trace
                         ),
                         "cables": [c[1] for c in path_trace],
-                        "remote_device": remote_device_terminations[0]["device"][
-                            "name"
-                        ],
+                        "remote_device": remote_device_terminations[0]
+                        .get("device", {})
+                        .get("name"),
                         "remote_interface": (
                             remote_device_terminations[0]["name"]
                             if len(remote_device_terminations) == 1
@@ -909,6 +912,18 @@ def get_connections(
                         if len(remote_device_terminations) == 1
                         else True,
                     }
+                    # check if far end termination is provider network
+                    if "provider-networks" in remote_device_terminations[0]["url"]:
+                        connections_dict[device_name][termination["name"]].update(
+                            {
+                                "remote_device": None,
+                                "remote_interface": None,
+                                "provider_network": remote_device_terminations[0][
+                                    "name"
+                                ],
+                                "remote_termination_type": "provider_network",
+                            }
+                        )
                 # retrieve local cable connection to the circuit
                 elif remote_termination_type == "circuittermination":
                     connections_dict[device_name][termination["name"]] = {
@@ -1199,20 +1214,17 @@ def run_dir(**kwargs):
 def _calculate_peer_ip(address):
     """
     Helper function to claculate peer IP for ptp subnets
-    
+
     :param address: Netbox IP adddress string of '10.0.0.1/30' format
     """
-    if not any(
-        address.endswith(k) 
-        for k in ["/30", "/31", "/120", "126", "/127"]
-    ):
+    if not any(address.endswith(k) for k in ["/30", "/31", "/120", "126", "/127"]):
         return None
     ip_interface = ipaddress.ip_interface(address)
     net_hosts = list(ip_interface.network.hosts())
     peer_ip = net_hosts[0] if net_hosts[0] != ip_interface.ip else net_hosts[1]
-    return f"{str(peer_ip)}/{ip_interface.network.prefixlen}"    
-    
-    
+    return f"{str(peer_ip)}"
+
+
 def get_circuits(
     params=None,
     sync=False,
@@ -1226,7 +1238,7 @@ def get_circuits(
 ) -> dict:
     """
     Function to retrieve circuits details from Netbox
-    
+
     :param params: dictionary with salt_nornir_netbox parameters
     :param sync: if True, saves get circuits results to host's in-memory
         inventory data under ``circuits`` key, if sync is a string, provided
@@ -1240,28 +1252,28 @@ def get_circuits(
     :param kwargs: Fx filters to filter hosts to retrieve circuits for
     :param get_interface_details: boolen, indicating if need to retrieve interface
         details, inventory items and IP addresses
-    :return: dictionary keyed by device name with circuits details    
-    
-    Circuits data retrived for a set of hosts first by queriyng netbox for a 
+    :return: dictionary keyed by device name with circuits details
+
+    Circuits data retrived for a set of hosts first by queriyng netbox for a
     list of sites where hosts belongs to, next all circuits for given sites
-    retrived from Netbox using GraphQL API, after that for each circuit one 
+    retrived from Netbox using GraphQL API, after that for each circuit one
     of the terminations path traced using REST API endpoint -
     `/api/circuits/circuit-terminations/{id}/paths/`. Once full path for the
-    circuit retrived interface and device details extracted from path data 
+    circuit retrived interface and device details extracted from path data
     for each end and stored in circuits data.
-    
-    When `get_interface_details` set to True interface details retrieved from 
-    Netbox using `get_interfaces` function together with inventory items, 
-    child interfaces and IP addresses. For each IP address `peer_ip` calculated 
-    and added to IP data if subnet is one of prefix length - `/30`, `/31`, 
+
+    When `get_interface_details` set to True interface details retrieved from
+    Netbox using `get_interfaces` function together with inventory items,
+    child interfaces and IP addresses. For each IP address `peer_ip` calculated
+    and added to IP data if subnet is one of prefix length - `/30`, `/31`,
     `/127`, `/126`, `/120` by calculating second IP value.
-    
-    When circuit connects to provider network, no interface, instead of 
-    `remote_device` and `remote_interface` keys, circuit contains 
+
+    When circuit connects to provider network, no interface, instead of
+    `remote_device` and `remote_interface` keys, circuit contains
     `provider_network` key with value referring to provider network name.
-    
-    Sample circuits data::        
-        
+
+    Sample circuits data::
+
         {'CID2': {'comments': 'some comments',
                   'commit_rate': 10000,
                   'custom_fields': {},
@@ -1336,7 +1348,7 @@ def get_circuits(
                   'tenant': None,
                   'type': 'DarkFibre'},
         }
-    
+
     """
     device_sites_fields = ["site {slug}"]
     circuit_fields = [
@@ -1354,7 +1366,7 @@ def get_circuits(
         "custom_fields",
         "comments",
     ]
-    
+
     # retrieve a list of hosts to get circuits for
     hosts = hosts or __salt__["nr.nornir"](
         "hosts",
@@ -1394,16 +1406,20 @@ def get_circuits(
                     f"netbox_utils:get_circuits '{host}' deleted get_circuits data from cache"
                 )
         cache_obj.close()
-        
+
     # check if still has hosts left to retrieve data for
     if hosts:
         # retrieve list of hosts' sites
-        hosts_sites = nb_graphql("device_list", {"name": hosts}, device_sites_fields, params)
-        hosts_sites = [i["site"]["slug"] for i in hosts_sites]  
+        hosts_sites = nb_graphql(
+            "device_list", {"name": hosts}, device_sites_fields, params
+        )
+        hosts_sites = [i["site"]["slug"] for i in hosts_sites]
 
         # retrieve all circuits for hists' sites
-        all_circuits = nb_graphql("circuit_list", {"site": hosts_sites}, circuit_fields, params)
-        
+        all_circuits = nb_graphql(
+            "circuit_list", {"site": hosts_sites}, circuit_fields, params
+        )
+
         # iterate over circuits and map them to hosts
         for circuit in all_circuits:
             cid = circuit.pop("cid")
@@ -1411,59 +1427,81 @@ def get_circuits(
             circuit["type"] = circuit["type"]["name"]
             circuit["provider"] = circuit["provider"]["name"]
             circuit["tenant"] = circuit["tenant"]["name"] if circuit["tenant"] else None
-            circuit["provider_account"] = circuit["provider_account"]["name"] if circuit["provider_account"] else None
+            circuit["provider_account"] = (
+                circuit["provider_account"]["name"]
+                if circuit["provider_account"]
+                else None
+            )
             termination_a = circuit.pop("termination_a")
             termination_z = circuit.pop("termination_z")
             termination_a = termination_a["id"] if termination_a else None
-            termination_z = termination_z["id"] if termination_z else None   
-            
+            termination_z = termination_z["id"] if termination_z else None
+
             # retrieve A or Z termination path using Netbox REST API
             if termination_a is not None:
                 circuit_path = nb_rest(
-                    method="get", 
-                    api=f"/circuits/circuit-terminations/{termination_a}/paths/", 
-                    __salt__=__salt__
+                    method="get",
+                    api=f"/circuits/circuit-terminations/{termination_a}/paths/",
+                    __salt__=__salt__,
                 )
             elif termination_z is not None:
                 circuit_path = nb_rest(
-                    method="get", 
-                    api=f"/circuits/circuit-terminations/{termination_z}/paths/", 
-                    __salt__=__salt__
+                    method="get",
+                    api=f"/circuits/circuit-terminations/{termination_z}/paths/",
+                    __salt__=__salt__,
                 )
             else:
                 continue
-                
+
             # forma A and Z connection endpoints
             end_a = {
-                "device": circuit_path[0]["path"][0][0].get("device", {}).get("name", False),
-                "provider_network": "provider-network" in circuit_path[0]["path"][0][0]["url"],
+                "device": circuit_path[0]["path"][0][0]
+                .get("device", {})
+                .get("name", False),
+                "provider_network": "provider-network"
+                in circuit_path[0]["path"][0][0]["url"],
                 "name": circuit_path[0]["path"][0][0]["name"],
             }
             end_z = {
-                "device": circuit_path[0]["path"][-1][-1].get("device", {}).get("name", False),
-                "provider_network": "provider-network" in circuit_path[0]["path"][-1][-1]["url"],
+                "device": circuit_path[0]["path"][-1][-1]
+                .get("device", {})
+                .get("name", False),
+                "provider_network": "provider-network"
+                in circuit_path[0]["path"][-1][-1]["url"],
                 "name": circuit_path[0]["path"][-1][-1]["name"],
             }
             circuit["is_active"] = circuit_path[0]["is_active"]
-            
+
             # map path ends to devices
             if end_a["device"] and end_a["device"] in hosts:
                 circuits_dict[end_a["device"]][cid] = circuit
                 circuits_dict[end_a["device"]][cid]["interface"] = end_a["name"]
                 if end_z["device"]:
-                    circuits_dict[end_a["device"]][cid]["remote_device"] = end_z["device"]
-                    circuits_dict[end_a["device"]][cid]["remote_interface"] = end_z["name"]
+                    circuits_dict[end_a["device"]][cid]["remote_device"] = end_z[
+                        "device"
+                    ]
+                    circuits_dict[end_a["device"]][cid]["remote_interface"] = end_z[
+                        "name"
+                    ]
                 elif end_z["provider_network"]:
-                    circuits_dict[end_a["device"]][cid]["provider_network"] = end_z["name"]
+                    circuits_dict[end_a["device"]][cid]["provider_network"] = end_z[
+                        "name"
+                    ]
             if end_z["device"] and end_z["device"] in hosts:
                 circuits_dict[end_z["device"]][cid] = circuit
                 circuits_dict[end_z["device"]][cid]["interface"] = end_z["name"]
                 if end_a["device"]:
-                    circuits_dict[end_z["device"]][cid]["remote_device"] = end_a["device"]
-                    circuits_dict[end_z["device"]][cid]["remote_interface"] = end_a["name"]
+                    circuits_dict[end_z["device"]][cid]["remote_device"] = end_a[
+                        "device"
+                    ]
+                    circuits_dict[end_z["device"]][cid]["remote_interface"] = end_a[
+                        "name"
+                    ]
                 elif end_a["provider_network"]:
-                    circuits_dict[end_z["device"]][cid]["provider_network"] = end_a["name"]
-            
+                    circuits_dict[end_z["device"]][cid]["provider_network"] = end_a[
+                        "name"
+                    ]
+
         # retrieve itnerfaces details
         if get_interface_details:
             interfaces_data = get_interfaces(
@@ -1475,7 +1513,7 @@ def get_circuits(
                 proxy_id=proxy_id,
                 hosts=hosts,
                 cache=cache,
-                **kwargs,                
+                **kwargs,
             )
             # iterate over hosts and add interface details for each circuit
             for hostname, host_interfaces in interfaces_data.items():
@@ -1483,20 +1521,36 @@ def get_circuits(
                     interface_name = circuit_data["interface"]
                     circuit_data["interface"] = host_interfaces[interface_name]
                     circuit_data["interface"]["name"] = interface_name
-                    circuit_data["interface"]["vrf"] = circuit_data["interface"]["vrf"]["name"] if circuit_data["interface"]["vrf"] else None
+                    circuit_data["interface"]["vrf"] = (
+                        circuit_data["interface"]["vrf"]["name"]
+                        if circuit_data["interface"]["vrf"]
+                        else None
+                    )
                     circuit_data["subinterfaces"] = {}
                     # add peer IP details for ptp subnets
                     for ip_address in circuit_data["interface"]["ip_addresses"]:
-                        ip_address["peer_ip"] = _calculate_peer_ip(ip_address["address"])
+                        ip_address["peer_ip"] = _calculate_peer_ip(
+                            ip_address["address"]
+                        )
                     # add child interfaces details
-                    for child_interface in circuit_data["interface"].pop("child_interfaces"):
+                    for child_interface in circuit_data["interface"].pop(
+                        "child_interfaces"
+                    ):
                         child_interface_data = host_interfaces[child_interface["name"]]
-                        child_interface_data["vrf"] = child_interface_data["vrf"]["name"] if child_interface_data["vrf"] else None
-                        circuit_data["subinterfaces"][child_interface["name"]] = child_interface_data 
+                        child_interface_data["vrf"] = (
+                            child_interface_data["vrf"]["name"]
+                            if child_interface_data["vrf"]
+                            else None
+                        )
+                        circuit_data["subinterfaces"][
+                            child_interface["name"]
+                        ] = child_interface_data
                         # add peer IP details for ptp subnets
                         for ip_address in child_interface_data["ip_addresses"]:
-                            ip_address["peer_ip"] = _calculate_peer_ip(ip_address["address"])
-            
+                            ip_address["peer_ip"] = _calculate_peer_ip(
+                                ip_address["address"]
+                            )
+
         # cache connections data for each host
         if HAS_DISKCACHE and cache:
             cache_obj = FanoutCache(directory=cache_directory, shards=1)
@@ -1507,7 +1561,7 @@ def get_circuits(
                     f"netbox_utils:get_circuits '{host}' cached get_circuits data"
                 )
             cache_obj.close()
-            
+
     # save results to hosts inventory if requested to do so
     if sync:
         key = sync if isinstance(sync, str) else "circuits"
@@ -1519,7 +1573,7 @@ def get_circuits(
                 for host, circuits in circuits_dict.items()
             ],
         )
-    
+
     return circuits_dict
 
 

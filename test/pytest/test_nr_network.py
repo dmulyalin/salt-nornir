@@ -140,3 +140,17 @@ def test_nr_network_resolve_dns_custom_servers_timeout():
     assert ret["nrp2"]["csr1000v-1"]["resolve_dns"]["failed"] == True
     assert ret["nrp2"]["iosxr1"]["resolve_dns"]["failed"] == True
     assert ret["nrp2"]["nxos1"]["resolve_dns"]["failed"] == True
+    
+    
+def test_nr_network_ping():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.network",
+        arg=["ping"],
+        kwarg={"count": 5},
+        tgt_type="glob",
+        timeout=60,
+    )
+    pprint.pprint(ret)
+    assert (ret["nrp1"]["ceos1"]["ping"]).count("Reply from 10.0.1.4") == 5
+    assert (ret["nrp1"]["ceos2"]["ping"]).count("Reply from 10.0.1.5") == 5

@@ -189,8 +189,8 @@ def test_nr_file_read_no_filegroup_provided():
     )
     pprint.pprint(ret)
 
-    assert "none is not an allowed value" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
-    assert "none is not an allowed value" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "ValidationError" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "ValidationError" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
     
 # test_nr_file_read_no_filegroup_provided()
 

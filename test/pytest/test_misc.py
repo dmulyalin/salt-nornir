@@ -1002,7 +1002,7 @@ def test_connections_idle_timeout(fixture_modify_proxy_pillar):
     # verify connections closed
     for worker_name, connections_data in connections_after["nrp1"].items():
         for host_name, host_data in connections_data.items():
-            assert host_data["connections:ls"] == [], "All {} host's connections should be closed".format(host_name)
+            assert host_data["connections"] == [], "All {} host's connections should be closed".format(host_name)
         
 # test_connections_idle_timeout()
 
@@ -1099,24 +1099,24 @@ def test_connections_via_jumphost(remove_hosts_at_the_end):
     assert "Clock source" in cli_cmd_1st["nrp1"]["ceos2-1"]["show clock"]
     # verify active connections after first command run
     for host_name, conn_data in active_connections_before["nrp1"]["nornir-worker-1"].items():
-        assert len(conn_data["connections:ls"]) > 0, "Has no active connections via nornir-worker-1"
-        for item in conn_data["connections:ls"]:
+        assert len(conn_data["connections"]) > 0, "Has no active connections via nornir-worker-1"
+        for item in conn_data["connections"]:
             assert "netmiko" in item["connection_name"] or "jumphost" in item["connection_name"], "Unexpected connection name"
     # verify disconnect call
     for host_name, conn_data in disconnect_connections["nrp1"]["nornir-worker-1"].items():
-        assert len(conn_data["connections:close"]) > 0, "No disconnected connections via nornir-worker-1"
-        for item in conn_data["connections:close"]:
+        assert len(conn_data["connections"]) > 0, "No disconnected connections via nornir-worker-1"
+        for item in conn_data["connections"]:
             assert item["status"] == "closed", "Unexpected connection close status, host: {}, connection: {}".format(host_name, item)
     # verify active connections after disconnect
     for host_name, conn_data in active_connections_after_disconn["nrp1"]["nornir-worker-1"].items():
-        assert len(conn_data["connections:ls"]) == 0, "Has active connections via nornir-worker-1"    
+        assert len(conn_data["connections"]) == 0, "Has active connections via nornir-worker-1"    
     # verify command run after disconnection
     assert "Clock source" in cli_cmd_after_disconnect["nrp1"]["ceos1-1"]["show clock"]
     assert "Clock source" in cli_cmd_after_disconnect["nrp1"]["ceos2-1"]["show clock"]
     # verify active connections after last command run
     for host_name, conn_data in active_connections_after_recon["nrp1"]["nornir-worker-1"].items():
-        assert len(conn_data["connections:ls"]) > 0, "Has no active connections via nornir-worker-1 after reconnecting"
-        for item in conn_data["connections:ls"]:
+        assert len(conn_data["connections"]) > 0, "Has no active connections via nornir-worker-1 after reconnecting"
+        for item in conn_data["connections"]:
             assert "netmiko" in item["connection_name"] or "jumphost" in item["connection_name"], "Unexpected connection name"   
             
 # test_connections_via_jumphost()
@@ -1205,10 +1205,10 @@ def test_proxy_always_alive_false(fixture_modify_proxy_pillar, remove_hosts_at_t
     # verify connections status
     for t in connections:
         for wkr in ["nornir-worker-1", "nornir-worker-2", "nornir-worker-3"]:
-            assert t["nrp1"][wkr]["ceos1"]["connections:ls"] == [], "Unexpected connections status for ceos1"
-            assert t["nrp1"][wkr]["ceos2"]["connections:ls"] == [], "Unexpected connections status for ceos2"
-            assert t["nrp1"][wkr]["ceos1-1"]["connections:ls"] == [], "Unexpected connections status for ceos1-1"
-            assert t["nrp1"][wkr]["ceos2-1"]["connections:ls"] == [], "Unexpected connections status for ceos2-1"
+            assert t["nrp1"][wkr]["ceos1"]["connections"] == [], "Unexpected connections status for ceos1"
+            assert t["nrp1"][wkr]["ceos2"]["connections"] == [], "Unexpected connections status for ceos2"
+            assert t["nrp1"][wkr]["ceos1-1"]["connections"] == [], "Unexpected connections status for ceos1-1"
+            assert t["nrp1"][wkr]["ceos2-1"]["connections"] == [], "Unexpected connections status for ceos2-1"
 
 def test_worker_target_tasks_distribution():
     """

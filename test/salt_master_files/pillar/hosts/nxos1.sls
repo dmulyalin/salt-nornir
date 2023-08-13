@@ -27,6 +27,8 @@ hosts:
               os: nxos
               connections:
                 default:
+                  arguments:
+                    learn_hostname: true
                   ip: sandbox-nxos-1.cisco.com
                   protocol: ssh
                   port: 22      

@@ -19,7 +19,7 @@ from pydantic import (
 from typing import Union, Optional, List, Any, Dict, Callable
 from nornir_salt.utils.pydantic_models import FilesCallsEnum, model_ffun_fx_filters
 from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
-    
+
 try:
     from picle import Cache as PicleCache
 
@@ -50,7 +50,7 @@ GLOBAL_CACHE = (
     PicleCache("/var/salt-nornir/master/cache/picle.cache") if HAS_PICLE else {}
 )
 
-        
+
 # ---------------------------------------------------------------
 # Execution Module Function Models
 # ---------------------------------------------------------------
@@ -232,7 +232,7 @@ class model_exec_nr_test(BaseModel):
     use_ps: Optional[StrictBool] = None
     cli: Optional[
         Dict
-    ]  = None # if reference model_exec_nr_cli here it fails as test's cli might not contain commands and its normal
+    ] = None  # if reference model_exec_nr_cli here it fails as test's cli might not contain commands and its normal
     failed_only: Optional[StrictBool] = None
     remove_tasks: Optional[StrictBool] = None
     table: Optional[Union[EnumExecTableTypes, Dict, StrictBool]] = "brief"
@@ -241,7 +241,7 @@ class model_exec_nr_test(BaseModel):
     reverse: Optional[StrictBool] = None
     tests: Optional[Union[StrictStr, List[StrictStr]]] = None
     worker: Optional[StrictInt] = None
-    
+
     class Config:
         extra = "allow"
 
@@ -262,7 +262,9 @@ class model_exec_nr_nc(ModelExecCommonArgs):
     source: Optional[StrictStr] = None
     target: Optional[StrictStr] = None
     config: Optional[StrictStr] = None
-    ncclient_filter: Optional[Union[List[StrictStr], StrictStr]] = Field(None, alias="filter")
+    ncclient_filter: Optional[Union[List[StrictStr], StrictStr]] = Field(
+        None, alias="filter"
+    )
     scrapli_filter: Optional[StrictStr] = Field(None, alias="filter_")
 
     class Config:
@@ -557,6 +559,7 @@ class model_exec_nr_snmp(ModelExecCommonArgs):
 
 class EnumNrNetwork(str, Enum):
     resolve_dns = "resolve_dns"
+    ping = "ping"
 
 
 class model_exec_nr_network(ModelExecCommonArgs):
@@ -610,7 +613,7 @@ class model_exec_nr_netbox(model_ffun_fx_filters):
     hosts: Optional[List[StrictStr]] = None
     cache: Optional[Union[StrictBool, StrictStr]] = None
     cache_ttl: Optional[StrictInt] = None
-        
+
     class Config:
         extra = "allow"
 
@@ -657,7 +660,7 @@ class StateWorkflowStep(BaseModel):
     run_if_fail_all: Optional[List[StrictStr]] = None
     run_if_pass_all: Optional[List[StrictStr]] = None
     stop_if_fail: Optional[StrictBool] = None
-    
+
     class Config:
         extra = "forbid"
 
@@ -1014,4 +1017,3 @@ class SaltNornirShell(BaseModel):
     @classmethod
     def source_hosts(self):
         return list(GLOBAL_CACHE["hosts"])
-

@@ -83,6 +83,12 @@ hosts:
       inband:
         hostname: 10.0.1.4
         port: 22
+      inband_scrapli:
+        extras:
+          auth_strict_key: false
+          ssh_config_file: false
+        hostname: 10.0.1.4
+        port: 22
       puresnmp:
         extras:
           community: public
@@ -244,10 +250,9 @@ nornir:
       description: Learn uptime info
       function: nr.cli
 proxy:
+  cache_base_path: /var/salt-nornir/{proxy_id}/cache/
   multiprocessing: true
   proxytype: nornir
-  cache_base_path: "/var/salt-nornir/{proxy_id}/cache/"
-  
 salt_nornir_netbox_pillar:
   host_add_netbox_data: salt_nornir_netbox_pillar_test
   hosts_filters:
