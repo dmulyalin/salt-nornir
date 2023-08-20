@@ -1061,6 +1061,11 @@ nr.nornir
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
 
+nr.service
++++++++++
+
+.. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.service
+
 nr.snmp
 +++++++++
 
@@ -1910,7 +1915,7 @@ def test(*args, **kwargs):
                 raise CommandExecutionError(
                     f"Tests suite '{suite}' rendering failed for '{host_name}':\n{v}"
                 )
-            else:
+            elif v.strip():
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
                     string=v, default_renderer="yaml"
                 )
@@ -1959,7 +1964,7 @@ def test(*args, **kwargs):
                 raise CommandExecutionError(
                     f"Tests suite '{suite}' rendering failed for '{host_name}', error:\n{v}"
                 )
-            else:
+            elif v.strip():
                 loaded_suite[host_name] = __salt__["slsutil.renderer"](
                     string=v, default_renderer="yaml"
                 )
@@ -2802,6 +2807,7 @@ def nornir_fun(fun, *args, **kwargs):
         salt nrp1 nr.nornir inventory read_host FB="R1"
         salt nrp1 nr.nornir inventory call=delete_host name="R1"
         salt nrp1 nr.nornir inventory update_defaults username=foo password=bar data='{"f": "b"}'
+        salt nrp1 nr.nornir inventory read_host_data keys="['hostname', 'platform', 'circuits']"
         salt nrp1 nr.nornir stats stat="proxy_minion_id"
         salt nrp1 nr.nornir version
         salt nrp1 nr.nornir shutdown
@@ -3339,3 +3345,21 @@ def network(fun, *args, **kwargs):
         kwargs=kwargs,
         identity=_form_identity(kwargs, "network"),
     )
+
+
+def service(name, *args, **kwargs):
+    """
+    Function to interact with services definitions.
+
+    :param name: service name
+    :param action: what action to do with service - activate, list, deactivate, verify
+
+    **Service Actions Description**
+
+    ``activate`` - implements service into the network
+
+    Sample usage:
+
+        salt nrp1 nr.service ntp apply
+    """
+    return "nr.service not implemented"

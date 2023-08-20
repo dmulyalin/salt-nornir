@@ -1,0 +1,8 @@
+- task: "show version"
+  test: contains
+  pattern: "cEOS,F34.b"
+  name: check ceos version
+- test: contains_lines
+  pattern: ["1.1.1.10", "1.1.1.11"]
+  task: "show ntp associations"
+  name: check NTP config
