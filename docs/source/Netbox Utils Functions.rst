@@ -1,1 +1,1 @@
-.. automodule:: salt_nornir.netbox_utils.py
+.. automodule:: salt_nornir.netbox_utils
