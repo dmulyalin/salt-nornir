@@ -588,3 +588,19 @@ def test_netbox_get_circuits_sync_true():
                             'nornir-worker-2': [{'fceos4': True}],
                             'nornir-worker-3': [{'fceos4': True}]}}
     assert all(k in inventory_data["nrp3"]["hosts"]["fceos4"]["data"]["circuits"] for k in ["CID1", "CID2", "CID3"])
+    
+    
+def test_netbox_get_connections_incomplete_path_with_trace():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_connections"], 
+        kwarg={
+            "FB": "fceos4",
+            "trace": True,
+            "cache": False,
+        },
+        tgt_type="glob", 
+        timeout=60
+    )    
+    pprint.pprint(ret)

@@ -2480,6 +2480,9 @@ def file(*args, **kwargs):
     Function to manage Nornir-salt files.
 
     :param call: (str) files task to call - ls, rm, read, diff
+    :param base_url: (str) base path to files, default is ``/var/salt-nornir/{proxy_id}/files/``
+    :param index: (str) index filename within ``base_url`` folder to read
+        files info from, default value is equal to proxy id
     :param kwargs: (dict) any additional kwargs such ``Fx`` filters or call
         function arguments
 
@@ -2540,6 +2543,12 @@ def file(*args, **kwargs):
     kwargs["filegroup"] = kwargs.pop(
         "filegroup", list(args[1:]) if len(args) >= 2 else None
     )
+    kwargs["base_url"] = kwargs.get(
+        "base_url", __proxy__["nornir.nr_data"]("files_base_path")
+    )
+    kwargs["index"] = kwargs.get(
+        "index", __proxy__["nornir.nr_data"]("stats")["proxy_minion_id"]
+    )
     if kwargs["call"] in ["ls", "rm", "list"]:
         kwargs.setdefault("table", "extend")
         kwargs.setdefault(
@@ -2562,8 +2571,6 @@ def file(*args, **kwargs):
 
     return task(
         plugin="nornir_salt.plugins.tasks.files",
-        base_url=__proxy__["nornir.nr_data"]("files_base_path"),
-        index=__proxy__["nornir.nr_data"]("stats")["proxy_minion_id"],
         render=[],
         **kwargs,
     )

@@ -322,6 +322,7 @@ interfaces = [
     {"name": "eth11.123", "device": {"name": "fceos4"}, "type": "virtual", "parent": {"name": "eth11"}},
     {"name": "eth11", "device": {"name": "fceos5"}, "type": "10gbase-x-sfpp"},
     {"name": "eth11.123", "device": {"name": "fceos5"}, "type": "virtual", "parent": {"name": "eth11"}},
+    {"name": "eth30", "device": {"name": "fceos4"}, "type": "10gbase-x-sfpp"},
 ]
 
 power_outlet_ports = [
@@ -511,6 +512,17 @@ connections = [
         "status": "connected",
         "tenant": {"slug": "saltnornir"},
     },    
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "fceos4", "interface": "eth30", "termination_type": "dcim.interface"},
+        ],
+        "b_terminations": [
+            {"device": "PatchPanel-1", "interface": "FrontPort8", "termination_type": "dcim.frontport"}
+        ],
+        "status": "connected",
+        "tenant": {"slug": "saltnornir"},
+    },     
     # console connections
     {
         "type": "cat6a",
@@ -958,6 +970,15 @@ circuits = [
         "provider_account": {"account": "test_account"},
         "tags": [{"name": "ACCESS"}],
     },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "planned",
+        "cid": "CID4",
+        "termination_a": {"device": "fceos4", "interface": "eth5", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": None,
+        "provider_account": {"account": "test_account"},
+    },
 ]
             
 config_templates = [
@@ -1369,40 +1390,39 @@ def create_circuits():
         try:
             termination_a = item.pop("termination_a")
             termination_b = item.pop("termination_b")
-            cable_a = termination_a.pop("cable", None)
-            cable_b = termination_b.pop("cable", None)
             # provider account supported starting with netbox 3.5 only
             if not NB_VERSION.startswith("3.5"):
                    _ = circuit.pop("provider_account")
             circuit = nb.circuits.circuits.create(**item)
             # add termination A
-            if "provider_network" in termination_a:
+            if termination_a and "provider_network" in termination_a:
                 cterm_a = nb.circuits.circuit_terminations.create(
                     circuit=circuit.id, 
                     term_side="A", 
                     provider_network={"name": termination_a["provider_network"]} 
                 )
-            else:
+            elif termination_a:
                 cterm_a = nb.circuits.circuit_terminations.create(
                     circuit=circuit.id, 
                     term_side="A", 
                     site={"slug": slugify(termination_a["site"])}
                 )
             # add termination B
-            if "provider_network" in termination_b:
+            if termination_b and "provider_network" in termination_b:
                 cterm_z = nb.circuits.circuit_terminations.create(
                     circuit=circuit.id, 
                     term_side="Z", 
                     provider_network={"name": termination_b["provider_network"]} 
                 )
-            else:
+            elif termination_b:
                 cterm_z = nb.circuits.circuit_terminations.create(
                     circuit=circuit.id, 
                     term_side="Z", 
                     site={"slug": slugify(termination_b["site"])}
                 )            
             # add cable A
-            if "provider_network" not in termination_a:
+            if termination_a and "provider_network" not in termination_a:
+                cable_a = termination_a.pop("cable", None)
                 if termination_a["termination_type"] == "dcim.interface":
                     intf_a = nb.dcim.interfaces.get(device=termination_a["device"], name=termination_a["interface"])
                 elif termination_a["termination_type"] == "dcim.rearport":
@@ -1412,8 +1432,9 @@ def create_circuits():
                     a_terminations=[{"object_type": termination_a["termination_type"], "object_id": intf_a.id}],
                     b_terminations=[{"object_type": "circuits.circuittermination", "object_id": cterm_a.id}]
                 )
-            # add cable Z
-            if "provider_network" not in termination_b:
+            # add cable B
+            if termination_b and "provider_network" not in termination_b:
+                cable_b = termination_b.pop("cable", None)
                 if termination_b["termination_type"] == "dcim.interface":
                     intf_b = nb.dcim.interfaces.get(device=termination_b["device"], name=termination_b["interface"])
                 elif termination_b["termination_type"] == "dcim.rearport":

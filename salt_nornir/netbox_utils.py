@@ -19,6 +19,7 @@ Reference
 .. autofunction:: salt_nornir.netbox_utils.nb_rest
 .. autofunction:: salt_nornir.netbox_utils.get_interfaces
 .. autofunction:: salt_nornir.netbox_utils.get_connections
+.. autofunction:: salt_nornir.netbox_utils.get_circuits
 .. autofunction:: salt_nornir.netbox_utils.parse_config
 .. autofunction:: salt_nornir.netbox_utils.update_config_context
 .. autofunction:: salt_nornir.netbox_utils.update_vrf
@@ -889,6 +890,13 @@ def get_connections(
                     path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
                     # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
                     remote_device_terminations = path_trace[-1][-1]
+                    # check if path remote end connected anythere
+                    if (
+                        not remote_device_terminations
+                        or not "name" in remote_device_terminations[0]
+                    ):
+                        continue
+                    # form connection dictionary
                     connections_dict[device_name][termination["name"]] = {
                         # path is reachable if all segments' cables are connected
                         "reachable": all(
@@ -1451,6 +1459,13 @@ def get_circuits(
                     __salt__=__salt__,
                 )
             else:
+                continue
+
+            # check if circuit ends connect to device or provider network
+            if (
+                "name" not in circuit_path[0]["path"][0][0]
+                or "name" not in circuit_path[0]["path"][-1][-1]
+            ):
                 continue
 
             # forma A and Z connection endpoints

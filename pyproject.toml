@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "salt_nornir"
-version = "0.20.1"
+version = "0.20.2"
 description = "Salt-Nornir Proxy Minion SaltStack Modules"
 authors = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
 maintainers = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
