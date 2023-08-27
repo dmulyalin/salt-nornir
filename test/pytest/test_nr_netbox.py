@@ -175,7 +175,7 @@ def test_netbox_get_connections():
         fun="nr.netbox", 
         arg=["get_connections"], 
         kwarg={
-            "hosts": ["fceos4"]
+            "hosts": ["fceos4"],
         },
         tgt_type="glob", 
         timeout=60
@@ -185,9 +185,8 @@ def test_netbox_get_connections():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
 
@@ -209,9 +208,8 @@ def test_netbox_get_connections_cache_false():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
     
@@ -233,9 +231,8 @@ def test_netbox_get_connections_cache_refresh():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
     
@@ -256,32 +253,10 @@ def test_netbox_get_connections_fb_filter():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
-    
-    
-@skip_if_not_has_netbox
-def test_netbox_get_connections_with_trace():
-    ret = client.cmd(
-        tgt="nrp3", 
-        fun="nr.netbox", 
-        arg=["get_connections"], 
-        kwarg={
-            "hosts": ["fceos4"],
-            "trace": True
-        },
-        tgt_type="glob", 
-        timeout=60
-    )
-    pprint.pprint(ret)
-    assert len(ret["nrp3"]["fceos4"]) > 0, "No connections returned for fceos4"
-    assert ret["nrp3"]["fceos4"]["eth7"]["reachable"] == False, "eth7 reachable status should be False"
-    assert len(ret["nrp3"]["fceos4"]["eth7"]["cables"])== 3, "eth7 should have 3 cables"
-    assert len(ret["nrp3"]["fceos4"]["eth101"]["cables"]) == 2, "eth101 should have 2 cables"
-    assert "PowerOutlet-1" in ret["nrp3"]["fceos4"], "No power connections retrieved?"
-    assert ret["nrp3"]["fceos4"]["PowerOutlet-1"]["remote_termination_type"] == "powerport"
+
     
 @skip_if_not_has_netbox
 def test_netbox_parse_config():

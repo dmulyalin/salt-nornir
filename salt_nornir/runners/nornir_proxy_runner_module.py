@@ -75,6 +75,7 @@ from salt_nornir.pydantic_models import (
     model_runner_nr_diagram,
     SaltNornirShell,
 )
+from fnmatch import fnmatchcase
 
 log = logging.getLogger(__name__)
 
@@ -1142,6 +1143,9 @@ def diagram(*args, **kwargs):
         call_kwargs["fun"] = "cli"
         FM = cli.pop("FM", [])
 
+    # form a list of platform to filter hosts by
+    FM = [i.strip() for i in FM.split(",")] if isinstance(FM, str) else FM
+
     drawing_plugin, ext = {
         "yed": (N2G.yed_diagram, "graphml"),
         "drawio": (N2G.drawio_diagram, "drawio"),
@@ -1159,6 +1163,7 @@ def diagram(*args, **kwargs):
     # get folders info
     outfile = kwargs.pop("outfile", f"./Output/{data_plugin}_{ctime}.{ext}")
     out_folder, out_filename = os.path.split(outfile)
+    out_folder = out_folder or "."
     # check if need to save devices output to local folder
     if isinstance(save_data, str):
         data_out_folder = save_data
@@ -1171,8 +1176,10 @@ def diagram(*args, **kwargs):
         for i in list_templates()["misc"]["N2G"][template_dir]
     ]
     # if FM filter provided, leave only supported platforms
-    platforms = (
-        [p for p in n2g_supported_platorms if p in FM] if FM else n2g_supported_platorms
+    platforms = set(
+        [p for p in n2g_supported_platorms if any(fnmatchcase(p, fm) for fm in FM)]
+        if FM
+        else n2g_supported_platorms
     )
 
     print(

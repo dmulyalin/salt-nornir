@@ -145,3 +145,24 @@ def test_nr_diagram_IP_save_data_path():
     assert "ceos2.txt" in os.listdir("/tmp/pytest/test_nr_diagram_IP_save_data_path/arista_eos/")
 
 # test_nr_diagram_IP_save_data_path()
+
+
+def test_nr_diagram_IP_fm_filter():
+    ret = runner.cmd(
+        fun="nr.diagram",
+        arg=["IP"],
+        kwarg={
+            "FM": "arista*", 
+            "outfile": "/tmp/pytest/test_nr_diagram_IP_fm_filter.graphml", 
+            "tgt": "nrp1", 
+            "tgt_type": "glob",
+        },        
+    )
+    pprint.pprint(ret)
+    with open("/tmp/pytest/test_nr_diagram_IP_fm_filter.graphml") as f:
+        diagram_content = f.read()
+        root = ET.fromstring(diagram_content)
+        
+    assert "/tmp/pytest/test_nr_diagram_IP_fm_filter.graphml" in ret and "saved" in ret
+    assert "Traceback" not in diagram_content
+    assert root and len(root) > 1

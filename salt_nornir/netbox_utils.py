@@ -27,6 +27,7 @@ Reference
 import logging
 import json
 import ipaddress
+import traceback
 
 log = logging.getLogger(__name__)
 
@@ -297,6 +298,109 @@ def get_interfaces(
     `diskcache <https://github.com/grantjenks/python-diskcache>`_ library installed
     on salt-nornir proxy minion. Cache is persistant and stored on the minion's
     local filesystem.
+
+    Sample data returned for interfaces when ``add_ip`` and ``add_inventory_items``
+    set to True::
+
+        {'fceos4': {'Port-Channel1': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [],
+                                      'custom_fields': {},
+                                      'description': 'Main uplink interface',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'inventory_items': [],
+                                      'ip_addresses': [],
+                                      'last_updated': '2023-08-22T09:47:57.256446+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [{'name': 'eth101'},
+                                                            {'name': 'eth102'}],
+                                      'mode': None,
+                                      'mtu': None,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                      'wwn': None},
+                             'eth1': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [{'name': 'eth1.11'}],
+                                      'custom_fields': {},
+                                      'description': 'Interface 1 description',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'ip_addresses': [{'address': '1.0.10.1/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:03.287649+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None},
+                                                       {'address': '1.0.100.1/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:01.692965+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None}],
+                                      'inventory_items': [{'asset_tag': None,
+                                                           'custom_fields': {},
+                                                           'description': '',
+                                                           'label': '',
+                                                           'manufacturer': None,
+                                                           'name': 'SFP-1G-T',
+                                                           'part_id': '',
+                                                           'role': {'name': 'Transceiver'},
+                                                           'serial': '',
+                                                           'tags': []}],
+                                      'ip_addresses': [],
+                                      'last_updated': '2023-08-22T09:47:57.809307+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [],
+                                      'mode': 'TAGGED',
+                                      'mtu': 1500,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                      'wwn': None},
+                        'loopback0': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [],
+                                      'custom_fields': {},
+                                      'description': '',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'inventory_items': [],
+                                      'ip_addresses': [{'address': '1.0.1.4/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:00.728097+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None}],
+                                      'last_updated': '2023-08-22T09:47:57.148611+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [],
+                                      'mode': None,
+                                      'mtu': None,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                           'wwn': None}}}}
     """
     # retrieve a list of hosts to get interfaces for
     hosts = hosts or __salt__["nr.nornir"](
@@ -458,7 +562,6 @@ def get_interfaces(
 
 def get_connections(
     params: dict = None,
-    trace: bool = False,
     sync=False,
     __salt__=None,
     proxy_id=None,
@@ -468,10 +571,10 @@ def get_connections(
     **kwargs,
 ) -> dict:
     """
-    Function to retrieve connections details from Netbox
+    Function to retrieve connections details from Netbox for interface and
+    console ports.
 
     :param params: dictionary with salt_nornir_netbox parameters
-    :param trace: if True traces full connection path between devices interfaces
     :param sync: if True, saves get connections results to host's in-memory
         inventory data under ``connections`` key, if sync is a string, provided
         value used as a key.
@@ -489,124 +592,97 @@ def get_connections(
     .. note:: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
     otherwise ``CommandExecutionError`` raised.
 
-    When ``trace`` set to False, only first segment of connection path returned. If
-    first segment is a circuit termination, ``circuit`` details included, otherwise
-    first segment ``remote_device`` details included.
-
-    Path tracing only performed if first segment remote cable termination is of
-    frontport, rearport or circuittermination type and only for interface and console
-    ports connections, power cables trace not implemented.
-
-    .. warning:: trace operation performed on an interface by interface basis and may
-        take significant amount of time to complete for all device's interfaces.
-
     Get connections returns a dictionary keyed by device name with value being a
-    dictionary keyed by local interface names.
+    dictionary keyed by device interface names.
 
-    Sample return data with ``trace`` set to ``True``::
+    Sample return data::
 
-        {'fceos4': {'ConsolePort1': {'breakout': False,
-                          'cable': {'custom_fields': {},
-                                    'label': '',
-                                    'last_updated': '2022-12-29T04:16:49.919563+00:00',
-                                    'length': None,
-                                    'length_unit': None,
-                                    'status': 'CONNECTED',
-                                    'tags': [],
-                                    'tenant': {'name': 'SALTNORNIR'},
-                                    'type': 'CAT6A'},
-                          'reachable': True,
-                          'remote_device': 'fceos5',
-                          'remote_interface': 'ConsoleServerPort1',
-                          'remote_termination_type': 'consoleserverport',
-                          'termination_type': 'consoleport'},
-         'eth1': {'breakout': True,
-                  'cable': {'custom_fields': {},
-                            'label': '',
-                            'last_updated': '2022-12-29T06:54:16.036814+00:00',
-                            'length': None,
-                            'length_unit': None,
-                            'status': 'CONNECTED',
-                            'tags': [],
-                            'tenant': {'name': 'SALTNORNIR'},
-                            'type': 'CAT6A'},
-                  'reachable': True,
-                  'remote_device': 'fceos5',
-                  'remote_interface': ['eth1', 'eth10'],
-                  'remote_termination_type': 'interface',
-                  'termination_type': 'interface'},
-          'eth101': {'breakout': False,
-                     'cables': [{'color': '',
-                                 'description': '',
-                                 'id': 28,
-                                 'label': '',
-                                 'length': None,
-                                 'length_unit': '',
-                                 'status': 'connected',
-                                 'type': '',
-                                 'url': 'http://192.168.75.200:8000/api/dcim/cables/28/'},
-                                {'color': '',
-                                 'description': '',
-                                 'id': 29,
-                                 'label': '',
-                                 'length': None,
-                                 'length_unit': '',
-                                 'status': 'connected',
-                                 'type': '',
-                                 'url': 'http://192.168.75.200:8000/api/dcim/cables/29/'}],
-                     'reachable': True,
-                     'remote_device': 'fceos5',
-                     'remote_interface': 'eth8',
-                     'remote_termination_type': 'interface',
-                     'termination_type': 'interface'},
-          'eth3': {'breakout': False,
-                   'cable': {'custom_fields': {},
-                             'label': '',
-                             'last_updated': '2022-12-29T06:56:23.629652+00:00',
-                             'length': None,
-                             'length_unit': None,
-                             'status': 'CONNECTED',
-                             'tags': [],
-                             'tenant': {'name': 'SALTNORNIR'},
-                             'type': 'CAT6A'},
-                   'reachable': True,
-                   'remote_device': 'fceos5',
-                   'remote_interface': 'eth3',
-                   'remote_termination_type': 'interface',
-                   'termination_type': 'interface'},
-         'eth7': {'breakout': False,
-                  'cables': [{'color': '',
-                              'description': '',
-                              'id': 25,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'connected',
-                              'type': 'smf',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/25/'},
-                             {'color': '',
-                              'description': '',
-                              'id': 26,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'planned',
-                              'type': '',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/26/'},
-                             {'color': '',
-                              'description': '',
-                              'id': 27,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'connected',
-                              'type': '',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/27/'}],
-                  'reachable': False,
-                  'remote_device': 'fceos5',
-                  'remote_interface': 'eth7',
-                  'remote_termination_type': 'interface',
-                  'termination_type': 'interface'}}}
+    {'fceos4': {'ConsolePort1': {'breakout': False,
+                                 'cable': {'custom_fields': {},
+                                           'label': '',
+                                           'length': None,
+                                           'length_unit': None,
+                                           'peer_device': 'fceos5',
+                                           'peer_interface': 'ConsoleServerPort1',
+                                           'peer_termination_type': 'consoleserverport',
+                                           'status': 'CONNECTED',
+                                           'tags': [],
+                                           'tenant': {'name': 'SALTNORNIR'},
+                                           'type': 'CAT6A'},
+                                 'remote_device': 'fceos5',
+                                 'remote_interface': 'ConsoleServerPort1',
+                                 'remote_termination_type': 'consoleserverport',
+                                 'termination_type': 'consoleport'},
+                'eth1': {'breakout': True,
+                         'cable': {'custom_fields': {},
+                                   'label': '',
+                                   'length': None,
+                                   'length_unit': None,
+                                   'peer_device': 'fceos5',
+                                   'peer_interface': ['eth1', 'eth10'],
+                                   'peer_termination_type': 'interface',
+                                   'status': 'CONNECTED',
+                                   'tags': [],
+                                   'tenant': {'name': 'SALTNORNIR'},
+                                   'type': 'CAT6A'},
+                         'remote_device': 'fceos5',
+                         'remote_interface': ['eth1', 'eth10'],
+                         'remote_termination_type': 'interface',
+                         'termination_type': 'interface'},
+                'eth101': {'breakout': False,
+                           'cable': {'custom_fields': {},
+                                     'label': '',
+                                     'length': None,
+                                     'length_unit': None,
+                                     'peer_termination_type': 'circuittermination',
+                                     'status': 'CONNECTED',
+                                     'tags': [],
+                                     'tenant': None,
+                                     'type': 'SMF'},
+                           'circuit': {'cid': 'CID1',
+                                       'commit_rate': None,
+                                       'custom_fields': {},
+                                       'description': '',
+                                       'provider': {'name': 'Provider1'},
+                                       'status': 'ACTIVE',
+                                       'tags': []},
+                           'remote_device': 'fceos5',
+                           'remote_interface': 'eth8',
+                           'remote_termination_type': 'interface',
+                           'termination_type': 'interface'},
+                'eth3': {'breakout': False,
+                         'cable': {'custom_fields': {},
+                                   'label': '',
+                                   'length': None,
+                                   'length_unit': None,
+                                   'peer_device': 'fceos5',
+                                   'peer_interface': 'eth3',
+                                   'peer_termination_type': 'interface',
+                                   'status': 'CONNECTED',
+                                   'tags': [],
+                                   'tenant': {'name': 'SALTNORNIR'},
+                                   'type': 'CAT6A'},
+                         'remote_device': 'fceos5',
+                         'remote_interface': 'eth3',
+                         'remote_termination_type': 'interface',
+                         'termination_type': 'interface'},
+                'eth7': {'breakout': False,
+                         'cable': {'custom_fields': {},
+                                   'label': '',
+                                   'length': None,
+                                   'length_unit': None,
+                                   'peer_device': 'PatchPanel-1',
+                                   'peer_interface': 'FrontPort1',
+                                   'peer_termination_type': 'frontport',
+                                   'status': 'CONNECTED',
+                                   'tags': [],
+                                   'tenant': {'name': 'SALTNORNIR'},
+                                   'type': 'SMF'},
+                         'remote_device': 'fceos5',
+                         'remote_interface': 'eth7',
+                         'remote_termination_type': 'interface',
+                         'termination_type': 'interface'}}}}
+
     Where:
 
     * ``ConsolePort1`` is a direct cable between devices
@@ -614,92 +690,6 @@ def get_connections(
     * ``eth1`` is a direct between devices breakout cable
     * ``eth3`` is a direct between devices normal (non-breakout) cable
     * ``eth7`` connected to another device through patch panels
-
-    Same connections but with ``trace`` set to ``False``::
-
-        {'fceos4': {'ConsolePort1': {'breakout': False,
-                               'cable': {'custom_fields': {},
-                                         'label': '',
-                                         'last_updated': '2022-12-29T04:16:49.919563+00:00',
-                                         'length': None,
-                                         'length_unit': None,
-                                         'status': 'CONNECTED',
-                                         'tags': [],
-                                         'tenant': {'name': 'SALTNORNIR'},
-                                         'type': 'CAT6A'},
-                               'reachable': True,
-                               'remote_device': 'fceos5',
-                               'remote_interface': 'ConsoleServerPort1',
-                               'remote_termination_type': 'consoleserverport',
-                               'termination_type': 'consoleport'},
-              'eth1': {'breakout': True,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T06:54:16.036814+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': {'name': 'SALTNORNIR'},
-                                 'type': 'CAT6A'},
-                       'reachable': True,
-                       'remote_device': 'fceos5',
-                       'remote_interface': ['eth1', 'eth10'],
-                       'remote_termination_type': 'interface',
-                       'termination_type': 'interface'},
-              'eth101': {'cable': {'custom_fields': {},
-                                   'label': '',
-                                   'last_updated': '2022-12-29T09:43:21.761420+00:00',
-                                   'length': None,
-                                   'length_unit': None,
-                                   'status': 'CONNECTED',
-                                   'tags': [],
-                                   'tenant': None,
-                                   'type': None},
-                         'circuit': {'cid': 'CID1',
-                                     'commit_rate': None,
-                                     'custom_fields': {},
-                                     'description': '',
-                                     'provider': {'name': 'Provider1'},
-                                     'status': 'ACTIVE',
-                                     'tags': []},
-                         'reachable': True,
-                         'remote_termination_type': 'circuittermination',
-                         'termination_type': 'interface'},
-              'eth3': {'breakout': False,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T06:56:23.629652+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': {'name': 'SALTNORNIR'},
-                                 'type': 'CAT6A'},
-                       'reachable': True,
-                       'remote_device': 'fceos5',
-                       'remote_interface': 'eth3',
-                       'remote_termination_type': 'interface',
-                       'termination_type': 'interface'},
-              'eth7': {'breakout': False,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T08:52:26.546559+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': None,
-                                 'type': 'SMF'},
-                       'reachable': True,
-                       'remote_device': 'PatchPanel1',
-                       'remote_interface': 'FrontPort1',
-                       'remote_termination_type': 'frontport',
-                       'termination_type': 'interface'}}}}
-
-    Each connection has ``reachable`` status calculated based on cables status - set to
-    ``True`` if all cables in the path have status ``connected``, path circuits' status
-    not taken into account.
     """
     # retrieve a list of hosts to get interfaces for
     hosts = hosts or __salt__["nr.nornir"](
@@ -727,7 +717,7 @@ def get_connections(
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
         for host in list(hosts):
-            key = f"nr.netbox:get_connections, {host}, trace {trace}"
+            key = f"nr.netbox:get_connections, {host}"
             if key in cache_obj and cache is True:
                 connections_dict[host] = cache_obj[key]
                 hosts.remove(host)
@@ -743,225 +733,149 @@ def get_connections(
 
     # check if still has hosts left to retrieve data for
     if hosts:
-        # retrieve full list of device cables with all terminations
-        cable_fields = [
-            "type",
-            "status",
-            "tenant {name}",
-            "label",
-            "tags {name}",
-            "length",
-            "length_unit",
-            "last_updated",
-            "custom_fields",
-            """terminations {
-                   termination {
-                     __typename
-                     ... on InterfaceType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }  
-                     ... on ConsolePortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on ConsoleServerPortType {name device{name}}
-                       }
-                     }
-                     ... on ConsoleServerPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on ConsolePortType {name device{name}}
-                       }
-                     }
-                     ... on PowerPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on PowerOutletType {name device{name}}
-                       }
-                     }
-                     ... on PowerOutletType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on PowerPortType {name device{name}}
-                       }
-                     }
-                     ... on FrontPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }
-                     ... on RearPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }""",
+        # forem lists of fields to request from netbox
+        cable_fields = """
+            cable {
+                type
+                status
+                tenant {name}
+                label
+                tags {name}
+                length
+                length_unit
+                custom_fields
+            }
+        """
+        interfaces_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on InterfaceType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on InterfaceType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+              ... on CircuitTerminationType {
+                circuit{
+                  cid 
+                  description 
+                  tags{name} 
+                  provider{name} 
+                  status
+                  custom_fields
+                  commit_rate
+                }
+              }
+            }""",
+            str(cable_fields),
         ]
+        console_ports_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on ConsoleServerPortType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on ConsoleServerPortType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+            }""",
+            str(cable_fields),
+        ]
+        console_server_ports_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on ConsolePortType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on ConsolePortType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+            }""",
+            str(cable_fields),
+        ]
+        # form query dictionary with aliases to get data from Netbox
+        queries = {
+            "interface": {
+                "field": "interface_list",
+                "filters": {"device": hosts, "type__n": ["lag", "virtual"]},
+                "fields": interfaces_fields,
+            },
+            "consoleport": {
+                "field": "console_port_list",
+                "filters": {"device": hosts},
+                "fields": console_ports_fields,
+            },
+            "consoleserverport": {
+                "field": "console_server_port_list",
+                "filters": {"device": hosts},
+                "fields": console_server_ports_fields,
+            },
+        }
+        # retrieve full list of devices interface with all cables
+        all_ports = nb_graphql(queries=queries, params=params)
 
-        all_cables = nb_graphql("cable_list", {"device": hosts}, cable_fields, params)
-
-        # form connections_dict keyed by device name and device's local interface name
-        for cable in all_cables:
-            terminations = cable.pop("terminations")
-            for termination in terminations:
-                termination = termination.pop("termination")
-                termination_type = termination["__typename"].replace("Type", "").lower()
-                # skip circuit termination point
-                if termination_type == "circuittermination":
+        # extract interfaces
+        for port_type, ports in all_ports.items():
+            for port in ports:
+                endpoints = port["connected_endpoints"]
+                cable = port["cable"]
+                # skip ports that have no cable connected
+                if not cable:
                     continue
-                # skip if cable has no peers
-                if not termination["link_peers"]:
+                # skip ports that have no remote device connected
+                # that will ignore cases when port connectes to
+                # provider network via circuit as well
+                if not endpoints or not all(i for i in endpoints):
                     continue
-                device_name = termination["device"]["name"]
-                # skip connections for non requested devices
-                if device_name not in hosts:
-                    continue
-                connections_dict.setdefault(device_name, {})
-                link_peers = termination.pop("link_peers")
-                remote_termination_type = (
-                    link_peers[0]["__typename"].replace("Type", "").lower()
-                )
-                # check if need to trace full path
-                if trace and remote_termination_type in [
-                    "frontport",
-                    "rearport",
-                    "circuittermination",
-                ]:
-                    if termination_type == "interface":
-                        far_end_termination_type = "interface"
-                        api = f"dcim/interfaces/{termination['id']}/trace"
-                    elif termination_type == "consoleport":
-                        far_end_termination_type = "consoleserverport"
-                        api = f"dcim/console-ports/{termination['id']}/trace"
-                    elif termination_type == "consoleserverport":
-                        far_end_termination_type = "consoleport"
-                        api = f"dcim/console-server-ports/{termination['id']}/trace"
-                    path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
-                    # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
-                    remote_device_terminations = path_trace[-1][-1]
-                    # check if path remote end connected anythere
-                    if (
-                        not remote_device_terminations
-                        or not "name" in remote_device_terminations[0]
-                    ):
-                        continue
-                    # form connection dictionary
-                    connections_dict[device_name][termination["name"]] = {
-                        # path is reachable if all segments' cables are connected
-                        "reachable": all(
-                            c[1]["status"].lower() == "connected"
-                            if isinstance(c[1], dict)
-                            else True
-                            for c in path_trace
-                        ),
-                        "cables": [c[1] for c in path_trace],
-                        "remote_device": remote_device_terminations[0]
-                        .get("device", {})
-                        .get("name"),
-                        "remote_interface": (
-                            remote_device_terminations[0]["name"]
-                            if len(remote_device_terminations) == 1
-                            else [i["name"] for i in remote_device_terminations]
-                        ),
-                        "termination_type": termination_type,
-                        "remote_termination_type": far_end_termination_type,
-                        "breakout": False
-                        if len(remote_device_terminations) == 1
-                        else True,
-                    }
-                    # check if far end termination is provider network
-                    if "provider-networks" in remote_device_terminations[0]["url"]:
-                        connections_dict[device_name][termination["name"]].update(
-                            {
-                                "remote_device": None,
-                                "remote_interface": None,
-                                "provider_network": remote_device_terminations[0][
-                                    "name"
-                                ],
-                                "remote_termination_type": "provider_network",
-                            }
-                        )
-                # retrieve local cable connection to the circuit
-                elif remote_termination_type == "circuittermination":
-                    connections_dict[device_name][termination["name"]] = {
-                        "reachable": cable["status"].lower() == "connected",
-                        "cable": cable,
-                        "circuit": link_peers[0]["circuit"],
-                        "termination_type": termination_type,
-                        "remote_termination_type": remote_termination_type,
-                    }
-                # retrieve local cable connections only, no full path trace
+                # etract required parameters
+                device_name = port["device"]["name"]
+                port_name = port["name"]
+                link_peers = port["link_peers"]
+                # add interface and its connection to results
+                connections_dict[device_name][port_name] = {
+                    "breakout": len(endpoints) > 1,
+                    "cable": cable,
+                    "remote_device": endpoints[0]["device"]["name"],
+                    "remote_interface": [i["name"] for i in endpoints]
+                    if len(endpoints) > 1
+                    else endpoints[0]["name"],
+                    "remote_termination_type": endpoints[0]["__typename"]
+                    .replace("Type", "")
+                    .lower(),
+                    "termination_type": port_type,
+                }
+                # if cable connected to circuit add circuit details
+                if link_peers and "circuit" in link_peers[0]:
+                    connections_dict[device_name][port_name]["circuit"] = link_peers[0][
+                        "circuit"
+                    ]
+                    cable["peer_termination_type"] = "circuittermination"
+                # add cable peers details
                 else:
-                    connections_dict[device_name][termination["name"]] = {
-                        "reachable": cable["status"].lower() == "connected",
-                        "cable": cable,
-                        "remote_device": link_peers[0]["device"]["name"],
-                        "remote_interface": (
-                            link_peers[0]["name"]
-                            if len(link_peers) == 1
-                            else [i["name"] for i in link_peers]
-                        ),
-                        "termination_type": termination_type,
-                        "remote_termination_type": remote_termination_type,
-                        "breakout": False if len(link_peers) == 1 else True,
-                    }
+                    cable["peer_device"] = link_peers[0]["device"]["name"]
+                    cable["peer_interface"] = (
+                        [i["name"] for i in link_peers]
+                        if len(link_peers) > 1
+                        else link_peers[0]["name"]
+                    )
+                    cable["peer_termination_type"] = (
+                        link_peers[0]["__typename"].replace("Type", "").lower()
+                    )
 
         # cache connections data for each host
         if HAS_DISKCACHE and cache:
             cache_obj = FanoutCache(directory=cache_directory, shards=1)
             for host in hosts:
-                key = f"nr.netbox:get_connections, {host}, trace {trace}"
+                key = f"nr.netbox:get_connections, {host}"
                 cache_obj.set(key, connections_dict[host], expire=cache_ttl)
                 log.debug(
                     f"netbox_utils:get_connections '{host}' cached get_connections data"
@@ -1280,7 +1194,7 @@ def get_circuits(
     `remote_device` and `remote_interface` keys, circuit contains
     `provider_network` key with value referring to provider network name.
 
-    Sample circuits data::
+    Sample circuits data with ``get_interface_details`` set to True::
 
         {'CID2': {'comments': 'some comments',
                   'commit_rate': 10000,
@@ -1463,7 +1377,8 @@ def get_circuits(
 
             # check if circuit ends connect to device or provider network
             if (
-                "name" not in circuit_path[0]["path"][0][0]
+                not circuit_path
+                or "name" not in circuit_path[0]["path"][0][0]
                 or "name" not in circuit_path[0]["path"][-1][-1]
             ):
                 continue

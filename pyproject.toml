@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "salt_nornir"
-version = "0.20.2"
+version = "0.20.3"
 description = "Salt-Nornir Proxy Minion SaltStack Modules"
 authors = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
 maintainers = ["Denis Mulyalin <d.mulyalin@gmail.com>"]
@@ -24,7 +24,7 @@ classifiers = [
 # mandatory dependencies
 python = ">=3.7,<4.0"
 nornir = "3.3.0"
-pydantic = ">=1.10.2,<=2.1.1"
+pydantic = ">=1.10.2,<=2.3.0"
 nornir_salt = "0.20.*"
 psutil = ">=5.8.*,<6.*"
 
@@ -62,6 +62,7 @@ robotframework = { version = "6.1.1", optional = true }
 dnspython = { version = "2.4.2", optional = true, python = ">=3.8,<4.0"}
 diskcache = { version = "5.6.1", optional = true }
 pythonping = { version = "1.1.4", optional = true }
+picle = { version = "0.2.*", optional = true }
 
 # docs dependencies for extras definition
 readthedocs-sphinx-search = { version = "0.1.1", optional = true }
@@ -102,7 +103,8 @@ prodmaxmaster = [
     "ttp-templates",
     "N2G",
     "robotframework",
-    "diskcache"
+    "diskcache",
+	"picle"
 ]
 prodminminion = [
     "ncclient",

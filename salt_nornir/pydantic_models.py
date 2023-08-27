@@ -22,6 +22,7 @@ from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
 
 try:
     from picle import Cache as PicleCache
+    from picle.utils import run_print_exception
 
     HAS_PICLE = True
 except ImportError:
@@ -947,17 +948,21 @@ class SaltNornirRunnerFunctions(BaseModel):
         prompt = "salt[run]#"
 
 
+# --------------------------------------------------------------
+# Salt-Nornir interactive shell models
+# --------------------------------------------------------------
+
+
 class ShowNornirCommandModel(BaseModel):
     version: Callable = Field(
         "show_version", description="Show Nornir Proxy Minions software version"
     )
-    minions: Optional[Union[StrictStr, List[StrictStr]]] = Field(
-        None, description="Proxy Minions to target"
-    )
+    minions: Callable = Field("source_minions", description="List Nornir Proxy Minions")
 
     @staticmethod
+    @run_print_exception
     def show_version(minions: list = None):
-        minions = minions or []
+        minions = minions or GLOBAL_CACHE["minions"]
         ret = salt_runner.cmd(
             "nr.call",
             arg=["nornir", "version"],
@@ -966,9 +971,10 @@ class ShowNornirCommandModel(BaseModel):
         for k, v in ret.items():
             print(f"{k}\n{v}\n\n")
 
-    @classmethod
-    def source_minions(self):
-        return GLOBAL_CACHE["minions"]
+    @staticmethod
+    @run_print_exception
+    def source_minions():
+        return "\n".join(GLOBAL_CACHE["minions"])
 
 
 class ShowCommandModel(BaseModel):
@@ -977,7 +983,7 @@ class ShowCommandModel(BaseModel):
 
     @staticmethod
     def show_version():
-        return "Salt-Nornir Version 0.18.0"
+        return "Salt-Nornir Version 0.20.3"
 
 
 class SaltNornirShell(BaseModel):
