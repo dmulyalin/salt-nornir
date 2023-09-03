@@ -1062,7 +1062,7 @@ nr.nornir
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.nornir_fun
 
 nr.service
-+++++++++
+++++++++++
 
 .. autofunction:: salt_nornir.modules.nornir_proxy_execution_module.service
 
@@ -1717,9 +1717,9 @@ def test(*args, **kwargs):
 
     Below is a list of arguments in a test suite that can refer to a text file to source
     from one of supported URL schemes: ``salt://``, ``http://``, ``https://``, ``ftp://``,
-    ``s3://``, ``swift://`` and ``file://`` (local filesystem), for example
-    ``salt://path/to/file.txt``:\]=-098y76r
-    * ``pattern`` - content of the file rendered and used to run the tests together with
+    ``s3://``, ``swift://`` and ``file://`` (local filesystem), for example ``salt://path/to/file.txt``
+    
+    * ``pattern`` - content of the file rendered and used to run the tests together with 
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
     * ``schema`` - used with ``CerberusTest`` test function
     * ``function_file`` - content of the file used with ``CustomFunctionTest`` as ``function_text`` argument

@@ -73,9 +73,9 @@ from salt_nornir.pydantic_models import (
     model_runner_nr_event,
     model_runner_nr_cfg,
     model_runner_nr_diagram,
-    SaltNornirShell,
 )
 from fnmatch import fnmatchcase
+
 
 log = logging.getLogger(__name__)
 
@@ -1258,13 +1258,12 @@ def shell(*args, **kwargs):
 
     'Picle <>'_ module need to be installed
     """
-    from picle import App
-
     try:
+        from picle import App
+        from salt_nornir.salt_nornir_shell_models import SaltNornirShell
+
         shell = App(SaltNornirShell)
         shell.start()
-    except ImportError:
-        print("Failed importing PICLE module, install: pip install picle")
     except:
         tb = traceback.format_exc()
-        print(tb)
+        print(f"Failed to start Salt-Nornir interactive shell, error:\n{tb}")
