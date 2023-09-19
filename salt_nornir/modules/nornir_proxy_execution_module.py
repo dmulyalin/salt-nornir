@@ -1916,9 +1916,11 @@ def test(*args, **kwargs):
                     f"Tests suite '{suite}' rendering failed for '{host_name}':\n{v}"
                 )
             elif v.strip():
-                loaded_suite[host_name] = __salt__["slsutil.renderer"](
+                loaded_host_tests = __salt__["slsutil.renderer"](
                     string=v, default_renderer="yaml"
                 )
+                if loaded_host_tests:
+                    loaded_suite[host_name] = loaded_host_tests
         suite = loaded_suite
     # if test suite is a list or dict - use it as is
     elif isinstance(suite, (list, dict)) and suite:
