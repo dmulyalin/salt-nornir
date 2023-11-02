@@ -1095,6 +1095,7 @@ import uuid
 import time
 import json
 import hashlib
+import copy
 
 from salt_nornir.utils import _is_url
 from salt_nornir.pydantic_models import (
@@ -1589,6 +1590,9 @@ def test(*args, **kwargs):
         supported, only interger to indicate particular worker, default is None - can
         run on any worker
     :param job_data: (dict, list) job_data argument used for tests rendering
+    :param return_tests_suite: (bool) if ``True`` returns dictionary with test ``results``
+        and ``suite`` keys allowing to view the content of fully rendered per-host tests
+        suite
 
     ``nr.cli`` function related arguments
 
@@ -1718,8 +1722,8 @@ def test(*args, **kwargs):
     Below is a list of arguments in a test suite that can refer to a text file to source
     from one of supported URL schemes: ``salt://``, ``http://``, ``https://``, ``ftp://``,
     ``s3://``, ``swift://`` and ``file://`` (local filesystem), for example ``salt://path/to/file.txt``
-    
-    * ``pattern`` - content of the file rendered and used to run the tests together with 
+
+    * ``pattern`` - content of the file rendered and used to run the tests together with
       ``ContainsTest``, ``ContainsLinesTest`` or ``EqualTest`` test functions
     * ``schema`` - used with ``CerberusTest`` test function
     * ``function_file`` - content of the file used with ``CustomFunctionTest`` as ``function_text`` argument
@@ -1860,6 +1864,7 @@ def test(*args, **kwargs):
     strict = kwargs.pop("strict", False)
     worker = kwargs.pop("worker", None)
     job_data = kwargs.pop("job_data", {})
+    return_tests_suite = kwargs.pop("return_tests_suite", False)
     suites = {}  # dictionary to hold combined test suites
 
     # if tests given extract them from hosts' inventory data
@@ -2011,6 +2016,10 @@ def test(*args, **kwargs):
                             item["function_text"] = item.pop(k)
                 suite[host_name][index] = item
 
+    # save per-host tests suite content before mutating it
+    if return_tests_suite is True:
+        return_suite = copy.deepcopy(suite)
+
     # combine and sort per-host tests in suites based on exec function and its arguments
     if isinstance(suite, dict):
         for host_name, tests in suite.items():
@@ -2084,7 +2093,11 @@ def test(*args, **kwargs):
             tb = traceback.format_exc()
             log.error("nr.test failed to dump results at '{}':\n{}".format(dump, tb))
 
-    return test_results
+    # check if need to return tests suite content
+    if return_tests_suite is True:
+        return {"results": test_results, "suite": return_suite}
+    else:
+        return test_results
 
 
 @ValidateFuncArgs(model_exec_nr_nc)

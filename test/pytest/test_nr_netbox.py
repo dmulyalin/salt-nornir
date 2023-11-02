@@ -64,7 +64,7 @@ def test_netbox_query():
     pprint.pprint(ret)
     assert ret["nrp1"][0]["name"] == "ceos1"
     assert ret["nrp1"][0]["status"] == "ACTIVE"
-    assert ret["nrp1"][0]["platform"]["name"] == "Arista cEOS"
+    assert ret["nrp1"][0]["platform"]["name"] == "arista_eos"
     
     
 @skip_if_not_has_netbox
@@ -579,3 +579,119 @@ def test_netbox_get_connections_incomplete_path_with_trace():
         timeout=60
     )    
     pprint.pprint(ret)
+    
+    
+def test_netbox_cache_list():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )   
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )        
+    
+    pprint.pprint(ret)
+    
+    assert ret["nrp3"]["cache_keys"]
+    assert ret["nrp3"]["directory"]
+    assert ret["nrp3"]["size_bytes"]
+    assert ret["nrp3"]["size_mbytes"]
+    
+    
+def test_netbox_cache_list_with_keys():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )   
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={"keys": "*fceos4*"},
+        tgt_type="glob", 
+        timeout=60
+    )        
+    
+    pprint.pprint(ret)
+    
+    assert ret["nrp3"]["cache_keys"]
+    assert all("fceos4" in i for i in ret["nrp3"]["cache_keys"])
+    
+    
+def test_netbox_cache_delete_all():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    delete_cache = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_delete"], 
+        kwarg={"keys": "*"},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    cache_list_after = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    
+    pprint.pprint(f"delete_cache {delete_cache}")
+    pprint.pprint(f"cache_list_after {cache_list_after}")
+    
+    assert len(delete_cache["nrp3"]["deleted_keys"]) > 5
+    assert cache_list_after["nrp3"]["cache_keys"] == []
+    
+    
+def test_netbox_cache_delete_one_host():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    delete_cache = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_delete"], 
+        kwarg={"keys": "*fceos4*"},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    cache_list_after = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    
+    pprint.pprint(f"delete_cache {delete_cache}")
+    pprint.pprint(f"cache_list_after {cache_list_after}")
+    
+    assert all("fceos4" in k for k in delete_cache["nrp3"]["deleted_keys"])
+    assert len(cache_list_after["nrp3"]["cache_keys"]) > 5

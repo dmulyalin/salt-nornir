@@ -84,6 +84,8 @@ To run nr.test tests suite::
 """
 import logging
 import pprint
+import yaml
+
 from robot.api import logger
 
 log = logging.getLogger(__name__)
@@ -173,11 +175,12 @@ def nr_test(*args, **kwargs):
             "remove_tasks": False,
             **kwargs,
             "add_details": True,
+            "return_tests_suite": True
         },
     )
     # iterate over results and log tests statuses
     for minion, minion_results in ret.items():
-        for result in minion_results:
+        for result in minion_results["results"]:
             host = result["host"]
             # evaluate and log test result
             if "success" in result:
@@ -242,22 +245,36 @@ def nr_test(*args, **kwargs):
 
     # form nested HTML of commands output
     devices_output_html = []
-    for host, commands in commands_output.items():
+    for host in sorted(commands_output.keys()):
+        commands = commands_output[host]
         commands_output_html = []
         for command, result in commands.items():
             commands_output_html.append(
-                f'<p><details style="margin-left:20px;"><summary>{command}</summary><p><font face="courier new">{result}</font></p></details></p>'
+                f'<p><details style="margin-left:20px;"><summary>{command}</summary><p style="margin-left:20px;"><font face="courier new">{result}</font></p></details></p>'
             )
         devices_output_html.append(
-            f'<p><details><summary>{host}</summary><p>{"".join(commands_output_html)}</p></details></p>'
+            f'<p><details><summary>{host} ({len(commands_output_html)} commands)</summary><p>{"".join(commands_output_html)}</p></details></p>'
         )
 
+    # form nested HTML for devices tes suite
+    devices_test_suite = []
+    for minion, minion_results in ret.items():
+        for host in sorted(minion_results["suite"].keys()):
+            suite_content = minion_results["suite"][host]
+            devices_test_suite.append(
+                f'<p><details><summary>{host} ({len(suite_content)} tests)</summary><p style="margin-left:20px;">{yaml.dump(suite_content, default_flow_style=False)}</p></details></p>'
+            )
+    
     logger.info(
         f"<details><summary>Test suite results details</summary><p>{tests_results_html_table}</p></details>",
         html=True,
     )
     logger.info(
         f"<details><summary>Test suite results CSV table</summary><p>{tests_results_csv_table}</p></details>",
+        html=True,
+    )
+    logger.info(
+        f"<details><summary>Devices tests suites content</summary>{''.join(devices_test_suite)}</details>",
         html=True,
     )
     logger.info(
@@ -276,7 +293,7 @@ def nr_test(*args, **kwargs):
     # raise if has errors
     if has_errors:
         raise ContinuableFailure("Tests failed")
-    # return ret with no errors in structured format
+    # return ret test rtesults with no errors in structured format
     return ret
 
 
@@ -300,21 +317,120 @@ def nr_cli(*args, **kwargs):
         },
     )
     # extract results for the host
-    for minion_name, minion_results in ret.items():
-        result = minion_results[0]
-        if (
-            result["failed"]
-            or result["exception"]
-            or "traceback" in str(result["result"]).lower()
-        ):
+    for minion, minion_results in ret.items():
+        if isinstance(minion_results, str) and "traceback" in minion_results.lower():
             has_errors = True
-            log.error(
-                f"{minion_name} minion, {result['host']} cli command '{result['name']}' failed"
+            logger.error(
+                (
+                    f'{minion} minion task failed - <p><span>"{minion_results}"</span></p>'
+                ),
+                html=True,
             )
+            continue
+        for result in minion_results:
+            host = result["host"]
+            # evaluate and log results
+            if (
+                result["failed"]
+                or result["exception"]
+                or "traceback" in str(result["result"]).lower()
+            ):
+                has_errors = True
+                logger.error(
+                    (
+                        f'{minion} minion, {host} device, task "{result["name"]}" failed - '
+                        f'<span style="background-color: #CE3E01">"{result["exception"]}"</span>'
+                        f'<p><details><summary>Collected output</summary>'
+                        f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
+                        f'</font></p></details></p>'
+                    ),
+                    html=True,
+                )
+            else:
+                logger.info(
+                    (
+                        f'{minion} minion, {host} device, task "{result["name"]}" - '
+                        f'<span style="background-color: #97BD61">success</span>'
+                        f'<p><details><summary>Collected output</summary>'
+                        f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
+                        f'</font></p></details></p>'
+                    ),
+                    html=True,
+                )
     # clean global state to prep for next test
     clean_global_data()
     # raise exception if cli command failed
     if has_errors:
-        raise ContinuableFailure(result)
+        raise ContinuableFailure(ret)
     # return ret with no errors in structured format
-    return result["result"]
+    return ret
+
+
+@keyword("nr.cfg")
+def nr_cfg(*args, **kwargs):
+    """Run Salt-Nornir nr.cfg execution function"""
+    log.info(
+        f"Running nr.cfg with args '{args}', kwargs '{kwargs}', global DATA '{DATA}'"
+    )
+    has_errors = False
+    # run this function
+    ret = client.cmd(
+        **DATA["minions"],
+        fun="nr.cfg",
+        arg=args,
+        kwarg={
+            **DATA.get("hosts", {}),
+            **kwargs,
+            "to_dict": False,
+            "add_details": True,
+        },
+    )
+    # extract results for the host
+    for minion, minion_results in ret.items():
+        if isinstance(minion_results, str) and "traceback" in minion_results.lower():
+            has_errors = True
+            logger.error(
+                (
+                    f'{minion} minion task failed - <p><span>"{minion_results}"</span></p>'
+                ),
+                html=True,
+            )
+            continue
+        # iterate over results
+        for result in minion_results:
+            host = result["host"]
+            # evaluate and log results
+            if (
+                result["failed"]
+                or result["exception"]
+                or "traceback" in str(result["result"]).lower()
+            ):
+                has_errors = True
+                logger.error(
+                    (
+                        f'{minion} minion, {host} device, task "{result["name"]}" failed - '
+                        f'<span style="background-color: #CE3E01">"{result["exception"]}"</span>'
+                        f'<p><details><summary>Collected output</summary>'
+                        f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
+                        f'</font></p></details></p>'
+                    ),
+                    html=True,
+                )
+            else:
+                logger.info(
+                    (
+                        f'{minion} minion, {host} device, task "{result["name"]}" - '
+                        f'<span style="background-color: #97BD61">success</span>'
+                        f'<p><details><summary>Collected output</summary>'
+                        f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
+                        f'</font></p></details></p>'
+                    ),
+                    html=True,
+                )
+    # clean global state to prep for next test
+    clean_global_data()
+    # raise exception if cli command failed
+    if has_errors:
+        raise ContinuableFailure(ret)
+    # return ret with no errors in structured format
+    return ret

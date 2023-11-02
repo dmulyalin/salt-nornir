@@ -1056,3 +1056,17 @@ def test_nr_test_suite_that_renders_empty():
     )     
     pprint.pprint(ret)
     assert "ERROR" in ret["nrp1"]
+    
+    
+def test_nr_test_return_tests_suite():
+    ret = client.cmd(
+        tgt="nrp1",
+        fun="nr.test",
+        arg=[],
+        kwarg={"suite": "salt://tests/test_suite_1.txt", "return_tests_suite": True},
+        tgt_type="glob",
+        timeout=60,
+    )
+    assert "results" in ret["nrp1"], "No test results returned"
+    assert "suite" in ret["nrp1"], "No test suite returned"
+    assert ret["nrp1"]["suite"], "Returned tests suite is empty"

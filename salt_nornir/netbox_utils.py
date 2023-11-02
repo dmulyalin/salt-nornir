@@ -15,6 +15,8 @@ configuration.
 Reference
 +++++++++
 
+.. autofunction:: salt_nornir.netbox_utils.cache_list
+.. autofunction:: salt_nornir.netbox_utils.cache_delete
 .. autofunction:: salt_nornir.netbox_utils.nb_graphql
 .. autofunction:: salt_nornir.netbox_utils.nb_rest
 .. autofunction:: salt_nornir.netbox_utils.get_interfaces
@@ -28,6 +30,8 @@ import logging
 import json
 import ipaddress
 import traceback
+import copy
+import fnmatch
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +63,18 @@ try:
 except ImportError:
     HAS_DISKCACHE = False
     log.warning("Failed importing pynetbox module")
+
+
+def _get_cache_object(proxy_id, params):
+    """
+    Helper function to instantiate FanoutCache object
+    """
+    cache_directory = (
+        params["proxy"]
+        .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        .format(proxy_id=proxy_id)
+    )
+    return FanoutCache(directory=cache_directory, shards=1)
 
 
 def get_salt_nornir_netbox_params(__salt__) -> dict:
@@ -418,12 +434,13 @@ def get_interfaces(
 
     # check if need to use cache
     if HAS_DISKCACHE and cache:
-        cache_directory = (
-            params["proxy"]
-            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
-            .format(proxy_id=proxy_id)
-        )
-        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
         # remove expired items from cache
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
@@ -536,7 +553,8 @@ def get_interfaces(
 
         # cache interfaces data for each host
         if HAS_DISKCACHE and cache:
-            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
             for host in hosts:
                 key = f"nr.netbox:get_interfaces, {host}, add_ip {add_ip}, add_inventory_items {add_inventory_items}"
                 cache_obj.set(key, intf_dict[host], expire=cache_ttl)
@@ -707,12 +725,13 @@ def get_connections(
 
     # check if need to use cache
     if HAS_DISKCACHE and cache:
-        cache_directory = (
-            params["proxy"]
-            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
-            .format(proxy_id=proxy_id)
-        )
-        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
         # remove expired items from cache
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
@@ -873,7 +892,8 @@ def get_connections(
 
         # cache connections data for each host
         if HAS_DISKCACHE and cache:
-            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
             for host in hosts:
                 key = f"nr.netbox:get_connections, {host}"
                 cache_obj.set(key, connections_dict[host], expire=cache_ttl)
@@ -1305,12 +1325,13 @@ def get_circuits(
 
     # check if need to use cache
     if HAS_DISKCACHE and cache:
-        cache_directory = (
-            params["proxy"]
-            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
-            .format(proxy_id=proxy_id)
-        )
-        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
         # remove expired items from cache
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
@@ -1404,7 +1425,7 @@ def get_circuits(
 
             # map path ends to devices
             if end_a["device"] and end_a["device"] in hosts:
-                circuits_dict[end_a["device"]][cid] = circuit
+                circuits_dict[end_a["device"]][cid] = copy.deepcopy(circuit)
                 circuits_dict[end_a["device"]][cid]["interface"] = end_a["name"]
                 if end_z["device"]:
                     circuits_dict[end_a["device"]][cid]["remote_device"] = end_z[
@@ -1418,7 +1439,7 @@ def get_circuits(
                         "name"
                     ]
             if end_z["device"] and end_z["device"] in hosts:
-                circuits_dict[end_z["device"]][cid] = circuit
+                circuits_dict[end_z["device"]][cid] = copy.deepcopy(circuit)
                 circuits_dict[end_z["device"]][cid]["interface"] = end_z["name"]
                 if end_a["device"]:
                     circuits_dict[end_z["device"]][cid]["remote_device"] = end_a[
@@ -1483,7 +1504,8 @@ def get_circuits(
 
         # cache connections data for each host
         if HAS_DISKCACHE and cache:
-            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
             for host in hosts:
                 key = f"nr.netbox:get_circuits, {host}"
                 cache_obj.set(key, circuits_dict[host], expire=cache_ttl)
@@ -1507,6 +1529,82 @@ def get_circuits(
     return circuits_dict
 
 
+def cache_list(
+    keys="*",
+    params=None,
+    __salt__=None,
+    proxy_id=None,
+    **kwargs,
+):
+    """
+    Function to list cached data for hosts.
+
+    :param keys: (str, list) glob pattern(s) to match cache keys to list
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param kwargs: Fx filters to filter hosts to retrieve cache data for
+    :return: dictionary with cached data details
+    """
+    # check if has diskcache
+    if not HAS_DISKCACHE:
+        raise CommandExecutionError("No diskcache found")
+
+    if isinstance(keys, str):
+        keys = [keys]
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    cache_obj = _get_cache_object(proxy_id, params)
+
+    return {
+        "size_bytes": cache_obj.volume(),
+        "size_mbytes": cache_obj.volume() / 1024000,
+        "directory": cache_obj.directory,
+        "cache_keys": [
+            k for k in list(cache_obj) if any(fnmatch.fnmatchcase(k, p) for p in keys)
+        ],
+    }
+
+
+def cache_delete(
+    keys=None,
+    params=None,
+    __salt__=None,
+    proxy_id=None,
+    **kwargs,
+):
+    """
+    Function to delete cached data for hosts.
+
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param kwargs: Fx filters to filter hosts to retrieve cache data for
+    :param keys: (str, list) glob pattern(s) to match cache keys to delete
+    :return: dictionary with ``deleted_keys`` list
+    """
+    deleted_keys = []
+    # check if has diskcache
+    if not HAS_DISKCACHE:
+        raise CommandExecutionError("No diskcache found")
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    cache_obj = _get_cache_object(proxy_id, params)
+
+    if isinstance(keys, str):
+        keys = [keys]
+
+    # delete keys
+    for cache_key in cache_obj:
+        if any(fnmatch.fnmatchcase(cache_key, p) for p in keys):
+            _ = cache_obj.pop(cache_key)
+            deleted_keys.append(cache_key)
+
+    return {"deleted_keys": deleted_keys}
+
+
 # dispatch dictionary of Netbox tasks exposed for calling
 netbox_tasks = {
     "parse_config": parse_config,
@@ -1517,6 +1615,8 @@ netbox_tasks = {
     "get_interfaces": get_interfaces,
     "get_connections": get_connections,
     "get_circuits": get_circuits,
+    "cache_list": cache_list,
+    "cache_delete": cache_delete,
     # get_config_context
     # get_configuration
     "dir": run_dir,

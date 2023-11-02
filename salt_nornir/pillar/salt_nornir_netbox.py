@@ -285,7 +285,7 @@ following these rules:
 2. If ``name`` defined under Netbox device's configuration context ``nornir`` section it
    is used as a Nornir host's inventory name key, otherwise device name used
 3. If ``platform`` not defined in Netbox device's configuration context ``nornir`` section,
-   platform value set equal to the value of device's platform NAPALM Driver. If Netbox
+   platform value set equal to the value of device's platform name. If Netbox
    device has no platform associated and no platform given in configuration context ``nornir``
    section, warning message logged statring with version 0.19.0 instead of raising KeyError
 4. If ``hostname`` parameter not defined in Netbox device's configuration context ``nornir``
@@ -325,7 +325,7 @@ Sample device data sourced from Netbox, ``host_add_netbox_data`` key name equal 
               - 10.0.0.4
             custom_field_data:
               sr_mpls_sid: 4578
-            device_role:
+            role:
               name: VirtualRouter
             device_type:
               model: FakeNOS Arista cEOS
@@ -334,8 +334,7 @@ Sample device data sourced from Netbox, ``host_add_netbox_data`` key name equal 
               name: Cage-77
             name: fceos4
             platform:
-              name: FakeNOS Arista cEOS
-              napalm_driver: arista_eos
+              name: arista_eos
             position: '40.0'
             primary_ip4:
               address: 1.0.1.4/32
@@ -781,6 +780,7 @@ __virtualname__ = "salt_nornir_netbox"
 
 RUNTIME_VARS = {"devices_done": set(), "secrets": {}}
 RUNTIME_VARS_LOCK = RLock()
+NB_VERSION = None
 
 
 def __virtual__():
@@ -1104,7 +1104,7 @@ def _process_device(device, inventory, params):
     # add platform if not provided in device config context
     if not host.get("platform"):
         if device["platform"]:
-            host["platform"] = device["platform"]["napalm_driver"]
+            host["platform"] = device["platform"]["name"]
         else:
             log.warning(f"salt_nornir_netbox no platform found for '{name}' device")
     # add hostname if not provided in config context
@@ -1216,6 +1216,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 
         salt nrp1 nr.nornir refresh
     """
+    global NB_VERSION
     try:
         ret = {}
 
@@ -1235,16 +1236,35 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         data_retrieval_num_workers = params.get("data_retrieval_num_workers", 10)
         data_retrieval_timeout = params.get("data_retrieval_timeout", 10)
 
+        try:
+            # send request to netbox
+            nb_status = requests.get(
+                f"{params['url']}/api/status", verify=params.get("ssl_verify", True)
+            )
+            nb_status.raise_for_status()
+            NB_VERSION = nb_status.json()["netbox-version"]
+            NB_VERSION = float(".".join(NB_VERSION.split(".")[:2]))
+            log.info(
+                f"salt_nornir_netbox successfully queried Netbox API URL '{params['url']}' while "
+                f"forming {minion_id} pillar data, Netbox version {NB_VERSION}"
+            )
+        except Exception as e:
+            log.exception(
+                f"salt_nornir_netbox failed to query Netbox API while forming {minion_id} pillar data, "
+                f"Netbox URL '{params['url']}', token ends with '..{params['token'][-6:]}'"
+            )
+            return ret
+
         device_fields = [
             "name",
             "last_updated",
             "custom_field_data",
             "tags {name}",
             "device_type {model}",
-            "device_role {name}",
+            "device_role {name}" if NB_VERSION < 3.6 else "role {name}",
             "config_context",
             "tenant {name}",
-            "platform {name napalm_driver}",
+            "platform {name}",
             "serial",
             "asset_tag",
             "site {name tags{name}}",
@@ -1256,22 +1276,6 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             "airflow",
             "position",
         ]
-
-        try:
-            # request dummy device to verify that Netbox GraphQL API is reachable
-            _ = nb_graphql(
-                field="device_list",
-                filters={"name": "__dummy__"},
-                fields=["id"],
-                params=params,
-                raise_for_status=True,
-            )
-        except Exception as e:
-            log.exception(
-                f"salt_nornir_netbox failed to query GarphQL API, Netbox URL "
-                f"'{params['url']}', token ends with '..{params['token'][-6:]}'"
-            )
-            return ret
 
         # source proxy minion pillar from config context
         if use_minion_id_device is True:
@@ -1314,7 +1318,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                     )
                 except Exception as e:
                     log.exception(
-                        f"salt_nornir_netbox error while processing device '{host_name}' "
+                        f"salt_nornir_netbox error while processing devices '{devices_by_minion_id}' "
                         f"from '{minion_id}' config context data: {e}"
                     )
 

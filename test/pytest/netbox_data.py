@@ -17,31 +17,31 @@ NB_PASSWORD = "admin"
 NB_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"
 NB_SECRETS_PRIVATE_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----
 """
 
@@ -151,7 +151,6 @@ racks = [
 ]
 
 manufacturers = [
-    {"name": "FakeNOS"},
     {"name": "SaltNornir"},
     {"name": "SaltStack"},
     {"name": "Arista"},
@@ -165,10 +164,6 @@ tags = [
 ]
 
 device_types = [
-    {
-        "model": "FakeNOS Arista cEOS",
-        "manufacturer": {"name": "FakeNOS"},
-    },
     {
         "model": "Salt-Nornir-Proxy-Minion",
         "manufacturer": {"name": "SaltStack"},
@@ -273,18 +268,11 @@ device_roles = [
 
 platforms = [
     {
-        "name": "FakeNOS Arista cEOS",
-        "manufacturer": {"name": "FakeNOS"},
-        "napalm_driver": "arista_eos"
-    },
-    {
-        "name": "Arista cEOS",
+        "name": "arista_eos",
         "manufacturer": {"name": "Arista"},
-        "napalm_driver": "arista_eos"
     },
     {
-        "name": "Cisco IOS-XR",
-        "napalm_driver": "cisco_xr"
+        "name": "cisco_xr",
     },    
 ]
 
@@ -579,7 +567,7 @@ connections = [
 devices = [
     {
         "name": "fceos4",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
@@ -589,7 +577,7 @@ devices = [
         "serial": "FNS123451",
         "asset_tag": "UUID-123451",
         "tags": [{"name": "nrp3"}],
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "domain_name": "lab.io",
             "lo0_ip": "1.0.1.4",
@@ -608,14 +596,14 @@ devices = [
     },
     {
         "name": "fceos5",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "position": 40,
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "nornir": {
                 "platform": "arista_eos",
@@ -698,7 +686,7 @@ devices = [
         "rack": {"name": "R201"},
         "position": 41,
         "face": "front",
-        "platform": {"name": "Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "secrets_test": {
                 "OSPF_KEY": f"nb://{NB_SECRETS_PLUGIN}/OSPF/hello_secret"
@@ -714,14 +702,14 @@ devices = [
     },
     {
         "name": "fceos8",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "position": 8,
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "nornir": {
                 "platform": "arista_eos",
@@ -741,7 +729,7 @@ devices = [
         "rack": {"name": "R201"},
         "position": 31,
         "face": "front",
-        "platform": {"name": "Cisco IOS-XR"},
+        "platform": {"name": "cisco_xr"},
         "local_context_data": {
             "nornir": {
                 "platform": "cisco_xr",
@@ -784,13 +772,13 @@ devices = [
 for i in range(10):
     devices.append({
         "name": f"fceos3_39{i}",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "tags": [{"name": "nrp3"}],
         "local_context_data": {
             "nornir": {
@@ -1189,6 +1177,9 @@ def create_devices():
     log.info("creating devices")
     for device in devices:
         device.setdefault("slug", slugify(device["name"]))
+        #  'device_role' field on the Device model has been renamed to 'role' starting Netbox 3.6
+        if NB_VERSION >= 3.6:
+            device["role"] = device.pop("device_role")
         try:
             nb.dcim.devices.create(**device)
         except Exception as e:
@@ -1391,7 +1382,7 @@ def create_circuits():
             termination_a = item.pop("termination_a")
             termination_b = item.pop("termination_b")
             # provider account supported starting with netbox 3.5 only
-            if not NB_VERSION.startswith("3.5"):
+            if NB_VERSION < 3.5:
                    _ = circuit.pop("provider_account")
             circuit = nb.circuits.circuits.create(**item)
             # add termination A
@@ -1845,7 +1836,7 @@ def populate_netbox():
     create_netbox_secrets_secrets()
     create_circuit_providers()
     creat_circuit_provider_networks()
-    if NB_VERSION.startswith("3.5"):
+    if NB_VERSION >= 3.5:
         create_circuit_provider_accounts()
     create_circuit_types()
     create_circuits()
@@ -1859,7 +1850,8 @@ if __name__ == "__main__":
         # raises ConnectionError if Netbox is not reachable
         _ = nb.status()
         globals()["nb"] = nb
-        globals()["NB_VERSION"] = nb.version
+        NB_VERSION = float(".".join(nb.version.split(".")[:2]))
+        globals()["NB_VERSION"] = NB_VERSION
     except Exception as e:
         log.exception(
             f"netbox_data failed to instantiate pynetbox.api object, "

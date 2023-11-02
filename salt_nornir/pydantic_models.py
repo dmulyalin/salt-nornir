@@ -20,6 +20,10 @@ from typing import Union, Optional, List, Any, Dict, Callable
 from nornir_salt.utils.pydantic_models import FilesCallsEnum, model_ffun_fx_filters
 from nornir_salt.plugins.functions import FFun_functions  # list of Fx names
 
+try:
+    from salt.exceptions import CommandExecutionError
+except:
+    log.warning("Failed importing SALT libraries")
 
 # ---------------------------------------------------------------
 # Execution Module Function Models
@@ -565,6 +569,8 @@ class EnumNrNetboxTasks(str, Enum):
     update_vrf = "update_vrf"
     parse_config = "parse_config"
     rest = "rest"
+    cache_list = "cache_list"
+    cache_delete = "cache_delete"
 
 
 class model_exec_nr_netbox(model_ffun_fx_filters):
