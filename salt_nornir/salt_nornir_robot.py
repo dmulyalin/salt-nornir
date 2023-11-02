@@ -175,7 +175,7 @@ def nr_test(*args, **kwargs):
             "remove_tasks": False,
             **kwargs,
             "add_details": True,
-            "return_tests_suite": True
+            "return_tests_suite": True,
         },
     )
     # iterate over results and log tests statuses
@@ -264,7 +264,7 @@ def nr_test(*args, **kwargs):
             devices_test_suite.append(
                 f'<p><details><summary>{host} ({len(suite_content)} tests)</summary><p style="margin-left:20px;">{yaml.dump(suite_content, default_flow_style=False)}</p></details></p>'
             )
-    
+
     logger.info(
         f"<details><summary>Test suite results details</summary><p>{tests_results_html_table}</p></details>",
         html=True,
@@ -340,9 +340,9 @@ def nr_cli(*args, **kwargs):
                     (
                         f'{minion} minion, {host} device, task "{result["name"]}" failed - '
                         f'<span style="background-color: #CE3E01">"{result["exception"]}"</span>'
-                        f'<p><details><summary>Collected output</summary>'
+                        f"<p><details><summary>Collected output</summary>"
                         f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
-                        f'</font></p></details></p>'
+                        f"</font></p></details></p>"
                     ),
                     html=True,
                 )
@@ -351,9 +351,9 @@ def nr_cli(*args, **kwargs):
                     (
                         f'{minion} minion, {host} device, task "{result["name"]}" - '
                         f'<span style="background-color: #97BD61">success</span>'
-                        f'<p><details><summary>Collected output</summary>'
+                        f"<p><details><summary>Collected output</summary>"
                         f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
-                        f'</font></p></details></p>'
+                        f"</font></p></details></p>"
                     ),
                     html=True,
                 )
@@ -410,9 +410,9 @@ def nr_cfg(*args, **kwargs):
                     (
                         f'{minion} minion, {host} device, task "{result["name"]}" failed - '
                         f'<span style="background-color: #CE3E01">"{result["exception"]}"</span>'
-                        f'<p><details><summary>Collected output</summary>'
+                        f"<p><details><summary>Collected output</summary>"
                         f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
-                        f'</font></p></details></p>'
+                        f"</font></p></details></p>"
                     ),
                     html=True,
                 )
@@ -421,9 +421,9 @@ def nr_cfg(*args, **kwargs):
                     (
                         f'{minion} minion, {host} device, task "{result["name"]}" - '
                         f'<span style="background-color: #97BD61">success</span>'
-                        f'<p><details><summary>Collected output</summary>'
+                        f"<p><details><summary>Collected output</summary>"
                         f'<p style="margin-left:20px;"><font face="courier new">{result["result"]}'
-                        f'</font></p></details></p>'
+                        f"</font></p></details></p>"
                     ),
                     html=True,
                 )
