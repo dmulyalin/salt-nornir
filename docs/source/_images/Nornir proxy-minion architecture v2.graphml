@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:java="http://www.yworks.com/xml/yfiles-common/1.0/java" xmlns:sys="http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0" xmlns:x="http://www.yworks.com/xml/yfiles-common/markup/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:y="http://www.yworks.com/xml/graphml" xmlns:yed="http://www.yworks.com/xml/yed/3" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd">
-  <!--Created by yEd 3.18.1.1-->
+  <!--Created by yEd 3.23.2-->
   <key attr.name="Description" attr.type="string" for="graph" id="d0"/>
   <key for="port" id="d1" yfiles.type="portgraphics"/>
   <key for="port" id="d2" yfiles.type="portgeometry"/>
@@ -319,7 +319,7 @@ Device</y:NodeLabel>
     <node id="n23">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="142.7840000000001" width="134.15999999999997" x="-279.83052188006457" y="-737.0427097508897"/>
+          <y:Geometry height="96.39999999999998" width="134.15999999999997" x="-279.83052188006457" y="-737.0427097508898"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="53.8203125" x="40.169843749999984" xml:space="preserve" y="4.0">Server</y:NodeLabel>
@@ -330,7 +330,7 @@ Device</y:NodeLabel>
     <node id="n24">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="-268.59052188006456" y="-687.0791848488511"/>
+          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="-268.59052188006456" y="-707.2694182446752"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="10" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="16.2509765625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="108.4775390625" x="1.601230468749975" xml:space="preserve" y="4.0">Proxy Minion Process</y:NodeLabel>
@@ -341,7 +341,7 @@ Device</y:NodeLabel>
     <node id="n25">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="-268.59052188006456" y="-645.688951453027"/>
+          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="-268.59052188006456" y="-674.8791848488511"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="10" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="16.2509765625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="108.4775390625" x="1.601230468749975" xml:space="preserve" y="4.0">Proxy Minion Process</y:NodeLabel>
@@ -352,7 +352,7 @@ Device</y:NodeLabel>
     <node id="n26">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="142.7840000000001" width="134.15999999999997" x="48.48947811993537" y="-737.0427097508897"/>
+          <y:Geometry height="96.39999999999986" width="134.15999999999997" x="48.48947811993537" y="-737.0427097508897"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="53.8203125" x="40.169843749999984" xml:space="preserve" y="4.0">Server</y:NodeLabel>
@@ -363,7 +363,7 @@ Device</y:NodeLabel>
     <node id="n27">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="59.72947811993538" y="-687.0791848488511"/>
+          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="59.72947811993538" y="-707.0791848488511"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="10" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="16.2509765625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="108.4775390625" x="1.601230468749975" xml:space="preserve" y="4.0">Proxy Minion Process</y:NodeLabel>
@@ -374,7 +374,7 @@ Device</y:NodeLabel>
     <node id="n28">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="59.72947811993538" y="-645.688951453027"/>
+          <y:Geometry height="26.456950195923014" width="111.67999999999995" x="59.72947811993538" y="-674.8791848488511"/>
           <y:Fill color="#FFFFFF" transparent="false"/>
           <y:BorderStyle color="#000000" raised="false" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="10" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="16.2509765625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="108.4775390625" x="1.601230468749975" xml:space="preserve" y="4.0">Proxy Minion Process</y:NodeLabel>
@@ -549,6 +549,17 @@ Device</y:NodeLabel>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="t" textColor="#000000" verticalTextPosition="bottom" visible="true" width="85.796875" x="1.701562499999966" xml:space="preserve" y="4.0">PureSNMP</y:NodeLabel>
           <y:Shape type="roundrectangle"/>
         </y:ShapeNode>
+      </data>
+    </node>
+    <node id="n40">
+      <data key="d5"/>
+      <data key="d6">
+        <y:GenericNode configuration="com.yworks.flowchart.dataBase">
+          <y:Geometry height="101.52828410964025" width="73.82852188006575" x="281.81426094003285" y="-918.1557676175124"/>
+          <y:Fill color="#000000" color2="#000000" transparent="false"/>
+          <y:BorderStyle color="#00FFFF" type="line" width="2.0"/>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="16" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="23.6015625" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#FFFFFF" verticalTextPosition="bottom" visible="true" width="58.2265625" x="7.800979690032875" xml:space="preserve" y="38.96336080482013">Netbox<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
+        </y:GenericNode>
       </data>
     </node>
     <edge id="e0" source="n1" target="n2">
@@ -872,7 +883,6 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
       </data>
     </edge>
     <edge id="e29" source="n39" target="n38">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -884,7 +894,6 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
       </data>
     </edge>
     <edge id="e30" source="n37" target="n39">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -895,7 +904,6 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
       </data>
     </edge>
     <edge id="e31" source="n4" target="n37">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="24.11807700875591" sy="27.522535435123586" tx="0.0" ty="0.0">
@@ -904,6 +912,32 @@ SSH<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>
           <y:Arrows source="none" target="none"/>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e32" source="n1" target="n40">
+      <data key="d9"/>
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="56.166161467815165" sy="25.152196647229175" tx="0.0" ty="0.0"/>
+          <y:LineStyle color="#000000" type="line" width="1.0"/>
+          <y:Arrows source="circle" target="standard"/>
+          <y:EdgeLabel alignment="center" backgroundColor="#FFFFFF" configuration="AutoFlippingLabel" distance="2.0" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasLineColor="false" height="18.701171875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" preferredPlacement="anywhere" ratio="0.5" textColor="#000000" verticalTextPosition="bottom" visible="true" width="23.341796875" x="225.42734890391603" xml:space="preserve" y="-9.350609937692298">API<y:LabelModel><y:SmartEdgeLabelModel autoRotationEnabled="false" defaultAngle="0.0" defaultDistance="10.0"/></y:LabelModel><y:ModelParameter><y:SmartEdgeLabelModelParameter angle="6.283185307179586" distance="8.818241855899664" distanceToCenter="true" position="center" ratio="0.9151737952081774" segment="-1"/></y:ModelParameter><y:PreferredPlacementDescriptor angle="0.0" angleOffsetOnRightSide="0" angleReference="absolute" angleRotationOnRightSide="co" distance="-1.0" frozen="true" placement="anywhere" side="anywhere" sideReference="relative_to_edge_flow"/></y:EdgeLabel>
+          <y:BendStyle smoothed="false"/>
+        </y:PolyLineEdge>
+      </data>
+    </edge>
+    <edge id="e33" source="n0" target="n40">
+      <data key="d9"/>
+      <data key="d10">
+        <y:PolyLineEdge>
+          <y:Path sx="46.34000000000009" sy="47.5" tx="-106.50000000000006" ty="0.0">
+            <y:Point x="212.22852188006567" y="-618.1507097508897"/>
+            <y:Point x="212.22852188006567" y="-867.3916255626923"/>
+          </y:Path>
+          <y:LineStyle color="#000000" type="line" width="1.0"/>
+          <y:Arrows source="circle" target="circle"/>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
