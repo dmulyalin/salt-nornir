@@ -1,6 +1,6 @@
 hosts:
   nxos1:
-    hostname: sandbox-nxos-1.cisco.com
+    hostname: sbx-nxos-mgmt.cisco.com
     platform: nxos_ssh
     username: admin
     password: "Admin_1234!"
@@ -29,6 +29,6 @@ hosts:
                 default:
                   arguments:
                     learn_hostname: true
-                  ip: sandbox-nxos-1.cisco.com
+                  ip: sbx-nxos-mgmt.cisco.com
                   protocol: ssh
                   port: 22      

@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir /tmp/nornir_salt/.[prodmaxmaster] --upgrade && \
     pip install --no-cache-dir /tmp/nornir_salt/.[prodmaxminion] --upgrade && \
     pip install --no-cache-dir /tmp/salt_nornir/.[prodmaxminion] --upgrade
     
-RUN USE_STATIC_REQUIREMENTS=1 pip install --no-cache-dir salt==3006.2
+RUN USE_STATIC_REQUIREMENTS=1 pip install --no-cache-dir salt==3006.5
 
 ENTRYPOINT ["/usr/bin/dumb-init"]
 CMD ["/usr/local/bin/saltinit"]
