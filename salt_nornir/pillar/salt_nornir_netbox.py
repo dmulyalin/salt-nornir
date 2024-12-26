@@ -862,7 +862,7 @@ def _fetch_device_secrets(device_name, params):
             # fetch device id using Netbox GraphQL API
             nb_device = nb_graphql(
                 field="device_list",
-                filters={"name": device_name},
+                filters={"name": {"exact": device_name}},
                 fields=["id"],
                 params=params,
             )
@@ -1281,7 +1281,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         if use_minion_id_device is True:
             minion_nb = nb_graphql(
                 field="device_list",
-                filters={"name": minion_id},
+                filters={"name": {"exact": minion_id}},
                 fields=["config_context"],
                 params=params,
             )
@@ -1303,7 +1303,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 host_names = list(ret.get("hosts", {}))
                 devices_by_minion_id = nb_graphql(
                     field="device_list",
-                    filters={"name": host_names},
+                    filters={"name": {"in_list": host_names}},
                     fields=device_fields,
                     params=params,
                 )
