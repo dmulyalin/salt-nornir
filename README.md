@@ -62,6 +62,12 @@ Issues, bug reports and feature requests are welcomed. Feedback is a gift and we
 - done is better than perfect
 - keep it stupid simple
 
+# Want To Hire
+
+Reach out at [d.mulyalin@gmail.com](mailto:d.mulyalin@gmail.com?subject=[GitHub]%20Salt-Nornir-Job) to discuss.
+
+Feel like you want to [sponsor me or buy me a coffee](https://paypal.me/dmulyalin) :smiley: :coffee:.
+
 [logo]:                        docs/source/_images/SaltNornirLogo.png "salt nornir logo"
 [architecture]:                docs/source/_images/Nornir_proxy_minion_architecture_v2.png "salt nornir architecture"
 [pepy-downloads-badge]:        https://pepy.tech/badge/salt-nornir

@@ -37,7 +37,7 @@ if HAS_SALT:
     client = salt.client.LocalClient()
 
 test_proxy_id = "nrp2"
-JUNOS_DEVICE_IP = "192.168.1.220"
+JUNOS_DEVICE_IP = "192.168.4.220"
 junos_test_device_params = f"""
 name: vSRX-1
 hostname: {JUNOS_DEVICE_IP}
@@ -212,7 +212,7 @@ class TestJunosNrCli:
             tgt=test_proxy_id,
             fun="nr.cli",
             arg=["salt://templates/juniper_jinja_multiline_test.j2"],
-            kwarg={"add_details": True, "FB": "vSRX-1", "use_ps": True},
+            kwarg={"add_details": True, "FB": "vSRX-1", "use_ps": True, "split_lines": False},
             tgt_type="glob",
             timeout=60,
         )

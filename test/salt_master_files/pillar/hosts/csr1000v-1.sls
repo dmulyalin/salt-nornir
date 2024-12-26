@@ -2,7 +2,7 @@ hosts:
   csr1000v-1:
     hostname: sandbox-iosxe-latest-1.cisco.com
     platform: cisco_ios
-    username: developer
+    username: admin
     password: C1sco12345
     port: 22
     connection_options:

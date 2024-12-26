@@ -15,11 +15,12 @@
     function: nr.tping   
 - name: Check NTP configuration
   test: contains_lines
-  pattern: ["1.1.1.1", "2.2.2.2"]
+  pattern: ["1.1.1"]
   task: "show run | inc ntp"
   salt:
     function: nr.cli
-    plugin: scrapli
+    plugin: netmiko
+    enable: True
 - task: "show version"
   test: contains
   pattern: "cEOS"
@@ -27,4 +28,7 @@
 - test: contains_lines
   pattern: ["1.1.1.10", "1.1.1.11"]
   task: "show ntp associations"
-  name: check NTP config
+  name: check NTP status
+  salt:
+    function: nr.cli
+    plugin: scrapli

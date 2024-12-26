@@ -257,6 +257,7 @@ def _run_workflow_step(
     dcache,
     state_name,
     common_kwargs,
+    stop_if_fail_hosts,
 ):
     """
     Helper function to run single work flow step.
@@ -272,6 +273,7 @@ def _run_workflow_step(
     :param dcache: (bool) if True saves step results in defaults data
     :param state_name: (str) Name of this state
     :param common_kwargs: (dict) arguments to supply to each step
+    :param stop_if_fail_hosts: (set) list of hosts to stop not run workflow for
     """
     nr_fun = [
         "nr.cli",
@@ -367,6 +369,11 @@ def _run_workflow_step(
             "hosts", **step["kwargs"], identity=_form_identity("workflow")
         )
 
+        # exclude hosts that need to stop workflow for
+        if stop_if_fail_hosts:
+            matched_hosts = [h for h in matched_hosts if h not in stop_if_fail_hosts]
+            step["kwargs"]["FL"] = list(matched_hosts)
+
         # return when have no hosts to run step against
         if not matched_hosts:
             if report_all:
@@ -409,6 +416,9 @@ def _run_workflow_step(
                 report["summary"][host_name].append(
                     {step["name"]: "FAIL" if result["failed"] else "PASS"}
                 )
+                # check if need to stop running workflow for failed host
+                if step.get("stop_if_fail") and result["failed"]:
+                    stop_if_fail_hosts.add(host_name)
         elif step["function"] in nr_fun:
             # result is a dict if to_dict set to True
             if isinstance(result, dict):
@@ -417,6 +427,9 @@ def _run_workflow_step(
                         if task_result["failed"] or task_result.get("success") is False:
                             report["summary"][host_name].append({step["name"]: "FAIL"})
                             steps_failed[step["name"]].add(host_name)
+                            # check if need to stop running workflow for failed host
+                            if step.get("stop_if_fail"):
+                                stop_if_fail_hosts.add(host_name)
                             break
                     else:
                         report["summary"][host_name].append({step["name"]: "PASS"})
@@ -431,6 +444,9 @@ def _run_workflow_step(
                         report["summary"][task_result["host"]].append(
                             {task_result["name"]: "FAIL"}
                         )
+                        # check if need to stop running workflow for failed host
+                        if step.get("stop_if_fail"):
+                            stop_if_fail_hosts.add(task_result["host"])
                     else:
                         steps_passed[task_result["name"]].add(task_result["host"])
                         report["summary"][task_result["host"]].append(
@@ -442,6 +458,9 @@ def _run_workflow_step(
                     steps_failed[step["name"]] = set(matched_hosts)
                     for host_name in matched_hosts:
                         report["summary"][host_name].append({step["name"]: "ERROR"})
+                        # check if need to stop running workflow for failed host
+                        if step.get("stop_if_fail"):
+                            stop_if_fail_hosts.add(host_name)
                 else:
                     steps_passed[step["name"]] = set(matched_hosts)
                     for host_name in matched_hosts:
@@ -466,6 +485,9 @@ def _run_workflow_step(
         # add ERROR for this step to all hosts
         for host_name, host_steps in report["summary"].items():
             host_steps.append({step["name"]: "ERROR"})
+            # check if need to stop running workflow for failed host
+            if step.get("stop_if_fail"):
+                stop_if_fail_hosts.add(host_name)
 
 
 def _decide_state_execution_status(options, ret, steps_failed, steps_passed):
@@ -599,6 +621,7 @@ def workflow(*args, **kwargs):
     :param run_if_pass_any: (list) this step will run if ``any`` of the previous steps in a list passed
     :param run_if_fail_all: (list) this step will run if ``all`` of the previous steps in a list failed
     :param run_if_pass_all: (list) this step will run if ``all`` of the previous steps in a list passed
+    :param stop_if_fail: (bool) Stop workflow execution for host if this step failed
 
     While workflow steps can call any execution module function, ``run_if_x``
     properly supported only for Nornir Execution Module functions: ``nr.task``,
@@ -800,6 +823,7 @@ def workflow(*args, **kwargs):
             |  1 | ceos2  | PASS | PASS | PASS | PASS |
     """
     steps_failed, steps_passed = {}, {}
+    stop_if_fail_hosts = set()
     options = kwargs.pop("options", {})
     state_name = kwargs.pop("name")
 
@@ -853,6 +877,7 @@ def workflow(*args, **kwargs):
                 dcache,
                 state_name,
                 common_kwargs,
+                stop_if_fail_hosts,
             )
 
     # clean up cached data

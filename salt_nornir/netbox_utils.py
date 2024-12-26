@@ -15,16 +15,23 @@ configuration.
 Reference
 +++++++++
 
+.. autofunction:: salt_nornir.netbox_utils.cache_list
+.. autofunction:: salt_nornir.netbox_utils.cache_delete
 .. autofunction:: salt_nornir.netbox_utils.nb_graphql
 .. autofunction:: salt_nornir.netbox_utils.nb_rest
 .. autofunction:: salt_nornir.netbox_utils.get_interfaces
 .. autofunction:: salt_nornir.netbox_utils.get_connections
+.. autofunction:: salt_nornir.netbox_utils.get_circuits
 .. autofunction:: salt_nornir.netbox_utils.parse_config
 .. autofunction:: salt_nornir.netbox_utils.update_config_context
 .. autofunction:: salt_nornir.netbox_utils.update_vrf
 """
 import logging
 import json
+import ipaddress
+import traceback
+import copy
+import fnmatch
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +63,18 @@ try:
 except ImportError:
     HAS_DISKCACHE = False
     log.warning("Failed importing pynetbox module")
+
+
+def _get_cache_object(proxy_id, params):
+    """
+    Helper function to instantiate FanoutCache object
+    """
+    cache_directory = (
+        params["proxy"]
+        .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        .format(proxy_id=proxy_id)
+    )
+    return FanoutCache(directory=cache_directory, shards=1)
 
 
 def get_salt_nornir_netbox_params(__salt__) -> dict:
@@ -287,14 +306,117 @@ def get_interfaces(
 
     .. note:: ``add_inventory_items`` only supported with Netbox 3.4 and above.
 
-    .. note: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
-    otherwise ``CommandExecutionError`` raised.
+    .. note:: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
+      otherwise ``CommandExecutionError`` raised.
 
     Starting with version ``0.20.0`` support added to cache data retrieved from
     Netbox on a per-device basis. For this functionality to work need to have
     `diskcache <https://github.com/grantjenks/python-diskcache>`_ library installed
-    on salt-nornir proxy minion. Cache is persistant and stored on the minion's
-    local filesystem.
+    on salt-nornir proxy minion. Cache is persistent and stored on the minion's
+    local file system.
+
+    Sample data returned for interfaces when ``add_ip`` and ``add_inventory_items``
+    set to True::
+
+        {'fceos4': {'Port-Channel1': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [],
+                                      'custom_fields': {},
+                                      'description': 'Main uplink interface',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'inventory_items': [],
+                                      'ip_addresses': [],
+                                      'last_updated': '2023-08-22T09:47:57.256446+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [{'name': 'eth101'},
+                                                            {'name': 'eth102'}],
+                                      'mode': None,
+                                      'mtu': None,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                      'wwn': None},
+                             'eth1': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [{'name': 'eth1.11'}],
+                                      'custom_fields': {},
+                                      'description': 'Interface 1 description',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'ip_addresses': [{'address': '1.0.10.1/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:03.287649+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None},
+                                                       {'address': '1.0.100.1/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:01.692965+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None}],
+                                      'inventory_items': [{'asset_tag': None,
+                                                           'custom_fields': {},
+                                                           'description': '',
+                                                           'label': '',
+                                                           'manufacturer': None,
+                                                           'name': 'SFP-1G-T',
+                                                           'part_id': '',
+                                                           'role': {'name': 'Transceiver'},
+                                                           'serial': '',
+                                                           'tags': []}],
+                                      'ip_addresses': [],
+                                      'last_updated': '2023-08-22T09:47:57.809307+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [],
+                                      'mode': 'TAGGED',
+                                      'mtu': 1500,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                      'wwn': None},
+                        'loopback0': {'bridge': None,
+                                      'bridge_interfaces': [],
+                                      'child_interfaces': [],
+                                      'custom_fields': {},
+                                      'description': '',
+                                      'duplex': None,
+                                      'enabled': True,
+                                      'inventory_items': [],
+                                      'ip_addresses': [{'address': '1.0.1.4/32',
+                                                        'custom_fields': {},
+                                                        'description': '',
+                                                        'dns_name': '',
+                                                        'last_updated': '2023-08-22T09:48:00.728097+00:00',
+                                                        'role': None,
+                                                        'status': 'ACTIVE',
+                                                        'tags': [],
+                                                        'tenant': None}],
+                                      'last_updated': '2023-08-22T09:47:57.148611+00:00',
+                                      'mac_address': None,
+                                      'member_interfaces': [],
+                                      'mode': None,
+                                      'mtu': None,
+                                      'parent': None,
+                                      'speed': None,
+                                      'tagged_vlans': [],
+                                      'tags': [],
+                                      'untagged_vlan': None,
+                                      'vrf': None,
+                                           'wwn': None}}}}
     """
     # retrieve a list of hosts to get interfaces for
     hosts = hosts or __salt__["nr.nornir"](
@@ -312,12 +434,13 @@ def get_interfaces(
 
     # check if need to use cache
     if HAS_DISKCACHE and cache:
-        cache_directory = (
-            params["proxy"]
-            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
-            .format(proxy_id=proxy_id)
-        )
-        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
         # remove expired items from cache
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
@@ -376,6 +499,7 @@ def get_interfaces(
                 "fields": intf_fields,
             }
         }
+
         # add query to retrieve inventory items
         if add_inventory_items:
             inv_filters = {"device": hosts, "component_type": "dcim.interface"}
@@ -429,7 +553,8 @@ def get_interfaces(
 
         # cache interfaces data for each host
         if HAS_DISKCACHE and cache:
-            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
             for host in hosts:
                 key = f"nr.netbox:get_interfaces, {host}, add_ip {add_ip}, add_inventory_items {add_inventory_items}"
                 cache_obj.set(key, intf_dict[host], expire=cache_ttl)
@@ -455,7 +580,6 @@ def get_interfaces(
 
 def get_connections(
     params: dict = None,
-    trace: bool = False,
     sync=False,
     __salt__=None,
     proxy_id=None,
@@ -465,144 +589,118 @@ def get_connections(
     **kwargs,
 ) -> dict:
     """
-    Function to retrieve connections details from Netbox
+    Function to retrieve connections details from Netbox for interface and
+    console ports.
 
     :param params: dictionary with salt_nornir_netbox parameters
-    :param trace: if True traces full connection path between devices interfaces
     :param sync: if True, saves get connections results to host's in-memory
         inventory data under ``connections`` key, if sync is a string, provided
         value used as a key.
     :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param hosts: list of hosts to get connections for
     :param cache: boolean indicating whether to cache Netbox response or string
         ``refresh`` to delete cached data, if set to False cached data ignored
         but not refreshed
     :param cache_ttl: integer indicating cache time to live
-    :param kwargs: Fx filters to filter hosts to retrieve interfaces for
+    :param kwargs: Fx filters to filter hosts to retrieve connections for
     :return: dictionary keyed by device name with connections details
 
     .. warning:: Get connections only supported for Netbox of 3.4 and above.
 
     .. note:: Either ``hosts`` or ``__salt__`` with ``Fx`` filters should be provided,
-    otherwise ``CommandExecutionError`` raised.
-
-    When ``trace`` set to False, only first segment of connection path returned. If
-    first segment is a circuit termination, ``circuit`` details included, otherwise
-    first segment ``remote_device`` details included.
-
-    Path tracing only performed if first segment remote cable termination is of
-    frontport, rearport or circuittermination type and only for interface and console
-    ports connections, power cables trace not implemented.
-
-    .. warning:: trace operation performed on an interface by interface basis and may
-        take significant amount of time to complete for all device's interfaces.
+      otherwise ``CommandExecutionError`` raised.
 
     Get connections returns a dictionary keyed by device name with value being a
-    dictionary keyed by local interface names.
+    dictionary keyed by device interface names.
 
-    Sample return data with ``trace`` set to ``True``::
+    Sample return data::
 
         {'fceos4': {'ConsolePort1': {'breakout': False,
-                          'cable': {'custom_fields': {},
-                                    'label': '',
-                                    'last_updated': '2022-12-29T04:16:49.919563+00:00',
-                                    'length': None,
-                                    'length_unit': None,
-                                    'status': 'CONNECTED',
-                                    'tags': [],
-                                    'tenant': {'name': 'SALTNORNIR'},
-                                    'type': 'CAT6A'},
-                          'reachable': True,
-                          'remote_device': 'fceos5',
-                          'remote_interface': 'ConsoleServerPort1',
-                          'remote_termination_type': 'consoleserverport',
-                          'termination_type': 'consoleport'},
-         'eth1': {'breakout': True,
-                  'cable': {'custom_fields': {},
-                            'label': '',
-                            'last_updated': '2022-12-29T06:54:16.036814+00:00',
-                            'length': None,
-                            'length_unit': None,
-                            'status': 'CONNECTED',
-                            'tags': [],
-                            'tenant': {'name': 'SALTNORNIR'},
-                            'type': 'CAT6A'},
-                  'reachable': True,
-                  'remote_device': 'fceos5',
-                  'remote_interface': ['eth1', 'eth10'],
-                  'remote_termination_type': 'interface',
-                  'termination_type': 'interface'},
-          'eth101': {'breakout': False,
-                     'cables': [{'color': '',
-                                 'description': '',
-                                 'id': 28,
-                                 'label': '',
-                                 'length': None,
-                                 'length_unit': '',
-                                 'status': 'connected',
-                                 'type': '',
-                                 'url': 'http://192.168.75.200:8000/api/dcim/cables/28/'},
-                                {'color': '',
-                                 'description': '',
-                                 'id': 29,
-                                 'label': '',
-                                 'length': None,
-                                 'length_unit': '',
-                                 'status': 'connected',
-                                 'type': '',
-                                 'url': 'http://192.168.75.200:8000/api/dcim/cables/29/'}],
-                     'reachable': True,
-                     'remote_device': 'fceos5',
-                     'remote_interface': 'eth8',
-                     'remote_termination_type': 'interface',
-                     'termination_type': 'interface'},
-          'eth3': {'breakout': False,
-                   'cable': {'custom_fields': {},
-                             'label': '',
-                             'last_updated': '2022-12-29T06:56:23.629652+00:00',
-                             'length': None,
-                             'length_unit': None,
-                             'status': 'CONNECTED',
-                             'tags': [],
-                             'tenant': {'name': 'SALTNORNIR'},
-                             'type': 'CAT6A'},
-                   'reachable': True,
-                   'remote_device': 'fceos5',
-                   'remote_interface': 'eth3',
-                   'remote_termination_type': 'interface',
-                   'termination_type': 'interface'},
-         'eth7': {'breakout': False,
-                  'cables': [{'color': '',
-                              'description': '',
-                              'id': 25,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'connected',
-                              'type': 'smf',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/25/'},
-                             {'color': '',
-                              'description': '',
-                              'id': 26,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'planned',
-                              'type': '',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/26/'},
-                             {'color': '',
-                              'description': '',
-                              'id': 27,
-                              'label': '',
-                              'length': None,
-                              'length_unit': '',
-                              'status': 'connected',
-                              'type': '',
-                              'url': 'http://192.168.75.200:8000/api/dcim/cables/27/'}],
-                  'reachable': False,
-                  'remote_device': 'fceos5',
-                  'remote_interface': 'eth7',
-                  'remote_termination_type': 'interface',
-                  'termination_type': 'interface'}}}
+                                     'cable': {'custom_fields': {},
+                                               'label': '',
+                                               'length': None,
+                                               'length_unit': None,
+                                               'peer_device': 'fceos5',
+                                               'peer_interface': 'ConsoleServerPort1',
+                                               'peer_termination_type': 'consoleserverport',
+                                               'status': 'CONNECTED',
+                                               'tags': [],
+                                               'tenant': {'name': 'SALTNORNIR'},
+                                               'type': 'CAT6A'},
+                                     'remote_device': 'fceos5',
+                                     'remote_interface': 'ConsoleServerPort1',
+                                     'remote_termination_type': 'consoleserverport',
+                                     'termination_type': 'consoleport'},
+                    'eth1': {'breakout': True,
+                             'cable': {'custom_fields': {},
+                                       'label': '',
+                                       'length': None,
+                                       'length_unit': None,
+                                       'peer_device': 'fceos5',
+                                       'peer_interface': ['eth1', 'eth10'],
+                                       'peer_termination_type': 'interface',
+                                       'status': 'CONNECTED',
+                                       'tags': [],
+                                       'tenant': {'name': 'SALTNORNIR'},
+                                       'type': 'CAT6A'},
+                             'remote_device': 'fceos5',
+                             'remote_interface': ['eth1', 'eth10'],
+                             'remote_termination_type': 'interface',
+                             'termination_type': 'interface'},
+                    'eth101': {'breakout': False,
+                               'cable': {'custom_fields': {},
+                                         'label': '',
+                                         'length': None,
+                                         'length_unit': None,
+                                         'peer_termination_type': 'circuittermination',
+                                         'status': 'CONNECTED',
+                                         'tags': [],
+                                         'tenant': None,
+                                         'type': 'SMF'},
+                               'circuit': {'cid': 'CID1',
+                                           'commit_rate': None,
+                                           'custom_fields': {},
+                                           'description': '',
+                                           'provider': {'name': 'Provider1'},
+                                           'status': 'ACTIVE',
+                                           'tags': []},
+                               'remote_device': 'fceos5',
+                               'remote_interface': 'eth8',
+                               'remote_termination_type': 'interface',
+                               'termination_type': 'interface'},
+                    'eth3': {'breakout': False,
+                             'cable': {'custom_fields': {},
+                                       'label': '',
+                                       'length': None,
+                                       'length_unit': None,
+                                       'peer_device': 'fceos5',
+                                       'peer_interface': 'eth3',
+                                       'peer_termination_type': 'interface',
+                                       'status': 'CONNECTED',
+                                       'tags': [],
+                                       'tenant': {'name': 'SALTNORNIR'},
+                                       'type': 'CAT6A'},
+                             'remote_device': 'fceos5',
+                             'remote_interface': 'eth3',
+                             'remote_termination_type': 'interface',
+                             'termination_type': 'interface'},
+                    'eth7': {'breakout': False,
+                             'cable': {'custom_fields': {},
+                                       'label': '',
+                                       'length': None,
+                                       'length_unit': None,
+                                       'peer_device': 'PatchPanel-1',
+                                       'peer_interface': 'FrontPort1',
+                                       'peer_termination_type': 'frontport',
+                                       'status': 'CONNECTED',
+                                       'tags': [],
+                                       'tenant': {'name': 'SALTNORNIR'},
+                                       'type': 'SMF'},
+                             'remote_device': 'fceos5',
+                             'remote_interface': 'eth7',
+                             'remote_termination_type': 'interface',
+                             'termination_type': 'interface'}}}}
+
     Where:
 
     * ``ConsolePort1`` is a direct cable between devices
@@ -610,92 +708,6 @@ def get_connections(
     * ``eth1`` is a direct between devices breakout cable
     * ``eth3`` is a direct between devices normal (non-breakout) cable
     * ``eth7`` connected to another device through patch panels
-
-    Same connections but with ``trace`` set to ``False``::
-
-        {'fceos4': {'ConsolePort1': {'breakout': False,
-                               'cable': {'custom_fields': {},
-                                         'label': '',
-                                         'last_updated': '2022-12-29T04:16:49.919563+00:00',
-                                         'length': None,
-                                         'length_unit': None,
-                                         'status': 'CONNECTED',
-                                         'tags': [],
-                                         'tenant': {'name': 'SALTNORNIR'},
-                                         'type': 'CAT6A'},
-                               'reachable': True,
-                               'remote_device': 'fceos5',
-                               'remote_interface': 'ConsoleServerPort1',
-                               'remote_termination_type': 'consoleserverport',
-                               'termination_type': 'consoleport'},
-              'eth1': {'breakout': True,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T06:54:16.036814+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': {'name': 'SALTNORNIR'},
-                                 'type': 'CAT6A'},
-                       'reachable': True,
-                       'remote_device': 'fceos5',
-                       'remote_interface': ['eth1', 'eth10'],
-                       'remote_termination_type': 'interface',
-                       'termination_type': 'interface'},
-              'eth101': {'cable': {'custom_fields': {},
-                                   'label': '',
-                                   'last_updated': '2022-12-29T09:43:21.761420+00:00',
-                                   'length': None,
-                                   'length_unit': None,
-                                   'status': 'CONNECTED',
-                                   'tags': [],
-                                   'tenant': None,
-                                   'type': None},
-                         'circuit': {'cid': 'CID1',
-                                     'commit_rate': None,
-                                     'custom_fields': {},
-                                     'description': '',
-                                     'provider': {'name': 'Provider1'},
-                                     'status': 'ACTIVE',
-                                     'tags': []},
-                         'reachable': True,
-                         'remote_termination_type': 'circuittermination',
-                         'termination_type': 'interface'},
-              'eth3': {'breakout': False,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T06:56:23.629652+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': {'name': 'SALTNORNIR'},
-                                 'type': 'CAT6A'},
-                       'reachable': True,
-                       'remote_device': 'fceos5',
-                       'remote_interface': 'eth3',
-                       'remote_termination_type': 'interface',
-                       'termination_type': 'interface'},
-              'eth7': {'breakout': False,
-                       'cable': {'custom_fields': {},
-                                 'label': '',
-                                 'last_updated': '2022-12-29T08:52:26.546559+00:00',
-                                 'length': None,
-                                 'length_unit': None,
-                                 'status': 'CONNECTED',
-                                 'tags': [],
-                                 'tenant': None,
-                                 'type': 'SMF'},
-                       'reachable': True,
-                       'remote_device': 'PatchPanel1',
-                       'remote_interface': 'FrontPort1',
-                       'remote_termination_type': 'frontport',
-                       'termination_type': 'interface'}}}}
-
-    Each connection has ``reachable`` status calculated based on cables status - set to
-    ``True`` if all cables in the path have status ``connected``, path circuits' status
-    not taken into account.
     """
     # retrieve a list of hosts to get interfaces for
     hosts = hosts or __salt__["nr.nornir"](
@@ -713,17 +725,18 @@ def get_connections(
 
     # check if need to use cache
     if HAS_DISKCACHE and cache:
-        cache_directory = (
-            params["proxy"]
-            .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
-            .format(proxy_id=proxy_id)
-        )
-        cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
         # remove expired items from cache
         _ = cache_obj.expire()
         # iterate over a copy of hosts list
         for host in list(hosts):
-            key = f"nr.netbox:get_connections, {host}, trace {trace}"
+            key = f"nr.netbox:get_connections, {host}"
             if key in cache_obj and cache is True:
                 connections_dict[host] = cache_obj[key]
                 hosts.remove(host)
@@ -739,203 +752,150 @@ def get_connections(
 
     # check if still has hosts left to retrieve data for
     if hosts:
-        # retrieve full list of device cables with all terminations
-        cable_fields = [
-            "type",
-            "status",
-            "tenant {name}",
-            "label",
-            "tags {name}",
-            "length",
-            "length_unit",
-            "last_updated",
-            "custom_fields",
-            """terminations {
-                   termination {
-                     __typename
-                     ... on InterfaceType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }  
-                     ... on ConsolePortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on ConsoleServerPortType {name device{name}}
-                       }
-                     }
-                     ... on ConsoleServerPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on ConsolePortType {name device{name}}
-                       }
-                     }
-                     ... on PowerPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on PowerOutletType {name device{name}}
-                       }
-                     }
-                     ... on PowerOutletType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on PowerPortType {name device{name}}
-                       }
-                     }
-                     ... on FrontPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }
-                     ... on RearPortType {
-                       name device{name} id
-                       link_peers {
-                         __typename
-                         ... on InterfaceType {name device{name}}
-                         ... on FrontPortType {name device{name}}
-                         ... on RearPortType {name device{name}}
-                         ... on CircuitTerminationType {
-                           circuit{
-                             cid 
-                             description 
-                             tags{name} 
-                             provider{name} 
-                             status
-                             custom_fields
-                             commit_rate
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }""",
+        # forem lists of fields to request from netbox
+        cable_fields = """
+            cable {
+                type
+                status
+                tenant {name}
+                label
+                tags {name}
+                length
+                length_unit
+                custom_fields
+            }
+        """
+        interfaces_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on InterfaceType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on InterfaceType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+              ... on CircuitTerminationType {
+                circuit{
+                  cid 
+                  description 
+                  tags{name} 
+                  provider{name} 
+                  status
+                  custom_fields
+                  commit_rate
+                }
+              }
+            }""",
+            str(cable_fields),
         ]
+        console_ports_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on ConsoleServerPortType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on ConsoleServerPortType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+            }""",
+            str(cable_fields),
+        ]
+        console_server_ports_fields = [
+            "name",
+            "device {name}",
+            """connected_endpoints {
+              __typename 
+              ... on ConsolePortType {name device {name}}
+            }""",
+            """link_peers {
+              __typename
+              ... on ConsolePortType {name device {name}}
+              ... on FrontPortType {name device {name}}
+              ... on RearPortType {name device {name}}
+            }""",
+            str(cable_fields),
+        ]
+        # form query dictionary with aliases to get data from Netbox
+        queries = {
+            "interface": {
+                "field": "interface_list",
+                "filters": {"device": hosts, "type__n": ["lag", "virtual"]},
+                "fields": interfaces_fields,
+            },
+            "consoleport": {
+                "field": "console_port_list",
+                "filters": {"device": hosts},
+                "fields": console_ports_fields,
+            },
+            "consoleserverport": {
+                "field": "console_server_port_list",
+                "filters": {"device": hosts},
+                "fields": console_server_ports_fields,
+            },
+        }
+        # retrieve full list of devices interface with all cables
+        all_ports = nb_graphql(queries=queries, params=params)
 
-        all_cables = nb_graphql("cable_list", {"device": hosts}, cable_fields, params)
-
-        # form connections_dict keyed by device name and device's local interface name
-        for cable in all_cables:
-            terminations = cable.pop("terminations")
-            for termination in terminations:
-                termination = termination.pop("termination")
-                termination_type = termination["__typename"].replace("Type", "").lower()
-                # skip circuit termination point
-                if termination_type == "circuittermination":
+        # extract interfaces
+        for port_type, ports in all_ports.items():
+            for port in ports:
+                endpoints = port["connected_endpoints"]
+                cable = port["cable"]
+                # skip ports that have no cable connected
+                if not cable:
                     continue
-                # skip if cable has no peers
-                if not termination["link_peers"]:
+                # skip ports that have no remote device connected
+                # that will ignore cases when port connectes to
+                # provider network via circuit as well
+                if not endpoints or not all(i for i in endpoints):
                     continue
-                device_name = termination["device"]["name"]
-                # skip connections for non requested devices
-                if device_name not in hosts:
-                    continue
-                connections_dict.setdefault(device_name, {})
-                link_peers = termination.pop("link_peers")
-                remote_termination_type = (
-                    link_peers[0]["__typename"].replace("Type", "").lower()
-                )
-                # check if need to trace full path
-                if trace and remote_termination_type in [
-                    "frontport",
-                    "rearport",
-                    "circuittermination",
-                ]:
-                    if termination_type == "interface":
-                        far_end_termination_type = "interface"
-                        api = f"dcim/interfaces/{termination['id']}/trace"
-                    elif termination_type == "consoleport":
-                        far_end_termination_type = "consoleserverport"
-                        api = f"dcim/console-ports/{termination['id']}/trace"
-                    elif termination_type == "consoleserverport":
-                        far_end_termination_type = "consoleport"
-                        api = f"dcim/console-server-ports/{termination['id']}/trace"
-                    path_trace = nb_rest(method="get", api=api, __salt__=__salt__)
-                    # path_trace - list of path segments as a three-tuple of (termination, cable, termination)
-                    remote_device_terminations = path_trace[-1][-1]
-                    connections_dict[device_name][termination["name"]] = {
-                        # path is reachable if all segments' cables are connected
-                        "reachable": all(
-                            c[1]["status"].lower() == "connected" for c in path_trace
-                        ),
-                        "cables": [c[1] for c in path_trace],
-                        "remote_device": remote_device_terminations[0]["device"][
-                            "name"
-                        ],
-                        "remote_interface": (
-                            remote_device_terminations[0]["name"]
-                            if len(remote_device_terminations) == 1
-                            else [i["name"] for i in remote_device_terminations]
-                        ),
-                        "termination_type": termination_type,
-                        "remote_termination_type": far_end_termination_type,
-                        "breakout": False
-                        if len(remote_device_terminations) == 1
-                        else True,
-                    }
-                # retrieve local cable connection to the circuit
-                elif remote_termination_type == "circuittermination":
-                    connections_dict[device_name][termination["name"]] = {
-                        "reachable": cable["status"].lower() == "connected",
-                        "cable": cable,
-                        "circuit": link_peers[0]["circuit"],
-                        "termination_type": termination_type,
-                        "remote_termination_type": remote_termination_type,
-                    }
-                # retrieve local cable connections only, no full path trace
+                # etract required parameters
+                device_name = port["device"]["name"]
+                port_name = port["name"]
+                link_peers = port["link_peers"]
+                # add interface and its connection to results
+                connections_dict[device_name][port_name] = {
+                    "breakout": len(endpoints) > 1,
+                    "cable": cable,
+                    "remote_device": endpoints[0]["device"]["name"],
+                    "remote_interface": [i["name"] for i in endpoints]
+                    if len(endpoints) > 1
+                    else endpoints[0]["name"],
+                    "remote_termination_type": endpoints[0]["__typename"]
+                    .replace("Type", "")
+                    .lower(),
+                    "termination_type": port_type,
+                }
+                # if cable connected to circuit add circuit details
+                if link_peers and "circuit" in link_peers[0]:
+                    connections_dict[device_name][port_name]["circuit"] = link_peers[0][
+                        "circuit"
+                    ]
+                    cable["peer_termination_type"] = "circuittermination"
+                # add cable peers details
                 else:
-                    connections_dict[device_name][termination["name"]] = {
-                        "reachable": cable["status"].lower() == "connected",
-                        "cable": cable,
-                        "remote_device": link_peers[0]["device"]["name"],
-                        "remote_interface": (
-                            link_peers[0]["name"]
-                            if len(link_peers) == 1
-                            else [i["name"] for i in link_peers]
-                        ),
-                        "termination_type": termination_type,
-                        "remote_termination_type": remote_termination_type,
-                        "breakout": False if len(link_peers) == 1 else True,
-                    }
+                    cable["peer_device"] = link_peers[0]["device"]["name"]
+                    cable["peer_interface"] = (
+                        [i["name"] for i in link_peers]
+                        if len(link_peers) > 1
+                        else link_peers[0]["name"]
+                    )
+                    cable["peer_termination_type"] = (
+                        link_peers[0]["__typename"].replace("Type", "").lower()
+                    )
 
         # cache connections data for each host
         if HAS_DISKCACHE and cache:
-            cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
             for host in hosts:
-                key = f"nr.netbox:get_connections, {host}, trace {trace}"
+                key = f"nr.netbox:get_connections, {host}"
                 cache_obj.set(key, connections_dict[host], expire=cache_ttl)
                 log.debug(
                     f"netbox_utils:get_connections '{host}' cached get_connections data"
@@ -1193,6 +1153,458 @@ def run_dir(**kwargs):
     return list(netbox_tasks.keys())
 
 
+def _calculate_peer_ip(address):
+    """
+    Helper function to claculate peer IP for ptp subnets
+
+    :param address: Netbox IP adddress string of '10.0.0.1/30' format
+    """
+    if not any(address.endswith(k) for k in ["/30", "/31", "/120", "126", "/127"]):
+        return None
+    ip_interface = ipaddress.ip_interface(address)
+    net_hosts = list(ip_interface.network.hosts())
+    peer_ip = net_hosts[0] if net_hosts[0] != ip_interface.ip else net_hosts[1]
+    return f"{str(peer_ip)}"
+
+
+def get_circuits(
+    params=None,
+    sync=False,
+    __salt__=None,
+    proxy_id=None,
+    hosts=None,
+    cache=True,
+    cache_ttl=3600,
+    get_interface_details=True,
+    **kwargs,
+) -> dict:
+    """
+    Function to retrieve circuits details from Netbox
+
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param sync: if True, saves get circuits results to host's in-memory
+        inventory data under ``circuits`` key, if sync is a string, provided
+        value used as a key.
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param hosts: list of hosts to get circuits for
+    :param cache: boolean indicating whether to cache Netbox response or string
+        ``refresh`` to delete cached data, if set to False cached data ignored
+        but not refreshed
+    :param cache_ttl: integer indicating cache time to live
+    :param kwargs: Fx filters to filter hosts to retrieve circuits for
+    :param get_interface_details: boolen, indicating if need to retrieve interface
+        details, inventory items and IP addresses
+    :return: dictionary keyed by device name with circuits details
+
+    Circuits data retrived for a set of hosts first by queriyng netbox for a
+    list of sites where hosts belongs to, next all circuits for given sites
+    retrived from Netbox using GraphQL API, after that for each circuit one
+    of the terminations path traced using REST API endpoint -
+    `/api/circuits/circuit-terminations/{id}/paths/`. Once full path for the
+    circuit retrived interface and device details extracted from path data
+    for each end and stored in circuits data.
+
+    When `get_interface_details` set to True interface details retrieved from
+    Netbox using `get_interfaces` function together with inventory items,
+    child interfaces and IP addresses. For each IP address `peer_ip` calculated
+    and added to IP data if subnet is one of prefix length - `/30`, `/31`,
+    `/127`, `/126`, `/120` by calculating second IP value.
+
+    When circuit connects to provider network, no interface, instead of
+    `remote_device` and `remote_interface` keys, circuit contains
+    `provider_network` key with value referring to provider network name.
+
+    Sample circuits data with ``get_interface_details`` set to True::
+
+        {'CID2': {'comments': 'some comments',
+                  'commit_rate': 10000,
+                  'custom_fields': {},
+                  'description': 'some description',
+                  'interface': {'bridge': None,
+                                'bridge_interfaces': [],
+                                'custom_fields': {},
+                                'description': '',
+                                'duplex': None,
+                                'enabled': True,
+                                'inventory_items': [],
+                                'ip_addresses': [{'address': '10.0.1.1/30',
+                                                  'custom_fields': {},
+                                                  'description': '',
+                                                  'dns_name': '',
+                                                  'last_updated': '2023-08-06T01:15:09.847777+00:00',
+                                                  'peer_ip': '10.0.1.2/30',
+                                                  'role': None,
+                                                  'status': 'ACTIVE',
+                                                  'tags': [],
+                                                  'tenant': None}],
+                                'last_updated': '2023-08-06T01:15:09.790266+00:00',
+                                'mac_address': None,
+                                'member_interfaces': [],
+                                'mode': None,
+                                'mtu': None,
+                                'name': 'eth11',
+                                'parent': None,
+                                'speed': None,
+                                'tagged_vlans': [],
+                                'tags': [],
+                                'untagged_vlan': None,
+                                'vrf': 'OOB_CTRL',
+                                'wwn': None},
+                  'is_active': True,
+                  'provider': 'Provider1',
+                  'provider_account': '',
+                  'remote_device': 'fceos5',
+                  'remote_interface': 'eth11',
+                  'status': 'ACTIVE',
+                  'subinterfaces': {'eth11.123': {'bridge': None,
+                                                  'bridge_interfaces': [],
+                                                  'child_interfaces': [{'name': 'eth123.123'}],
+                                                  'custom_fields': {},
+                                                  'description': '',
+                                                  'duplex': None,
+                                                  'enabled': True,
+                                                  'inventory_items': [],
+                                                  'ip_addresses': [{'address': '10.0.0.1/30',
+                                                                    'custom_fields': {},
+                                                                    'description': '',
+                                                                    'dns_name': '',
+                                                                    'last_updated': '2023-08-06T01:15:09.227279+00:00',
+                                                                    'peer_ip': '10.0.0.2/30',
+                                                                    'role': None,
+                                                                    'status': 'ACTIVE',
+                                                                    'tags': [],
+                                                                    'tenant': None}],
+                                                  'last_updated': '2023-08-06T01:15:09.175047+00:00',
+                                                  'mac_address': None,
+                                                  'member_interfaces': [],
+                                                  'mode': None,
+                                                  'mtu': None,
+                                                  'parent': {'name': 'eth11'},
+                                                  'speed': None,
+                                                  'tagged_vlans': [],
+                                                  'tags': [],
+                                                  'untagged_vlan': None,
+                                                  'vrf': 'MGMT',
+                                                  'wwn': None}},
+                  'tags': ['ACCESS'],
+                  'tenant': None,
+                  'type': 'DarkFibre'},
+        }
+
+    """
+    device_sites_fields = ["site {slug}"]
+    circuit_fields = [
+        "cid",
+        "tags {name}",
+        "provider {name}",
+        "commit_rate",
+        "description",
+        "status",
+        "type {name}",
+        "provider_account {name}",
+        "tenant {name}",
+        "termination_a {id}",
+        "termination_z {id}",
+        "custom_fields",
+        "comments",
+    ]
+
+    # retrieve a list of hosts to get circuits for
+    hosts = hosts or __salt__["nr.nornir"](
+        "hosts",
+        **{k: v for k, v in kwargs.items() if k in FFun_functions},
+    )
+    if not hosts:
+        raise CommandExecutionError("No hosts matched")
+
+    # form final result dictionary
+    circuits_dict = {h: {} for h in hosts}
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    # check if need to use cache
+    if HAS_DISKCACHE and cache:
+        # cache_directory = (
+        #     params["proxy"]
+        #     .get("cache_base_path", "/var/salt-nornir/{proxy_id}/cache/")
+        #     .format(proxy_id=proxy_id)
+        # )
+        # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+        cache_obj = _get_cache_object(proxy_id, params)
+        # remove expired items from cache
+        _ = cache_obj.expire()
+        # iterate over a copy of hosts list
+        for host in list(hosts):
+            key = f"nr.netbox:get_circuits, {host}"
+            if key in cache_obj and cache is True:
+                circuits_dict[host] = cache_obj[key]
+                hosts.remove(host)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' retrieved get_circuits data from cache"
+                )
+            elif key in cache_obj and cache == "refresh":
+                cache_obj.delete(key)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' deleted get_circuits data from cache"
+                )
+        cache_obj.close()
+
+    # check if still has hosts left to retrieve data for
+    if hosts:
+        # retrieve list of hosts' sites
+        hosts_sites = nb_graphql(
+            "device_list", {"name": hosts}, device_sites_fields, params
+        )
+        hosts_sites = [i["site"]["slug"] for i in hosts_sites]
+
+        # retrieve all circuits for hists' sites
+        all_circuits = nb_graphql(
+            "circuit_list", {"site": hosts_sites}, circuit_fields, params
+        )
+
+        # iterate over circuits and map them to hosts
+        for circuit in all_circuits:
+            cid = circuit.pop("cid")
+            circuit["tags"] = [i["name"] for i in circuit["tags"]]
+            circuit["type"] = circuit["type"]["name"]
+            circuit["provider"] = circuit["provider"]["name"]
+            circuit["tenant"] = circuit["tenant"]["name"] if circuit["tenant"] else None
+            circuit["provider_account"] = (
+                circuit["provider_account"]["name"]
+                if circuit["provider_account"]
+                else None
+            )
+            termination_a = circuit.pop("termination_a")
+            termination_z = circuit.pop("termination_z")
+            termination_a = termination_a["id"] if termination_a else None
+            termination_z = termination_z["id"] if termination_z else None
+
+            # retrieve A or Z termination path using Netbox REST API
+            if termination_a is not None:
+                circuit_path = nb_rest(
+                    method="get",
+                    api=f"/circuits/circuit-terminations/{termination_a}/paths/",
+                    __salt__=__salt__,
+                )
+            elif termination_z is not None:
+                circuit_path = nb_rest(
+                    method="get",
+                    api=f"/circuits/circuit-terminations/{termination_z}/paths/",
+                    __salt__=__salt__,
+                )
+            else:
+                continue
+
+            # check if circuit ends connect to device or provider network
+            if (
+                not circuit_path
+                or "name" not in circuit_path[0]["path"][0][0]
+                or "name" not in circuit_path[0]["path"][-1][-1]
+            ):
+                continue
+
+            # forma A and Z connection endpoints
+            end_a = {
+                "device": circuit_path[0]["path"][0][0]
+                .get("device", {})
+                .get("name", False),
+                "provider_network": "provider-network"
+                in circuit_path[0]["path"][0][0]["url"],
+                "name": circuit_path[0]["path"][0][0]["name"],
+            }
+            end_z = {
+                "device": circuit_path[0]["path"][-1][-1]
+                .get("device", {})
+                .get("name", False),
+                "provider_network": "provider-network"
+                in circuit_path[0]["path"][-1][-1]["url"],
+                "name": circuit_path[0]["path"][-1][-1]["name"],
+            }
+            circuit["is_active"] = circuit_path[0]["is_active"]
+
+            # map path ends to devices
+            if end_a["device"] and end_a["device"] in hosts:
+                circuits_dict[end_a["device"]][cid] = copy.deepcopy(circuit)
+                circuits_dict[end_a["device"]][cid]["interface"] = end_a["name"]
+                if end_z["device"]:
+                    circuits_dict[end_a["device"]][cid]["remote_device"] = end_z[
+                        "device"
+                    ]
+                    circuits_dict[end_a["device"]][cid]["remote_interface"] = end_z[
+                        "name"
+                    ]
+                elif end_z["provider_network"]:
+                    circuits_dict[end_a["device"]][cid]["provider_network"] = end_z[
+                        "name"
+                    ]
+            if end_z["device"] and end_z["device"] in hosts:
+                circuits_dict[end_z["device"]][cid] = copy.deepcopy(circuit)
+                circuits_dict[end_z["device"]][cid]["interface"] = end_z["name"]
+                if end_a["device"]:
+                    circuits_dict[end_z["device"]][cid]["remote_device"] = end_a[
+                        "device"
+                    ]
+                    circuits_dict[end_z["device"]][cid]["remote_interface"] = end_a[
+                        "name"
+                    ]
+                elif end_a["provider_network"]:
+                    circuits_dict[end_z["device"]][cid]["provider_network"] = end_a[
+                        "name"
+                    ]
+
+        # retrieve itnerfaces details
+        if get_interface_details:
+            interfaces_data = get_interfaces(
+                add_ip=True,
+                add_inventory_items=True,
+                sync=False,
+                params=params,
+                __salt__=__salt__,
+                proxy_id=proxy_id,
+                hosts=hosts,
+                cache=cache,
+                **kwargs,
+            )
+            # iterate over hosts and add interface details for each circuit
+            for hostname, host_interfaces in interfaces_data.items():
+                for cid, circuit_data in circuits_dict[hostname].items():
+                    interface_name = circuit_data["interface"]
+                    circuit_data["interface"] = host_interfaces[interface_name]
+                    circuit_data["interface"]["name"] = interface_name
+                    circuit_data["interface"]["vrf"] = (
+                        circuit_data["interface"]["vrf"]["name"]
+                        if circuit_data["interface"]["vrf"]
+                        else None
+                    )
+                    circuit_data["subinterfaces"] = {}
+                    # add peer IP details for ptp subnets
+                    for ip_address in circuit_data["interface"]["ip_addresses"]:
+                        ip_address["peer_ip"] = _calculate_peer_ip(
+                            ip_address["address"]
+                        )
+                    # add child interfaces details
+                    for child_interface in circuit_data["interface"].pop(
+                        "child_interfaces"
+                    ):
+                        child_interface_data = host_interfaces[child_interface["name"]]
+                        child_interface_data["vrf"] = (
+                            child_interface_data["vrf"]["name"]
+                            if child_interface_data["vrf"]
+                            else None
+                        )
+                        circuit_data["subinterfaces"][
+                            child_interface["name"]
+                        ] = child_interface_data
+                        # add peer IP details for ptp subnets
+                        for ip_address in child_interface_data["ip_addresses"]:
+                            ip_address["peer_ip"] = _calculate_peer_ip(
+                                ip_address["address"]
+                            )
+
+        # cache connections data for each host
+        if HAS_DISKCACHE and cache:
+            # cache_obj = FanoutCache(directory=cache_directory, shards=1)
+            cache_obj = _get_cache_object(proxy_id, params)
+            for host in hosts:
+                key = f"nr.netbox:get_circuits, {host}"
+                cache_obj.set(key, circuits_dict[host], expire=cache_ttl)
+                log.debug(
+                    f"netbox_utils:get_circuits '{host}' cached get_circuits data"
+                )
+            cache_obj.close()
+
+    # save results to hosts inventory if requested to do so
+    if sync:
+        key = sync if isinstance(sync, str) else "circuits"
+        return __salt__["nr.nornir"](
+            fun="inventory",
+            call="load",
+            data=[
+                {"call": "update_host", "name": host, "data": {key: circuits}}
+                for host, circuits in circuits_dict.items()
+            ],
+        )
+
+    return circuits_dict
+
+
+def cache_list(
+    keys="*",
+    params=None,
+    __salt__=None,
+    proxy_id=None,
+    **kwargs,
+):
+    """
+    Function to list cached data for hosts.
+
+    :param keys: (str, list) glob pattern(s) to match cache keys to list
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param kwargs: Fx filters to filter hosts to retrieve cache data for
+    :return: dictionary with cached data details
+    """
+    # check if has diskcache
+    if not HAS_DISKCACHE:
+        raise CommandExecutionError("No diskcache found")
+
+    if isinstance(keys, str):
+        keys = [keys]
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    cache_obj = _get_cache_object(proxy_id, params)
+
+    return {
+        "size_bytes": cache_obj.volume(),
+        "size_mbytes": cache_obj.volume() / 1024000,
+        "directory": cache_obj.directory,
+        "cache_keys": [
+            k for k in list(cache_obj) if any(fnmatch.fnmatchcase(k, p) for p in keys)
+        ],
+    }
+
+
+def cache_delete(
+    keys=None,
+    params=None,
+    __salt__=None,
+    proxy_id=None,
+    **kwargs,
+):
+    """
+    Function to delete cached data for hosts.
+
+    :param params: dictionary with salt_nornir_netbox parameters
+    :param __salt__: reference to ``__salt__`` execution modules dictionary
+    :param kwargs: Fx filters to filter hosts to retrieve cache data for
+    :param keys: (str, list) glob pattern(s) to match cache keys to delete
+    :return: dictionary with ``deleted_keys`` list
+    """
+    deleted_keys = []
+    # check if has diskcache
+    if not HAS_DISKCACHE:
+        raise CommandExecutionError("No diskcache found")
+
+    # if no params provided, extract Netbox params from mater config or minion pillar
+    params = params or get_salt_nornir_netbox_params(__salt__)
+
+    cache_obj = _get_cache_object(proxy_id, params)
+
+    if isinstance(keys, str):
+        keys = [keys]
+
+    # delete keys
+    for cache_key in cache_obj:
+        if any(fnmatch.fnmatchcase(cache_key, p) for p in keys):
+            _ = cache_obj.pop(cache_key)
+            deleted_keys.append(cache_key)
+
+    return {"deleted_keys": deleted_keys}
+
+
 # dispatch dictionary of Netbox tasks exposed for calling
 netbox_tasks = {
     "parse_config": parse_config,
@@ -1202,5 +1614,10 @@ netbox_tasks = {
     "rest": nb_rest,
     "get_interfaces": get_interfaces,
     "get_connections": get_connections,
+    "get_circuits": get_circuits,
+    "cache_list": cache_list,
+    "cache_delete": cache_delete,
+    # get_config_context
+    # get_configuration
     "dir": run_dir,
 }

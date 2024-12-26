@@ -189,8 +189,8 @@ def test_nr_file_read_no_filegroup_provided():
     )
     pprint.pprint(ret)
 
-    assert "none is not an allowed value" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
-    assert "none is not an allowed value" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "ValidationError" in ret["nrp1"]["ceos1"]["nornir_salt.plugins.tasks.files"], "No error"
+    assert "ValidationError" in ret["nrp1"]["ceos2"]["nornir_salt.plugins.tasks.files"], "No error"
     
 # test_nr_file_read_no_filegroup_provided()
 
@@ -400,3 +400,16 @@ def test_nr_file_diff_last_1_2_string_ceos1():
     assert ret_1_2_list["nrp1"]["ceos1"]["clock"] == ret_1_2_string["nrp1"]["ceos1"]["clock"]
     
 # test_nr_file_diff_last_1_2_string_ceos1()
+
+
+def test_nr_file_read_base_url_and_index_arguments():
+    ret = client.cmd(
+      tgt="nrp1",
+      fun="nr.file",
+      arg=["read"],
+      kwarg={"filegroup": "foobar", "FB": "ceos1", "base_url": "/var/salt-nornir/nrp1/files/kmx/backups/tf", "index": "common"},
+      tgt_type="glob",
+      timeout=60,
+    )
+    pprint.pprint(ret)
+    assert ret == {'nrp1': {'ceos1': {None: None}}}

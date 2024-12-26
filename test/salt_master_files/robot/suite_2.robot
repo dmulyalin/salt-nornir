@@ -10,10 +10,10 @@ Test NTP ceos1
     Minions           nrp1    
     Hosts             ceos1
     ${result} =       nr.cli    show clock
-    Should Contain    ${result}   NTP
+    Should Contain    ${result['nrp1'][0]['result']}   NTP
 
 Test NTP ceos2
     Minions           nrp1    
     Hosts             ceos2
     ${result} =       nr.cli    show clock
-    Should Contain    ${result}   local
+    Should Contain    ${result['nrp1'][0]['result']}   local

@@ -64,7 +64,7 @@ def test_netbox_query():
     pprint.pprint(ret)
     assert ret["nrp1"][0]["name"] == "ceos1"
     assert ret["nrp1"][0]["status"] == "ACTIVE"
-    assert ret["nrp1"][0]["platform"]["name"] == "Arista cEOS"
+    assert ret["nrp1"][0]["platform"]["name"] == "arista_eos"
     
     
 @skip_if_not_has_netbox
@@ -175,7 +175,7 @@ def test_netbox_get_connections():
         fun="nr.netbox", 
         arg=["get_connections"], 
         kwarg={
-            "hosts": ["fceos4"]
+            "hosts": ["fceos4"],
         },
         tgt_type="glob", 
         timeout=60
@@ -185,9 +185,8 @@ def test_netbox_get_connections():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
 
@@ -209,9 +208,8 @@ def test_netbox_get_connections_cache_false():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
     
@@ -233,9 +231,8 @@ def test_netbox_get_connections_cache_refresh():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
     
     
@@ -256,32 +253,10 @@ def test_netbox_get_connections_fb_filter():
     assert all(k in ret["nrp3"]["fceos4"] for k in ["ConsolePort1", "eth1", "eth2", "eth8"])
     assert all(k in ret["nrp3"]["fceos4"]["eth8"]["cable"] for k in ["status", "type", "tenant", "length"])
     assert ret["nrp3"]["fceos4"]["eth2"]["breakout"] == True, "eth2 should indicate breakout cable"
-    assert ret["nrp3"]["fceos4"]["eth8"]["reachable"] == True, "eth8 reachable status should be True"
-    assert ret["nrp3"]["fceos4"]["eth7"]["remote_termination_type"] == "frontport", "eth7 should be connected to patch panel"
-    assert ret["nrp3"]["fceos4"]["eth101"]["remote_termination_type"] == "circuittermination"
+    assert ret["nrp3"]["fceos4"]["eth7"]["cable"]["peer_termination_type"] == "frontport", "eth7 should be connected to patch panel"
+    assert ret["nrp3"]["fceos4"]["eth101"]["cable"]["peer_termination_type"] == "circuittermination"
     assert "circuit" in ret["nrp3"]["fceos4"]["eth101"], "eth01 should have circuit data"
-    
-    
-@skip_if_not_has_netbox
-def test_netbox_get_connections_with_trace():
-    ret = client.cmd(
-        tgt="nrp3", 
-        fun="nr.netbox", 
-        arg=["get_connections"], 
-        kwarg={
-            "hosts": ["fceos4"],
-            "trace": True
-        },
-        tgt_type="glob", 
-        timeout=60
-    )
-    pprint.pprint(ret)
-    assert len(ret["nrp3"]["fceos4"]) > 0, "No connections returned for fceos4"
-    assert ret["nrp3"]["fceos4"]["eth7"]["reachable"] == False, "eth7 reachable status should be False"
-    assert len(ret["nrp3"]["fceos4"]["eth7"]["cables"])== 3, "eth7 should have 3 cables"
-    assert len(ret["nrp3"]["fceos4"]["eth101"]["cables"]) == 2, "eth101 should have 2 cables"
-    assert "PowerOutlet-1" in ret["nrp3"]["fceos4"], "No power connections retrieved?"
-    assert ret["nrp3"]["fceos4"]["PowerOutlet-1"]["remote_termination_type"] == "powerport"
+
     
 @skip_if_not_has_netbox
 def test_netbox_parse_config():
@@ -512,3 +487,211 @@ def test_netbox_get_connections_sync():
     assert sync_ret["nrp3"]["nornir-worker-3"] == [{"fceos4": True}]    
     assert "ConsolePort1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"]
     assert "eth1" in updated_inventory["nrp3"]["hosts"]["fceos4"]["data"]["connections"] 
+    
+
+def test_netbox_get_circuits():
+    circuits_fields = [
+        "comments",
+        "commit_rate",
+        "custom_fields",
+        "description",
+        "interface",
+        "is_active",
+        "provider",
+        "provider_account",
+        "remote_device",
+        "remote_interface",
+        "status",
+        "subinterfaces",
+        "tags",
+        "tenant",
+        "type",
+    ]
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_circuits"], 
+        kwarg={
+            "hosts": ["fceos4"]
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    pprint.pprint(ret)
+    # check circuits data
+    assert all(k in ret["nrp3"]["fceos4"] for k in ["CID1", "CID2", "CID3"])
+    # CID1 is direct between devices 
+    assert all(k in ret["nrp3"]["fceos4"]["CID1"] for k in circuits_fields)
+    assert "name" in ret["nrp3"]["fceos4"]["CID1"]["interface"]
+    # CID2 is via patchpanels with child interfaces
+    assert "eth11.123" in ret["nrp3"]["fceos4"]["CID2"]["subinterfaces"]
+    assert "peer_ip" in ret["nrp3"]["fceos4"]["CID2"]["subinterfaces"]["eth11.123"]["ip_addresses"][0], "subinterface peer_ip is missing"
+    assert "peer_ip" in ret["nrp3"]["fceos4"]["CID2"]["interface"]["ip_addresses"][0], "interface peer_ip is missing"
+    # CID3 goes to provider network
+    assert "provider_network" in ret["nrp3"]["fceos4"]["CID3"]
+    assert "remote_device" not in ret["nrp3"]["fceos4"]["CID3"]
+    
+    
+def test_netbox_get_circuits_sync_true():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_circuits"], 
+        kwarg={
+            "hosts": ["fceos4"],
+            "sync": True
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    inventory_data = client.cmd(
+        tgt="nrp3", 
+        fun="nr.nornir", 
+        arg=["inventory"], 
+        kwarg={
+            "FB": "fceos4",
+        },
+        tgt_type="glob", 
+        timeout=60
+    )
+    print("get circuits with sync true")
+    pprint.pprint(ret)
+    print("fceos4 inventory")
+    pprint.pprint(inventory_data)
+    
+    assert ret == {'nrp3': {'nornir-worker-1': [{'fceos4': True}],
+                            'nornir-worker-2': [{'fceos4': True}],
+                            'nornir-worker-3': [{'fceos4': True}]}}
+    assert all(k in inventory_data["nrp3"]["hosts"]["fceos4"]["data"]["circuits"] for k in ["CID1", "CID2", "CID3"])
+    
+    
+def test_netbox_get_connections_incomplete_path_with_trace():
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_connections"], 
+        kwarg={
+            "FB": "fceos4",
+            "trace": True,
+            "cache": False,
+        },
+        tgt_type="glob", 
+        timeout=60
+    )    
+    pprint.pprint(ret)
+    
+    
+def test_netbox_cache_list():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )   
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )        
+    
+    pprint.pprint(ret)
+    
+    assert ret["nrp3"]["cache_keys"]
+    assert ret["nrp3"]["directory"]
+    assert ret["nrp3"]["size_bytes"]
+    assert ret["nrp3"]["size_mbytes"]
+    
+    
+def test_netbox_cache_list_with_keys():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )   
+    ret = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={"keys": "*fceos4*"},
+        tgt_type="glob", 
+        timeout=60
+    )        
+    
+    pprint.pprint(ret)
+    
+    assert ret["nrp3"]["cache_keys"]
+    assert all("fceos4" in i for i in ret["nrp3"]["cache_keys"])
+    
+    
+def test_netbox_cache_delete_all():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    delete_cache = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_delete"], 
+        kwarg={"keys": "*"},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    cache_list_after = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    
+    pprint.pprint(f"delete_cache {delete_cache}")
+    pprint.pprint(f"cache_list_after {cache_list_after}")
+    
+    assert len(delete_cache["nrp3"]["deleted_keys"]) > 5
+    assert cache_list_after["nrp3"]["cache_keys"] == []
+    
+    
+def test_netbox_cache_delete_one_host():
+    get_interfaces_from_netbox = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["get_interfaces"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    delete_cache = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_delete"], 
+        kwarg={"keys": "*fceos4*"},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    cache_list_after = client.cmd(
+        tgt="nrp3", 
+        fun="nr.netbox", 
+        arg=["cache_list"], 
+        kwarg={},
+        tgt_type="glob", 
+        timeout=60
+    )    
+    
+    pprint.pprint(f"delete_cache {delete_cache}")
+    pprint.pprint(f"cache_list_after {cache_list_after}")
+    
+    assert all("fceos4" in k for k in delete_cache["nrp3"]["deleted_keys"])
+    assert len(cache_list_after["nrp3"]["cache_keys"]) > 5

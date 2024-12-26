@@ -73,8 +73,9 @@ from salt_nornir.pydantic_models import (
     model_runner_nr_event,
     model_runner_nr_cfg,
     model_runner_nr_diagram,
-    SaltNornirShell,
 )
+from fnmatch import fnmatchcase
+
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ try:
 
     HAS_SALT = True
 except:
-    log.error("Nornir Runner Module - failed importing SALT libraries")
+    log.error("Salt-Nornir Runner Module - failed importing SALT libraries")
     HAS_SALT = False
 
 # import Nornir libs
@@ -99,7 +100,7 @@ try:
 
     HAS_NORNIR = True
 except ImportError:
-    log.error("Nornir-proxy - failed importing Nornir modules")
+    log.error("Salt-Nornir Runner Module - failed importing Nornir modules")
     HAS_NORNIR = False
 
 try:
@@ -112,8 +113,26 @@ try:
 
     HAS_RICH = True
 except ImportError:
-    log.warning("Nornir-proxy - failed importing rich library")
+    log.warning("Salt-Nornir Runner Module - failed importing rich library")
     HAS_RICH = False
+
+try:
+    import N2G
+
+    HAS_N2G = True
+except ImportError:
+    log.warning("Salt-Nornir Runner Module - failed importing N2G library")
+    HAS_N2G = False
+
+try:
+    from ttp import ttp
+    from ttp_templates import list_templates
+
+    HAS_TTP = True
+except ImportError:
+    log.warning("Salt-Nornir Runner Module - failed importing TTP library")
+    HAS_TTP = False
+
 
 __virtualname__ = "nr"
 
@@ -1086,13 +1105,8 @@ def diagram(*args, **kwargs):
         salt-run nr.diagram L2 v3d FC="core" group_links=True add_all_connected=True
         salt-run nr.diagram L2 yed filegroup="cdp_and_lldp_output" last=3
     """
-    try:
-        import N2G
-        from ttp import ttp
-        from ttp_templates import list_templates
-    except ImportError as e:
-        log.exception(e)
-        return f"nr.diagram failed importing required modules - {e}"
+    if not HAS_N2G and HAS_TTP:
+        return f"nr.diagram failed importing N2G and TTP modules"
 
     n2g_data = {}  # to store collected from devices data
     collected_hosts_list = []  # list of devices collected data from
@@ -1108,7 +1122,7 @@ def diagram(*args, **kwargs):
 
     # increase read timeout value for netmiko
     if cli["plugin"] == "netmiko":
-        cli.setdefault("read_timeout", 120)
+        cli.setdefault("read_timeout", 240)
 
     # construct argument for call functions
     call_kwargs = {
@@ -1129,6 +1143,9 @@ def diagram(*args, **kwargs):
         call_kwargs["fun"] = "cli"
         FM = cli.pop("FM", [])
 
+    # form a list of platform to filter hosts by
+    FM = [i.strip() for i in FM.split(",")] if isinstance(FM, str) else FM
+
     drawing_plugin, ext = {
         "yed": (N2G.yed_diagram, "graphml"),
         "drawio": (N2G.drawio_diagram, "drawio"),
@@ -1145,8 +1162,8 @@ def diagram(*args, **kwargs):
 
     # get folders info
     outfile = kwargs.pop("outfile", f"./Output/{data_plugin}_{ctime}.{ext}")
-    out_filename = outfile.split(os.sep)[-1]
-    out_folder = os.sep.join(outfile.split(os.sep)[:-1])
+    out_folder, out_filename = os.path.split(outfile)
+    out_folder = out_folder or "."
     # check if need to save devices output to local folder
     if isinstance(save_data, str):
         data_out_folder = save_data
@@ -1159,8 +1176,10 @@ def diagram(*args, **kwargs):
         for i in list_templates()["misc"]["N2G"][template_dir]
     ]
     # if FM filter provided, leave only supported platforms
-    platforms = (
-        [p for p in n2g_supported_platorms if p in FM] if FM else n2g_supported_platorms
+    platforms = set(
+        [p for p in n2g_supported_platorms if any(fnmatchcase(p, fm) for fm in FM)]
+        if FM
+        else n2g_supported_platorms
     )
 
     print(
@@ -1201,7 +1220,15 @@ def diagram(*args, **kwargs):
         # populate n2g data dictionary keyed by platform and save results to files
         for host_name, host_results in devices_output.items():
             collected_hosts_list.append(host_name)
-            n2g_data[platform].append("\n".join([i["result"] for i in host_results]))
+            n2g_data[platform].append(
+                "\n".join(
+                    [
+                        i["result"]
+                        for i in host_results
+                        if i["result"].strip() and not "Traceback" in i["result"]
+                    ]
+                )
+            )
             if save_data:
                 data_folder = os.path.join(data_out_folder, platform)
                 data_file = os.path.join(data_folder, f"{host_name}.txt")
@@ -1222,7 +1249,7 @@ def diagram(*args, **kwargs):
     drawer.work(n2g_data)
     drawing.dump_file(folder=out_folder, filename=out_filename)
 
-    return f"'{data_plugin}' diagram in '{diagram_plugin}' format saved at: '{out_folder}{os.sep}{out_filename}'"
+    return f"'{data_plugin}' diagram in '{diagram_plugin}' format saved at '{os.path.join(out_folder, out_filename)}'"
 
 
 def shell(*args, **kwargs):
@@ -1231,13 +1258,12 @@ def shell(*args, **kwargs):
 
     'Picle <>'_ module need to be installed
     """
-    from picle import App
-
     try:
+        from picle import App
+        from salt_nornir.salt_nornir_shell_models import SaltNornirShell
+
         shell = App(SaltNornirShell)
         shell.start()
-    except ImportError:
-        print("Failed importing PICLE module, install: pip install picle")
     except:
         tb = traceback.format_exc()
-        print(tb)
+        print(f"Failed to start Salt-Nornir interactive shell, error:\n{tb}")

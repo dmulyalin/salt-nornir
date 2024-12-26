@@ -20,7 +20,7 @@ if HAS_SALT:
     client = salt.client.LocalClient()
 
 # check if has access to always on sandbox IOSXE device
-iosxe_sandbox_router = "sandbox-iosxe-latest-1.cisco.com" 
+iosxe_sandbox_router = "sandbox-iosxe-recomm-1.cisco.com" 
 s = socket.socket()
 s.settimeout(5)
 try:

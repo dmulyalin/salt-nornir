@@ -1,0 +1,5 @@
+# some tests comment
+
+{% if 'foobar' in host.platform %}
+test: bla
+{% endif %}

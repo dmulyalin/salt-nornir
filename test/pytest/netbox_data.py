@@ -10,38 +10,38 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 NB_VERSION = None
-NB_URL = "http://192.168.1.130:8000/"
-NB_URL_SSL = "https://192.168.1.130:443/"
+NB_URL = "http://192.168.4.130:8000/"
+NB_URL_SSL = "https://192.168.4.130:443/"
 NB_USERNAME = "admin"
 NB_PASSWORD = "admin"
 NB_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"
 NB_SECRETS_PRIVATE_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
-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
+MIIEowIBAAKCAQEAqlYAwxqIYx1rE3ZHfbSVKpVQXdvjkDYvFAIzApenoGZMr95u
+nam1x/Zx6zPISdZt67Wy+g3W4by2TcpKArncAMA/mKUAgBDhob2pa2XUdKs/Mkhk
+Dz7A9dbSmx9kMwkw/dmVq5F988ffVZWB+o8nRXkB/sbbIykeg6SFG+P9/OJfO1bb
+JsBxpLAkRu1w7Gxmc62UdhQjniFwTQEEeCJhHnMsLfiBXHwJKVVbmWdTTV/fIVdi
+cUYgm8fBzt17uaTqi6cNt/MFZd9EjIeKI6K06k5hNRSiIWUqhp8+LP0vwvV/TCc6
+AFpbr/6jfwooNyJWyva6Q4Bni6s5xcyS6a7PQQIDAQABAoIBACGu9aIfTFKrRdoY
+pO0FCY1c7wJMghzpthgTEkLEOhv0Ntx9VCr93Spgf+kGuafuTRjUOsMLew9zKarK
+4qVU2x5T5g+Zq3ZnwDKjho3sGl4C4jGfkpfYLUDAHTAbPk2AVw2P2jLOB9XuE6pB
+MS2a4uVwVzZqXPnAPx5BqafZB0gbKfoEjYabJRlplqLd19qYalcmmnd/qfWq8AQr
+FL6acCeXiz5Su/Si0pVYG91V31rERG8K+BTYD60BpMd7uXuHlZhEmZZnELmHdYrE
+AMS65kmL3w6PBHvk45CLZqJlq6Syj7zY69qqPxT31/rDWY8BDjY2GgFTCFiePM7V
+e1fH77UCgYEAwx/gp4wVRRE6QUt6JiC4+pjpw0/bM1fsVVOK1Xa3kbWzpLCeq9zd
+0Z3Vv4VquSawlKRlktRU2UPPJpB0bqq82zocY8LFKRwDALZEVQge8kiiBDig4ylB
+ZoD0oaFIBMy5GlloPwwN1nPDCg4QrBC6lZz3FP886etWbeGroGdDYKUCgYEA33pS
+fcuJDQdSHLZuoYUDQFOUBq3fMIQOvZFu21dNO/GqV4uxP1hXt6rkj4LS3UA6fqBL
+mlTu8ACZpBN2GAqD1AqRi7/rt+unCbFw8OTnJQKC8/aZRE/Xub3klZs7mquab9qb
+7Hz00zKu+HVUIJStQL9LQzO4KAHA8XX3v3nitW0CgYAbFOmRV5f8Jg/30An8EL6b
+yW1odkTuM13R2e6DAh8oUhfE296p69W9qjJoipPtbrlDaC3Q2zeLkCXILHR8h6X+
+p2oZToce1Yx1JNcHFkF1Ty9tdo6d+LPjDjLl3ASq5d8rEQ2u8nVZNmfzlVArEYdU
+DJ0ehO5naQpt5cx0TuDDIQKBgQCB6Kilabj8suG/wSkkiZ7vOOaWz2Ir4Mh02GL5
+7JEAJKaiB5l8uk0bfqMo7aLIbPrT+ziXuYHAUIj/wTRoG0yw6YfcFi/flYRfdR+z
+WU0ozYH0cch81nEQD1wev8NxUQoQtaLoYWcskoz177Z8zhC8z7bflOQblZFki+/+
+BcuNLQKBgHp3+eFXuzAvGCpA1hczjUPTlVHOpP6AXW6nmiAjC1gD/T08GT7te++N
+6OnAaBM9ufB6j5h+Dj/d3IfSi183yq5UoZG5RaajluEqEiz9YVOPFgGW9rZlatIp
+vbHXhXuOco78DrAGLALXh8+TLESqu4XXsJJrIHcBA8tbYN9dDuHo
 -----END RSA PRIVATE KEY-----
 """
 
@@ -135,6 +135,11 @@ sites = [
         "name": "SALTNORNIR-LAB", 
         "tenant": {"name": "SALTNORNIR"},
         "region": {"name": "APAC"}
+    },
+    {
+        "name": "SALTNORNIR-LAB2", 
+        "tenant": {"name": "SALTNORNIR"},
+        "region": {"name": "APAC"}
     }
 ]
 
@@ -142,10 +147,10 @@ racks = [
     {"name": "R101", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
     {"name": "R201", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
     {"name": "R301", "site": {"name": "SALTNORNIR-LAB"}, "tenant": {"name": "SALTNORNIR"}},
+    {"name": "R401", "site": {"name": "SALTNORNIR-LAB2"}, "tenant": {"name": "SALTNORNIR"}},
 ]
 
 manufacturers = [
-    {"name": "FakeNOS"},
     {"name": "SaltNornir"},
     {"name": "SaltStack"},
     {"name": "Arista"},
@@ -154,14 +159,11 @@ manufacturers = [
 ]
 
 tags = [
-    {"name": "nrp3"}
+    {"name": "nrp3"},
+    {"name": "ACCESS"},    
 ]
 
 device_types = [
-    {
-        "model": "FakeNOS Arista cEOS",
-        "manufacturer": {"name": "FakeNOS"},
-    },
     {
         "model": "Salt-Nornir-Proxy-Minion",
         "manufacturer": {"name": "SaltStack"},
@@ -266,18 +268,11 @@ device_roles = [
 
 platforms = [
     {
-        "name": "FakeNOS Arista cEOS",
-        "manufacturer": {"name": "FakeNOS"},
-        "napalm_driver": "arista_eos"
-    },
-    {
-        "name": "Arista cEOS",
+        "name": "arista_eos",
         "manufacturer": {"name": "Arista"},
-        "napalm_driver": "arista_eos"
     },
     {
-        "name": "Cisco IOS-XR",
-        "napalm_driver": "cisco_xr"
+        "name": "cisco_xr",
     },    
 ]
 
@@ -285,6 +280,10 @@ ip_addresses = [
     {"address": "1.0.1.4/32"},
     {"address": "1.0.1.5/32"},
     {"address": "1.0.100.1/32"},
+    {"address": "10.0.0.1/30"},
+    {"address": "10.0.0.2/30"},
+    {"address": "10.0.1.1/30"},
+    {"address": "10.0.1.2/30"},
 ]
 # add more ip addresses
 ip_addresses.extend(
@@ -307,6 +306,11 @@ interfaces = [
     {"name": "eth102", "device": {"name": "fceos4"}, "type": "1000base-t", "mtu": 1500, "mode": "tagged", "lag": {"name": "Port-Channel1"}},
     {"name": "eth201", "device": {"name": "fceos4"}, "type": "1000base-t", "mode": "tagged", "tagged_vlans": [102,103,104,105], "untagged_vlan": 101},
     {"name": "loopback0", "device": {"name": "ceos1"}, "type": "virtual"},
+    {"name": "eth11", "device": {"name": "fceos4"}, "type": "10gbase-x-sfpp"},
+    {"name": "eth11.123", "device": {"name": "fceos4"}, "type": "virtual", "parent": {"name": "eth11"}},
+    {"name": "eth11", "device": {"name": "fceos5"}, "type": "10gbase-x-sfpp"},
+    {"name": "eth11.123", "device": {"name": "fceos5"}, "type": "virtual", "parent": {"name": "eth11"}},
+    {"name": "eth30", "device": {"name": "fceos4"}, "type": "10gbase-x-sfpp"},
 ]
 
 power_outlet_ports = [
@@ -383,7 +387,11 @@ ip_adress_to_devices = [
         "role": "loopback",
         "primary_device_ip": True,
     },
-    {"address": f"1.0.100.1/32", "interface": f"eth1.11", "device": "fceos4", "vrf": {"name": vrfs[1]["name"]}},
+    {"address": "1.0.100.1/32", "interface": "eth1.11", "device": "fceos4", "vrf": {"name": vrfs[1]["name"]}},
+    {"address": "10.0.0.1/30", "interface": "eth11.123", "device": "fceos4", "vrf": {"name": "MGMT"}},
+    {"address": "10.0.0.2/30", "interface": "eth11.123", "device": "fceos5", "vrf": {"name": "MGMT"}},
+    {"address": "10.0.1.1/30", "interface": "eth11", "device": "fceos4", "vrf": {"name": "OOB_CTRL"}},
+    {"address": "10.0.1.2/30", "interface": "eth11", "device": "fceos5", "vrf": {"name": "OOB_CTRL"}},
 ]
 # associate IP addresses to subinterfaces
 ip_adress_to_devices.extend(
@@ -492,6 +500,17 @@ connections = [
         "status": "connected",
         "tenant": {"slug": "saltnornir"},
     },    
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "fceos4", "interface": "eth30", "termination_type": "dcim.interface"},
+        ],
+        "b_terminations": [
+            {"device": "PatchPanel-1", "interface": "FrontPort8", "termination_type": "dcim.frontport"}
+        ],
+        "status": "connected",
+        "tenant": {"slug": "saltnornir"},
+    },     
     # console connections
     {
         "type": "cat6a",
@@ -522,12 +541,33 @@ connections = [
         "status": "connected",
         "tenant": {"slug": "saltnornir"},
     }, 
+    # circuit cables
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "PatchPanel-1", "interface": "FrontPort6", "termination_type": "dcim.frontport"},
+        ],
+        "b_terminations": [
+            {"device": "fceos4", "interface": "eth11", "termination_type": "dcim.interface"}
+        ],
+        "status": "connected",
+    },   
+    {
+        "type": "smf",
+        "a_terminations": [
+            {"device": "PatchPanel-3", "interface": "FrontPort6", "termination_type": "dcim.frontport"},
+        ],
+        "b_terminations": [
+            {"device": "fceos5", "interface": "eth11", "termination_type": "dcim.interface"}
+        ],
+        "status": "connected",
+    },   
 ]
 
 devices = [
     {
         "name": "fceos4",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
@@ -537,7 +577,7 @@ devices = [
         "serial": "FNS123451",
         "asset_tag": "UUID-123451",
         "tags": [{"name": "nrp3"}],
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "domain_name": "lab.io",
             "lo0_ip": "1.0.1.4",
@@ -556,14 +596,14 @@ devices = [
     },
     {
         "name": "fceos5",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "position": 40,
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "nornir": {
                 "platform": "arista_eos",
@@ -646,7 +686,7 @@ devices = [
         "rack": {"name": "R201"},
         "position": 41,
         "face": "front",
-        "platform": {"name": "Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "secrets_test": {
                 "OSPF_KEY": f"nb://{NB_SECRETS_PLUGIN}/OSPF/hello_secret"
@@ -662,14 +702,14 @@ devices = [
     },
     {
         "name": "fceos8",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "position": 8,
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "local_context_data": {
             "nornir": {
                 "platform": "arista_eos",
@@ -689,7 +729,7 @@ devices = [
         "rack": {"name": "R201"},
         "position": 31,
         "face": "front",
-        "platform": {"name": "Cisco IOS-XR"},
+        "platform": {"name": "cisco_xr"},
         "local_context_data": {
             "nornir": {
                 "platform": "cisco_xr",
@@ -717,18 +757,28 @@ devices = [
         "position": 42,
         "face": "front",
     },
+    {
+        "name": "PatchPanel-3",
+        "device_type": {"slug": slugify("24-port-lc-patch-panel")},
+        "device_role": {"name": "PatchPanel"},
+        "tenant": {"name": "SALTNORNIR"},
+        "site": {"name": "SALTNORNIR-LAB2"},
+        "rack": {"name": "R401"},
+        "position": 41,
+        "face": "front",
+    },
 ]
 # add fceos3_390-fceos3_399 devices to test multi-threading retrieval
 for i in range(10):
     devices.append({
         "name": f"fceos3_39{i}",
-        "device_type": {"slug": slugify("FakeNOS Arista cEOS")},
+        "device_type": {"slug": slugify("Arista cEOS")},
         "device_role": {"name": "VirtualRouter"},
         "tenant": {"name": "SALTNORNIR"},
         "site": {"name": "SALTNORNIR-LAB"},
         "rack": {"name": "R201"},
         "face": "front",
-        "platform": {"name": "FakeNOS Arista cEOS"},
+        "platform": {"name": "arista_eos"},
         "tags": [{"name": "nrp3"}],
         "local_context_data": {
             "nornir": {
@@ -863,6 +913,10 @@ circuit_providers = [
     {"name": "Provider1"}
 ]
 
+circuit_provider_networks = [
+    {"name": "Provider1-Net1", "provider": {"name": "Provider1"}}
+]
+
 provider_accounts = [
     {"provider": {"slug": slugify("Provider1")}, "account": "test_account"}
 ]
@@ -877,10 +931,42 @@ circuits = [
         "type": {"slug": slugify("DarkFibre")},
         "status": "active",
         "cid": "CID1",
-        "termination_a": {"device": "fceos4", "interface": "eth101", "cable": {"type": "smf"}},
-        "termination_b": {"device": "fceos5", "interface": "eth8", "cable": {"type": "smf"}},
-        "provider_account": {"account": "test_account"}
-    }
+        "termination_a": {"device": "fceos4", "interface": "eth101", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"device": "fceos5", "interface": "eth8", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "provider_account": {"account": "test_account"},
+    },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "active",
+        "cid": "CID2",
+        "termination_a": {"device": "PatchPanel-1", "interface": "RearPort6", "termination_type": "dcim.rearport", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"device": "PatchPanel-3", "interface": "RearPort6", "termination_type": "dcim.rearport", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB2"},
+        "provider_account": {"account": "test_account"},
+        "tags": [{"name": "ACCESS"}],
+        "description": "some description",
+        "comments": "some comments", 
+        "commit_rate": 10000
+    },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "active",
+        "cid": "CID3",
+        "termination_a": {"device": "fceos4", "interface": "eth201", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": {"provider_network": "Provider1-Net1"},
+        "provider_account": {"account": "test_account"},
+        "tags": [{"name": "ACCESS"}],
+    },
+    {
+        "provider": {"slug": slugify("Provider1")},
+        "type": {"slug": slugify("DarkFibre")},
+        "status": "planned",
+        "cid": "CID4",
+        "termination_a": {"device": "fceos4", "interface": "eth5", "termination_type": "dcim.interface", "cable": {"type": "smf"}, "site": "SALTNORNIR-LAB"},
+        "termination_b": None,
+        "provider_account": {"account": "test_account"},
+    },
 ]
             
 config_templates = [
@@ -1091,6 +1177,9 @@ def create_devices():
     log.info("creating devices")
     for device in devices:
         device.setdefault("slug", slugify(device["name"]))
+        #  'device_role' field on the Device model has been renamed to 'role' starting Netbox 3.6
+        if NB_VERSION >= 3.6:
+            device["role"] = device.pop("device_role")
         try:
             nb.dcim.devices.create(**device)
         except Exception as e:
@@ -1292,30 +1381,60 @@ def create_circuits():
         try:
             termination_a = item.pop("termination_a")
             termination_b = item.pop("termination_b")
-            cable_a = termination_a.pop("cable")
-            cable_b = termination_b.pop("cable")
             # provider account supported starting with netbox 3.5 only
-            if not NB_VERSION.startswith("3.5"):
+            if NB_VERSION < 3.5:
                    _ = circuit.pop("provider_account")
             circuit = nb.circuits.circuits.create(**item)
             # add termination A
-            cterm_a = nb.circuits.circuit_terminations.create(circuit=circuit.id, term_side="A", site={"slug": slugify("SALTNORNIR-LAB")})
+            if termination_a and "provider_network" in termination_a:
+                cterm_a = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="A", 
+                    provider_network={"name": termination_a["provider_network"]} 
+                )
+            elif termination_a:
+                cterm_a = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="A", 
+                    site={"slug": slugify(termination_a["site"])}
+                )
             # add termination B
-            cterm_z = nb.circuits.circuit_terminations.create(circuit=circuit.id, term_side="Z", site={"slug": slugify("SALTNORNIR-LAB")})            
+            if termination_b and "provider_network" in termination_b:
+                cterm_z = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="Z", 
+                    provider_network={"name": termination_b["provider_network"]} 
+                )
+            elif termination_b:
+                cterm_z = nb.circuits.circuit_terminations.create(
+                    circuit=circuit.id, 
+                    term_side="Z", 
+                    site={"slug": slugify(termination_b["site"])}
+                )            
             # add cable A
-            intf_a = nb.dcim.interfaces.get(device=termination_a["device"], name=termination_a["interface"])
-            nb.dcim.cables.create(
-                **cable_a,
-                a_terminations=[{"object_type": "dcim.interface","object_id": intf_a.id}],
-                b_terminations=[{"object_type": "circuits.circuittermination","object_id": cterm_a.id}]
-            )
-            # add cable Z
-            intf_b = nb.dcim.interfaces.get(device=termination_b["device"], name=termination_b["interface"])
-            nb.dcim.cables.create(
-                **cable_b,
-                a_terminations=[{"object_type": "dcim.interface","object_id": intf_b.id}],
-                b_terminations=[{"object_type": "circuits.circuittermination","object_id": cterm_z.id}]
-            )            
+            if termination_a and "provider_network" not in termination_a:
+                cable_a = termination_a.pop("cable", None)
+                if termination_a["termination_type"] == "dcim.interface":
+                    intf_a = nb.dcim.interfaces.get(device=termination_a["device"], name=termination_a["interface"])
+                elif termination_a["termination_type"] == "dcim.rearport":
+                    intf_a = nb.dcim.rear_ports.get(device=termination_a["device"], name=termination_a["interface"])
+                nb.dcim.cables.create(
+                    **cable_a,
+                    a_terminations=[{"object_type": termination_a["termination_type"], "object_id": intf_a.id}],
+                    b_terminations=[{"object_type": "circuits.circuittermination", "object_id": cterm_a.id}]
+                )
+            # add cable B
+            if termination_b and "provider_network" not in termination_b:
+                cable_b = termination_b.pop("cable", None)
+                if termination_b["termination_type"] == "dcim.interface":
+                    intf_b = nb.dcim.interfaces.get(device=termination_b["device"], name=termination_b["interface"])
+                elif termination_b["termination_type"] == "dcim.rearport":
+                    intf_b = nb.dcim.rear_ports.get(device=termination_b["device"], name=termination_b["interface"])
+                nb.dcim.cables.create(
+                    **cable_b,
+                    a_terminations=[{"object_type": termination_b["termination_type"], "object_id": intf_b.id}],
+                    b_terminations=[{"object_type": "circuits.circuittermination", "object_id": cterm_z.id}]
+                )            
         except Exception as e:
             log.exception(f"creating circuit '{item}' error '{e}'")      
             
@@ -1362,7 +1481,16 @@ def create_config_templates():
             except Exception as e:
                 log.error(f"creating config template '{item['name']}' error associating with device {'device'} '{e}'")                     
             
-    
+ 
+def creat_circuit_provider_networks():
+    log.info("creating circuit provider networks")    
+    for item in circuit_provider_networks:
+        try:
+            nb.circuits.provider_networks.create(**item)
+        except Exception as e:
+            log.error(f"creating provider network '{item}' error '{e}'")
+            
+        
 # -----------------------------------------------------------------------------------
 # DELETE functions
 # -----------------------------------------------------------------------------------
@@ -1635,60 +1763,83 @@ def delete_config_templates():
         log.error(f"deleting all config templates error '{e}'")  
         
         
+def delete_circuit_provider_accounts():
+    log.info("deleting all circuit provider accounts")
+    try:
+        accounts = nb.circuits.provider_accounts.all()
+        for i in accounts:
+            i.delete()
+    except Exception as e:
+        log.error(f"deleting all circuit provider accounts error '{e}'")      
+        
+
+def delete_circuit_provider_networks():
+    log.info("deleting all circuit provider networks")
+    try:
+        networks = nb.circuits.provider_networks.all()
+        for i in networks:
+            i.delete()
+    except Exception as e:
+        log.error(f"deleting all circuit provider networks error '{e}'") 
+        
+
 def clean_up_netbox():
-    # delete_netbox_secrets_secrets()
-    # delete_netbox_secrets_roles()
-    # delete_connections()
-    # delete_circuits()
-    # delete_circuit_providers()
-    # delete_circuit_types()
-    # delete_devices()
-    # delete_ip_addresses()
-    # delete_vrfs()
-    # delete_vlans()
-    # delete_device_roles()
-    # delete_device_types()
-    # delete_platforms()
-    # delete_manufacturers()
-    # delete_tags()
-    # delete_racks()
-    # delete_sites()
-    # delete_regions()
-    # delete_tenants()
-    # delete_inventory_items_roles()
+    delete_netbox_secrets_secrets()
+    delete_netbox_secrets_roles()
+    delete_connections()
+    delete_circuits()
+    delete_circuit_provider_accounts()
+    delete_circuit_provider_networks()
+    delete_circuit_providers()
+    delete_circuit_types()
+    delete_devices()
+    delete_ip_addresses()
+    delete_vrfs()
+    delete_vlans()
+    delete_device_roles()
+    delete_device_types()
+    delete_platforms()
+    delete_manufacturers()
+    delete_tags()
+    delete_racks()
+    delete_sites()
+    delete_regions()
+    delete_tenants()
+    delete_inventory_items_roles()
     delete_config_templates()
     
 
 def populate_netbox():
-    # create_regions()
-    # ceate_tenants()
-    # create_sites()
-    # create_racks()
-    # create_manufacturers()
-    # create_device_types()
-    # create_device_roles()
-    # create_platforms()
-    # create_vrfs()
-    # create_ip_addresses()
-    # create_tags()
-    # create_devices()
-    # create_vlans()
-    # create_interfaces()
-    # create_power_outlet_ports()
-    # create_power_ports()
-    # create_inventory_items_roles()
-    # create_inventory_items()
-    # create_console_server_ports()
-    # create_console_ports()
-    # associate_ip_adress_to_devices()
-    # create_connections()
-    # create_netbox_secrets_roles()
-    # create_netbox_secrets_secrets()
-    # create_circuit_providers()
-    # if NB_VERSION.startswith("3.5"):
-    #     create_circuit_provider_accounts()
-    # create_circuit_types()
-    # create_circuits()
+    create_regions()
+    ceate_tenants()
+    create_sites()
+    create_racks()
+    create_manufacturers()
+    create_device_types()
+    create_device_roles()
+    create_platforms()
+    create_vrfs()
+    create_ip_addresses()
+    create_tags()
+    create_devices()
+    create_vlans()
+    create_interfaces()
+    create_power_outlet_ports()
+    create_power_ports()
+    create_inventory_items_roles()
+    create_inventory_items()
+    create_console_server_ports()
+    create_console_ports()
+    associate_ip_adress_to_devices()
+    create_connections()
+    create_netbox_secrets_roles()
+    create_netbox_secrets_secrets()
+    create_circuit_providers()
+    creat_circuit_provider_networks()
+    if NB_VERSION >= 3.5:
+        create_circuit_provider_accounts()
+    create_circuit_types()
+    create_circuits()
     create_config_templates()
     
     
@@ -1699,7 +1850,8 @@ if __name__ == "__main__":
         # raises ConnectionError if Netbox is not reachable
         _ = nb.status()
         globals()["nb"] = nb
-        globals()["NB_VERSION"] = nb.version
+        NB_VERSION = float(".".join(nb.version.split(".")[:2]))
+        globals()["NB_VERSION"] = NB_VERSION
     except Exception as e:
         log.exception(
             f"netbox_data failed to instantiate pynetbox.api object, "
