@@ -1,4 +1,4 @@
-FROM ceosimage:4.30.0F
+FROM ceosimage:4.33.1F
 
 ENV INTFTYPE=eth 
 ENV ETBA=1 
