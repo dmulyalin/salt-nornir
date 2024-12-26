@@ -1086,7 +1086,6 @@ def _process_device(device, inventory, params):
     :param params: salt_nornir_netbox configuration parameters dictionary
     """
     # check if device have not been done already
-    device["custom_field_data"] = json.loads(device["custom_field_data"])
     nornir_data = device["config_context"].pop("nornir", {})
     name = nornir_data.get("name", device["name"])
     if name in RUNTIME_VARS["devices_done"]:
@@ -1300,10 +1299,11 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                         f"'{minion_id}' config context data: {e}"
                     )
                 # retrieve all hosts details
-                host_names = list(ret.get("hosts", {}))
+                # host_names = list(ret.get("hosts", {}))
+                ret.setdefault("hosts", {})
                 devices_by_minion_id = nb_graphql(
                     field="device_list",
-                    filters={"name": {"in_list": host_names}},
+                    filters={"name": {"exact": minion_id}},
                     fields=device_fields,
                     params=params,
                 )
