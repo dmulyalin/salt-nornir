@@ -1239,7 +1239,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         try:
             # send request to netbox
             nb_status = requests.get(
-                f"{params['url']}/api/status", verify=params.get("ssl_verify", True)
+                f"{params['url']}/api/status", verify=params.get("ssl_verify", True), headers={"Authorization": f"Token {params['token']}"}
             )
             nb_status.raise_for_status()
             NB_VERSION = nb_status.json()["netbox-version"]
