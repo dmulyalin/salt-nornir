@@ -343,6 +343,7 @@ workers_utils
 """
 
 # Import python std lib
+import asyncio
 import logging
 import threading
 import multiprocessing
@@ -717,6 +718,12 @@ def _use_loader_context(func):
 
     def wrapper(*args, **kwargs):
         loader = kwargs.pop("loader", None)
+
+        # Ensure an asyncio event loop is present
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
 
         if HAS_LOADER_CONTEXT and loader is not None:
             with loader_context(loader):
