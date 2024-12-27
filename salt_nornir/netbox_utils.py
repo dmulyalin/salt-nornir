@@ -139,26 +139,36 @@ def get_pynetbox(params):
 
 def _form_query(field, filters, fields, alias=None):
     """
-    Helper function to form graphql query
+    Helper function to form GraphQL query.
 
     :param field: string, field to return data for e.g. device, interface, ip_address
     :param filters: dictionary of key-value pairs to filter by
     :param fields: list of data fields to return
     :param alias: string, alias value for requested field
     """
+
+    def format_filter_value(value):
+        if isinstance(value, dict):  # Handle nested dictionary
+            nested_filters = ", ".join(f"{k}: {format_filter_value(v)}" for k, v in value.items())
+            return f"{{{nested_filters}}}"
+        elif isinstance(value, (list, set, tuple)):  # Handle lists, sets, tuples
+            items = ", ".join(f'"{i}"' for i in value)
+            return f"[{items}]"
+        elif isinstance(value, str):  # Handle string values
+            return f'"{value}"'
+        else:  # Handle other types like numbers
+            return str(value)
+
     filters_list = []
     for k, v in filters.items():
-        if isinstance(v, (list, set, tuple)):
-            items = ", ".join(f'"{i}"' for i in v)
-            filters_list.append(f"{k}: [{items}]")
-        else:
-            filters_list.append(f'{k}: "{v}"')
+        formatted_value = format_filter_value(v)
+        filters_list.append(f"{k}: {formatted_value}")
     filters_string = ", ".join(filters_list)
-    fields = " ".join(fields)
+    fields_string = " ".join(fields)
     if alias:
-        query = f"{alias}: {field}({filters_string}) {{{fields}}}"
+        query = f"{alias}: {field}(filters: {{{filters_string}}}) {{{fields_string}}}"
     else:
-        query = f"{field}({filters_string}) {{{fields}}}"
+        query = f"{field}(filters: {{{filters_string}}}) {{{fields_string}}}"
 
     return query
 
@@ -1085,7 +1095,7 @@ def update_vrf(__salt__=None, proxy_id=None, **kwargs):
     # retrieve a list of existing route-targets
     existing_rt = nb_graphql(
         field="route_target_list",
-        filters={"name": all_rt},
+        filters={"name": {"exact": all_rt}},
         fields=["name", "id"],
         params=netbox_params,
     )
@@ -1108,7 +1118,7 @@ def update_vrf(__salt__=None, proxy_id=None, **kwargs):
     # retrieve a list of existing route-targets IDs to add VRF references
     existing_rt = nb_graphql(
         field="route_target_list",
-        filters={"name": all_rt},
+        filters={"name": {"exact": all_rt}},
         fields=["name", "id"],
         params=netbox_params,
     )
@@ -1116,7 +1126,7 @@ def update_vrf(__salt__=None, proxy_id=None, **kwargs):
     # retrieve a list of existing VRFs
     existing_vrf = nb_graphql(
         field="vrf_list",
-        filters={"name": list(all_vrf)},
+        filters={"name": {"in_list": list(all_vrf)}},
         fields=["name", "id"],
         params=netbox_params,
     )

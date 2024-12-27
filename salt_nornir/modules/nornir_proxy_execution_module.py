@@ -3234,7 +3234,7 @@ def netbox(*args, **kwargs):
 
     Sample usage::
 
-        salt nrp1 nr.netbox query field="device_list" filters='{"name": "ceos1"}' fields='["name", "platform {name}", "status"]'
+        salt nrp1 nr.netbox query field="device_list" filters='{"name": {"exact": "ceos1"}}' fields='["name", "platform {name}", "status"]'
         salt nrp1 nr.netbox query queries='{"devices": {"field": "device_list", "filters": {"platform": "eos"}, "fields": ["name"]}}'
         salt nrp1 nr.netbox query query_string='query{device_list(platform: "eos") {name}}'
 
