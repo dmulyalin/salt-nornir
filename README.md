@@ -7,6 +7,10 @@
 
 ![logo][logo]
 
+---
+# **SALT-NORNIR DEPRECATED IN FAVOUR OF ANOTHER GREAT PROJECT - [NORFAB](https://github.com/norfablabs/NORFAB) !**
+---
+
 # Salt Nornir
 
 Nornir centered SaltStack modules:
